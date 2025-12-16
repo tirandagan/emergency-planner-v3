@@ -18,7 +18,7 @@ interface BundleItem {
     name: string;
     price: number;
     type: string;
-    image_url?: string;
+    imageUrl?: string;
     quantity: number;
     master_item_name?: string;
     metadata?: any;
@@ -337,7 +337,7 @@ export default function BundlesClient({
           name: item.product.name,
           price: item.product.price || 0,
           type: item.product.type,
-          image_url: item.product.image_url,
+          imageUrl: item.product.imageUrl,
           quantity: item.quantity,
           master_item_name: masterItems.find((m: any) => m.id === item.product.masterItemId)?.name,
           metadata: item.product.metadata
@@ -358,7 +358,7 @@ export default function BundlesClient({
               name: product.name,
               price: product.price || 0,
               type: product.type,
-              image_url: product.image_url,
+              imageUrl: product.imageUrl,
               quantity: 1,
               master_item_name: master?.name,
               metadata: product.metadata
@@ -711,8 +711,8 @@ export default function BundlesClient({
                                         <div key={item.id} className="bg-background border border-border p-3 rounded-lg flex items-center gap-3 group hover:border-primary/30 transition-colors">
                                             {/* Image or Placeholder */}
                                             <div className="w-10 h-10 bg-muted rounded border border-border flex items-center justify-center overflow-hidden shrink-0">
-                                                {item.image_url ? (
-                                                    <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                                                {item.imageUrl ? (
+                                                    <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <Package className="w-5 h-5 text-muted-foreground" strokeWidth={2.5} />
                                                 )}
@@ -916,8 +916,8 @@ function ProductCard({ product, onAdd, onEdit, masterItems, bundleItems }: { pro
     return (
         <div className={`bg-card border border-border rounded-lg p-4 flex items-center gap-4 transition-colors group ${isAdded ? 'opacity-60' : 'hover:border-primary/30'}`}>
             <div className="w-12 h-12 bg-muted rounded border border-border flex items-center justify-center overflow-hidden shrink-0">
-                {product.image_url ? (
-                    <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                {product.imageUrl ? (
+                    <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                     <Package className="w-6 h-6 text-muted-foreground" strokeWidth={2.5} />
                 )}

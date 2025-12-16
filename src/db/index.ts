@@ -31,7 +31,6 @@ if (process.env.NODE_ENV === 'production') {
     idle_timeout: 20, // Close idle connections after 20 seconds
     max_lifetime: 60 * 30, // Close connections after 30 minutes
     connect_timeout: 10, // 10 second connection timeout
-    statement_timeout: 10000, // 10 second statement timeout
     fetch_types: false, // Disable fetching types from DB (performance)
   });
   db = drizzle(queryClient, { schema });
@@ -43,7 +42,6 @@ if (process.env.NODE_ENV === 'production') {
       max: 3, // Increase to 3 connections in development to prevent exhaustion
       idle_timeout: 20,
       connect_timeout: 30, // 30 second connection timeout (shared pooler can be slower)
-      statement_timeout: 10000, // 10 second statement timeout
       fetch_types: false, // Disable fetching types from DB (performance)
     });
   }

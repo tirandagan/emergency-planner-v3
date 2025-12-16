@@ -47,7 +47,7 @@ interface SpecificProduct {
     price?: string;
     sku?: string;
     asin?: string;
-    image_url?: string;
+    imageUrl?: string;
     product_url?: string;
     type: string;
     status: string;
@@ -987,8 +987,8 @@ export default function CategoryManager() {
                                                             master.specific_products.map((prod: SpecificProduct) => (
                                                                 <div key={prod.id} className="flex items-center gap-3 p-2 bg-background rounded-lg hover:bg-muted transition-colors border border-transparent hover:border-border">
                                                                     <div className="w-10 h-10 bg-muted/50 rounded-lg border border-border flex items-center justify-center overflow-hidden shrink-0">
-                                                                        {prod.image_url ? (
-                                                                            <Image src={prod.image_url} alt={prod.name} width={40} height={40} className="w-full h-full object-cover" unoptimized />
+                                                                        {prod.imageUrl ? (
+                                                                            <Image src={prod.imageUrl} alt={prod.name} width={40} height={40} className="w-full h-full object-cover" unoptimized />
                                                                         ) : (
                                                                             <Package className="w-5 h-5 text-muted-foreground" />
                                                                         )}
