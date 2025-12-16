@@ -103,7 +103,7 @@ function AuthCallback() {
         try {
           const { error } = await supabase.auth.verifyOtp({
             token_hash,
-            type: type as 'email' | 'sms' | 'magiclink',
+            type: type as 'email' | 'magiclink',
           });
 
           if (error) {
