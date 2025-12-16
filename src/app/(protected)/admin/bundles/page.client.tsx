@@ -7,6 +7,7 @@ import ProductEditDialog from "../products/components/ProductEditDialog";
 import { SCENARIOS, CLIMATES as PROD_CLIMATES, DEMOGRAPHICS as PROD_DEMOGRAPHICS } from "../products/constants";
 import MultiSelectPills from "./components/MultiSelectPills";
 import CompactTagFilter from "./components/CompactTagFilter";
+import { slugify } from "@/lib/slugify";
 
 const CLIMATES = PROD_CLIMATES; // Use product constants
 const AGE_GROUPS = ['Infant/Toddler', 'Child', 'Adult', 'Elderly/Mobility'];
@@ -118,6 +119,7 @@ export default function BundlesClient({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [bundleName, setBundleName] = useState("");
   const [bundleSlug, setBundleSlug] = useState("");
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [bundleDesc, setBundleDesc] = useState("");
   const [bundlePrice, setBundlePrice] = useState("0.00");
 
@@ -300,10 +302,18 @@ export default function BundlesClient({
     setBundlePrice(calculateTotal());
   }, [bundleItems]);
 
+  // Auto-generate slug from bundle name (unless manually edited)
+  useEffect(() => {
+    if (!isSlugManuallyEdited && bundleName) {
+      setBundleSlug(slugify(bundleName));
+    }
+  }, [bundleName, isSlugManuallyEdited]);
+
   const openCreateModal = () => {
       setEditingId(null);
       setBundleName("");
       setBundleSlug("");
+      setIsSlugManuallyEdited(false);
       setBundleDesc("");
       setBundlePrice("0.00");
       setTargetScenarios([]);
@@ -321,6 +331,7 @@ export default function BundlesClient({
       setEditingId(bundle.id);
       setBundleName(bundle.name);
       setBundleSlug(bundle.slug);
+      setIsSlugManuallyEdited(true); // Don't auto-update slug when editing existing bundle
       setBundleDesc(bundle.description || "");
       setBundlePrice(bundle.totalEstimatedPrice);
       
@@ -597,9 +608,15 @@ export default function BundlesClient({
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase">Slug</label>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase">
+                                    Slug {!isSlugManuallyEdited && <span className="text-[10px] text-muted-foreground/70">(auto-generated)</span>}
+                                </label>
                                 <input
-                                    value={bundleSlug} onChange={e => setBundleSlug(e.target.value)}
+                                    value={bundleSlug}
+                                    onChange={e => {
+                                        setBundleSlug(e.target.value);
+                                        setIsSlugManuallyEdited(true);
+                                    }}
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-ring focus:border-primary outline-none text-sm font-mono"
                                     placeholder="url-slug"
                                 />

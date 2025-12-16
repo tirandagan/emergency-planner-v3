@@ -2,12 +2,13 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/utils/supabase/client';
 import { Loader2 } from 'lucide-react';
 
 function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createClient();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,23 +74,19 @@ function AuthCallback() {
             // Get user ID for activity logging
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Log successful login activity
+            // Log successful login activity (non-blocking)
             if (user?.id) {
-              try {
-                const response = await fetch('/api/activity/log-login', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ userId: user.id }),
-                });
-                if (!response.ok) {
-                  console.warn('Failed to log login activity:', await response.text());
-                }
-              } catch (err) {
+              // Fire and forget - don't block redirect
+              fetch('/api/activity/log-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id }),
+              }).catch(err => {
                 console.warn('Error logging login activity:', err);
-              }
+              });
             }
 
-            // Clear the hash and redirect
+            // Clear the hash and redirect immediately
             router.replace(next);
             return;
           } catch (err) {
@@ -106,7 +103,7 @@ function AuthCallback() {
         try {
           const { error } = await supabase.auth.verifyOtp({
             token_hash,
-            type: type as any,
+            type: type as 'email' | 'sms' | 'magiclink',
           });
 
           if (error) {
@@ -116,23 +113,19 @@ function AuthCallback() {
           // Get user ID for activity logging
           const { data: { user } } = await supabase.auth.getUser();
 
-          // Log successful login activity
+          // Log successful login activity (non-blocking)
           if (user?.id) {
-            try {
-              const response = await fetch('/api/activity/log-login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id }),
-              });
-              if (!response.ok) {
-                console.warn('Failed to log login activity:', await response.text());
-              }
-            } catch (err) {
+            // Fire and forget - don't block redirect
+            fetch('/api/activity/log-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id }),
+            }).catch(err => {
               console.warn('Error logging login activity:', err);
-            }
+            });
           }
 
-          // Auth successful - redirect to dashboard
+          // Auth successful - redirect immediately
           router.push(next);
         } catch (err) {
           console.error('Auth error:', err);
@@ -147,26 +140,29 @@ function AuthCallback() {
     };
 
     handleAuth();
-  }, [searchParams, router]);
+  }, [searchParams, router, supabase.auth]);
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
-        <div className="bg-red-900/20 border border-red-900/50 text-red-500 p-4 rounded-lg mb-4 text-center">
-          <p className="font-bold mb-1">Authentication Error</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive p-6 rounded-lg mb-4 text-center max-w-md">
+          <p className="font-semibold mb-2 text-lg">Authentication Error</p>
           <p className="text-sm">{error}</p>
         </div>
-        <p className="text-gray-500 text-sm">Redirecting to login...</p>
+        <p className="text-muted-foreground text-sm">Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-      <Loader2 className="w-8 h-8 text-tactical-accent animate-spin mb-4" />
-      <p className="text-gray-400 font-mono text-sm animate-pulse">
-        VERIFYING CREDENTIALS...
-      </p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-foreground font-medium text-lg">Verifying credentials...</p>
+          <p className="text-muted-foreground text-sm">Please wait a moment</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -174,11 +170,14 @@ function AuthCallback() {
 export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-        <Loader2 className="w-8 h-8 text-tactical-accent animate-spin mb-4" />
-        <p className="text-gray-400 font-mono text-sm animate-pulse">
-          LOADING...
-        </p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-foreground font-medium text-lg">Loading...</p>
+            <p className="text-muted-foreground text-sm">Initializing authentication</p>
+          </div>
+        </div>
       </div>
     }>
       <AuthCallback />
