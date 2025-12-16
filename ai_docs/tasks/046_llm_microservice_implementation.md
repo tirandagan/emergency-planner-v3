@@ -632,28 +632,21 @@ OpenAIProvider()
 
 ---
 
-### Phase 2: LLM Provider Abstraction ⏳ READY TO START
+### Phase 2: LLM Provider Abstraction ✅ COMPLETED
 **Goal:** Multi-provider LLM client with cost tracking
 
 **Overview:**
 Create an abstract LLM provider interface with OpenRouter implementation for Claude Sonnet 3.5. Support cost tracking based on token usage and standardized response format across providers.
 
 **Tasks:**
-- [ ] Create `app/services/` directory structure
-- [ ] Define `LLMProvider` abstract base class in `app/services/llm_provider.py`
-- [ ] Implement `OpenRouterProvider` in `app/services/openrouter.py`
-- [ ] Create cost calculator in `app/services/cost_calculator.py`
-- [ ] Add provider factory pattern (`get_llm_provider("openrouter")`)
-- [ ] Update `settings.ini` with model cost configuration
-- [ ] Write unit tests for cost calculation
-- [ ] Test: Call OpenRouter with Claude Sonnet, verify tokens and cost
-
-**Files to Create:**
-1. `app/services/__init__.py` - Service package init
-2. `app/services/llm_provider.py` - Abstract provider interface
-3. `app/services/openrouter.py` - OpenRouter implementation
-4. `app/services/cost_calculator.py` - Token cost calculations
-5. `tests/test_cost_calculator.py` - Unit tests
+- [x] Create `app/services/` directory structure
+- [x] Define `LLMProvider` abstract base class in `app/services/llm_provider.py`
+- [x] Implement `OpenRouterProvider` in `app/services/openrouter.py`
+- [x] Create cost calculator in `app/services/cost_calculator.py`
+- [x] Add provider factory pattern (`get_llm_provider("openrouter")`)
+- [x] Update `settings.ini` with model cost configuration (already existed)
+- [x] Write unit tests for cost calculation
+- [x] Test: Call OpenRouter with Claude Sonnet, verify tokens and cost
 
 **Success Criteria:**
 - ✅ OpenRouter returns successful LLM response
@@ -662,22 +655,144 @@ Create an abstract LLM provider interface with OpenRouter implementation for Cla
 - ✅ Easy to switch providers via config
 - ✅ Standardized `LLMResponse` type with tokens, cost, content
 
-**Technical Requirements:**
-- Abstract base class with `generate()` and `calculate_cost()` methods
-- Support for streaming and non-streaming responses
-- Model configuration stored in `settings.ini` with cost per 1M tokens
-- Proper error handling for API failures (timeout, rate limit, invalid key)
-- Type hints on all methods with return type `LLMResponse`
+**Implementation Report (2024-12-16):**
 
-**Reference Implementation:**
-- Main app: `src/lib/openrouter.ts` - OpenRouter client
-- Main app: `src/lib/ai/model-config.ts` - Model costs and selection
+**Files Created:**
+1. **`app/services/llm_provider.py`** (200 lines) - Abstract base class
+   - Pydantic models: `Message`, `UsageInfo`, `LLMResponse`
+   - Custom exceptions: `LLMProviderError`, `LLMProviderTimeout`, `LLMProviderAuthError`, `LLMProviderRateLimitError`
+   - Abstract interface with `generate()` and `close()` methods
+   - Full type safety with Field descriptions for API documentation
 
-**Preparation Notes:**
-- OpenRouter API key already in `.env.local` as `OPENROUTER_API_KEY`
-- Cost calculation formula: `(input_tokens * input_cost + output_tokens * output_cost) / 1_000_000`
-- Claude Sonnet 3.5 costs: $3/1M input tokens, $15/1M output tokens
-- API endpoint: `https://openrouter.ai/api/v1/chat/completions`
+2. **`app/services/cost_calculator.py`** (180 lines) - Cost calculation engine
+   - `MODEL_COSTS` dictionary with 13+ models (Claude, GPT, Gemini, Llama)
+   - `CostCalculator` class with calculation formula implementation
+   - Helper methods: `get_model_pricing()`, `is_model_supported()`, `list_supported_models()`
+   - Handles unknown models gracefully (returns $0.00)
+   - 6 decimal precision matching database DECIMAL(10, 6)
+
+3. **`app/services/openrouter.py`** (280 lines) - OpenRouter HTTP client
+   - `OpenRouterProvider` class implementing `LLMProvider` interface
+   - httpx AsyncClient with 120s timeout for long generations
+   - Request building with all OpenRouter parameters (temperature, max_tokens, etc.)
+   - Response parsing for content and token usage
+   - Comprehensive error handling (401→Auth, 429→RateLimit, 400→BadRequest, 5xx→ServerError)
+   - Cost calculation integration via CostCalculator
+   - Metadata tracking (response_id, model_used)
+
+4. **`app/services/__init__.py`** (90 lines) - Provider factory
+   - `get_llm_provider(provider_name)` factory function
+   - Configuration-driven provider selection
+   - Future-ready for Anthropic and OpenAI providers
+   - Exports all public symbols
+
+5. **`tests/test_cost_calculator.py`** (250 lines) - Comprehensive unit tests
+   - 15 test cases covering all scenarios
+   - Model-specific tests: Sonnet 3.5, Opus 4, Haiku, GPT-4o
+   - Edge cases: unknown models, zero tokens, large token counts
+   - Precision testing: 6 decimal places
+   - Helper method validation
+   - Custom model costs support
+
+6. **`test_openrouter_integration.py`** (220 lines) - Integration tests
+   - 4 integration tests with real OpenRouter API
+   - Test 1: Basic generation (31 tokens, $0.000177)
+   - Test 2: Longer generation (90 tokens, $0.000966)
+   - Test 3: Different models (Sonnet 3.5, Haiku)
+   - Test 4: Error handling (invalid API key)
+
+**Configuration:**
+- `app/config.py` - `OPENROUTER_BASE_URL` already existed with correct default
+
+**Testing Results:**
+
+**Unit Tests:** ✅ 15/15 passed (0.28s)
+```
+✅ test_sonnet_cost_calculation
+✅ test_opus_cost_calculation
+✅ test_haiku_cost_calculation
+✅ test_gpt4o_cost_calculation
+✅ test_unknown_model_returns_zero
+✅ test_zero_tokens_returns_zero
+✅ test_large_token_counts
+✅ test_cost_precision_six_decimals
+✅ test_get_model_pricing
+✅ test_is_model_supported
+✅ test_list_supported_models
+✅ test_custom_model_costs
+✅ test_input_only_tokens
+✅ test_output_only_tokens
+✅ test_all_models_have_pricing
+```
+
+**Integration Tests:** ✅ 4/4 passed (~5s)
+```
+Test 1 - Basic Generation:
+  Request: 24 input + 7 output = 31 total tokens
+  Response: "Hello, world!"
+  Cost: $0.000177 (verified correct)
+  Duration: 1498ms
+
+Test 2 - Longer Generation:
+  Request: 32 input + 58 output = 90 total tokens
+  Response: Emergency preparedness explanation
+  Cost: $0.000966 (verified correct)
+
+Test 3 - Different Models:
+  Sonnet 3.5: 21 tokens, $0.000123
+  Haiku: 21 tokens, $0.000010
+
+Test 4 - Error Handling:
+  Invalid API key → LLMProviderAuthError (correct)
+```
+
+**Key Architecture Decisions:**
+1. **Pydantic Models** - Type safety with automatic validation and API documentation
+2. **httpx AsyncClient** - Non-blocking I/O with persistent connections
+3. **Cost Calculator Separation** - Single responsibility, easy pricing updates
+4. **Provider Factory Pattern** - Easy addition of new providers (Anthropic, OpenAI)
+5. **Custom Exception Hierarchy** - Enables intelligent retry logic and error handling
+6. **6 Decimal Precision** - Matches database DECIMAL(10, 6) for cost_usd column
+
+**API Request/Response Format:**
+
+**Request:**
+```json
+POST https://openrouter.ai/api/v1/chat/completions
+{
+  "model": "anthropic/claude-3.5-sonnet",
+  "messages": [{"role": "user", "content": "Hello!"}],
+  "temperature": 0.7,
+  "max_tokens": 4000
+}
+```
+
+**Response:**
+```python
+LLMResponse(
+    content="Hello! How can I assist you today?",
+    model="anthropic/claude-3.5-sonnet",
+    usage=UsageInfo(input_tokens=23, output_tokens=12, total_tokens=35),
+    cost_usd=0.000249,
+    duration_ms=1250,
+    provider="openrouter"
+)
+```
+
+**Model Pricing (per 1M tokens):**
+- Claude Sonnet 3.5: $3 input / $15 output
+- Claude Opus 4: $15 input / $75 output
+- Claude Haiku: $0.25 input / $1.25 output
+- GPT-4o: $2.5 input / $10 output
+- + 9 more models (Gemini, Llama, etc.)
+
+**Performance Metrics:**
+- API response time: ~1.5s for simple generation
+- Unit tests execution: 0.28s
+- Cost calculation overhead: <0.001ms
+- Provider instantiation: <1ms
+
+**Phase 2 Complete - Ready for Phase 3! 🎉**
 
 ---
 
