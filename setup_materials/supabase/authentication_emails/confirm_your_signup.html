@@ -1,0 +1,92 @@
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; padding: 40px;">
+        <!-- Header -->
+        <tr>
+          <td style="text-align: center; padding-bottom: 30px;">
+            <h1 style="color: #2563eb; font-size: 24px; margin: 0; font-weight: 600;">beprepared.ai</h1>
+          </td>
+        </tr>
+        
+        <!-- Welcome Message -->
+        <tr>
+          <td style="color: #334155; font-size: 16px; line-height: 1.6; padding-bottom: 30px;">
+            <p style="margin: 0 0 20px 0;">Welcome to beprepared.ai!</p>
+            <p style="margin: 0;">Confirm your account to start building your personalized disaster preparedness plan with AI-powered guidance.</p>
+          </td>
+        </tr>
+
+        <!-- Verification Code Section -->
+        <tr>
+          <td style="padding-bottom: 30px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="text-align: center; padding-bottom: 16px;">
+                  <p style="margin: 0; font-size: 14px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Option 1: Enter This Code</p>
+                </td>
+              </tr>
+              <tr>
+                <td align="center">
+                  <div style="display: inline-block; background-color: #f1f5f9; padding: 20px 32px; border-radius: 8px; border: 2px solid #e2e8f0;">
+                    <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1e293b;">{{ .Token }}</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: center; padding-top: 12px;">
+                  <p style="margin: 0; font-size: 13px; color: #64748b;">Code expires in 24 hours</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Divider -->
+        <tr>
+          <td style="padding: 20px 0;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                  <p style="margin: 0; text-align: center; font-size: 14px; color: #94a3b8; font-weight: 500;">OR</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Magic Link Button Section -->
+        <tr>
+          <td style="padding-bottom: 30px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="text-align: center; padding-bottom: 16px;">
+                  <p style="margin: 0; font-size: 14px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Option 2: Click to Verify</p>
+                </td>
+              </tr>
+              <tr>
+                <td align="center">
+                  <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">Complete Setup</a>
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: center; padding-top: 16px;">
+                  <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">Or copy and paste this link:</p>
+                  <p style="margin: 0; font-size: 12px; color: #94a3b8; word-break: break-all; padding: 0 20px;">{{ .ConfirmationURL }}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="color: #64748b; font-size: 14px; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+            <p style="margin: 0 0 10px 0; font-weight: 500;">Why am I receiving this?</p>
+            <p style="margin: 0;">Someone (hopefully you!) requested to create an account with this email address. If you didn&rsquo;t create this account, you can safely ignore this email.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

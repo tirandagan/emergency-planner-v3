@@ -1,0 +1,49 @@
+name:
+    css: '#productTitle'
+    type: Text
+price:
+    css: '.a-price .a-offscreen, #price_inside_buybox, #priceblock_ourprice, #priceblock_dealprice'
+    type: Text
+short_description:
+    css: '#feature-bullets ul'
+    type: Text
+images:
+    css: '#landingImage, #imgBlkFront, .imgTagWrapper img'
+    type: Attribute
+    attribute: data-a-dynamic-image
+rating:
+    css: '#acrPopover, .reviewCountTextLinkedHistogram'
+    type: Attribute
+    attribute: title
+number_of_reviews:
+    css: '#acrCustomerReviewText'
+    type: Text
+variants:
+    css: '#variation_color_name li, #variation_style_name li, #variation_size_name li'
+    multiple: true
+    type: Text
+    children:
+        name:
+            css: img
+            type: Attribute
+            attribute: alt
+        asin:
+            css: ""
+            type: Attribute
+            attribute: data-defaultasin
+product_description:
+    css: '#productDescription'
+    type: Text
+sales_rank:
+    css: '#salesRank, ul.zg_hrsr, .zg_hrsr_item'
+    type: Text
+link_to_all_reviews:
+    css: '#reviews-medley-footer a, a[data-hook="see-all-reviews-link-foot"]'
+    type: Link
+tech_details:
+    css: '#productDetails_techSpec_section_1, #productDetails_techSpec_section_2, .prodDetTable'
+    type: Text
+asin:
+    css: '#ASIN'
+    type: Attribute
+    attribute: value

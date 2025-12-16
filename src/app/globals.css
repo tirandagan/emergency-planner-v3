@@ -1,0 +1,301 @@
+@import "tailwindcss";
+
+/* Trust Blue Theme - Professional Disaster Preparedness */
+/* Generated: December 8, 2025 */
+
+/* IMPORTANT: Define CSS variables first, then apply them in base layer */
+
+:root {
+  /* Primary Brand Color - Trust Blue */
+  --primary: 220 85% 55%;
+  --primary-foreground: 0 0% 98%;
+  
+  /* Background System - Soft gray-blue tint for eye comfort */
+  --background: 220 15% 96%;
+  --foreground: 222 47% 11%;
+  
+  /* Secondary Backgrounds - Darker for clear contrast */
+  --muted: 220 20% 85%;
+  --muted-foreground: 240 3.8% 46.1%;
+  
+  /* Component Surfaces - Subtle contrast with background */
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  
+  /* Secondary Actions */
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  
+  /* Borders & Inputs */
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 220 85% 55%;
+  
+  /* Accent Colors */
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  
+  /* Status Colors - Professional Harmony */
+  --success: 120 60% 45%;
+  --success-foreground: 0 0% 98%;
+  --warning: 45 80% 55%;
+  --warning-foreground: 240 10% 3.9%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
+  
+  /* Chart Colors */
+  --chart-1: 220 85% 55%;
+  --chart-2: 120 60% 45%;
+  --chart-3: 45 80% 55%;
+  --chart-4: 180 75% 45%;
+  --chart-5: 260 90% 58%;
+
+  /* Subscription Tier Colors */
+  --tier-free: 240 5% 65%;
+  --tier-free-foreground: 240 6% 30%;
+  --tier-free-bg: 240 5% 96%;
+  --tier-basic: 220 85% 55%;
+  --tier-basic-foreground: 0 0% 98%;
+  --tier-basic-bg: 220 95% 95%;
+  --tier-pro: 260 90% 58%;
+  --tier-pro-foreground: 0 0% 98%;
+  --tier-pro-bg: 260 95% 95%;
+
+  /* Radius */
+  --radius: 0.5rem;
+}
+
+/* Dark Mode - Blue-Tinted Neutrals for Brand Cohesion */
+.dark {
+  /* Primary Brand Color - Trust Blue (Nearly Identical) */
+  --primary: 220 75% 65%;
+  --primary-foreground: 0 0% 96%;
+  
+  /* Custom Blue-Tinted Dark Mode Neutrals */
+  --background: 220 15% 8%;
+  --foreground: 0 0% 96%;
+  
+  /* Secondary Backgrounds */
+  --muted: 220 12% 15%;
+  --muted-foreground: 220 8% 64%;
+  
+  /* Component Surfaces */
+  --card: 220 15% 8%;
+  --card-foreground: 0 0% 96%;
+  --popover: 220 15% 8%;
+  --popover-foreground: 0 0% 96%;
+  
+  /* Secondary Actions */
+  --secondary: 220 12% 15%;
+  --secondary-foreground: 0 0% 96%;
+  
+  /* Borders & Inputs */
+  --border: 220 10% 18%;
+  --input: 220 10% 18%;
+  --ring: 220 75% 65%;
+  
+  /* Accent Colors */
+  --accent: 220 12% 15%;
+  --accent-foreground: 0 0% 96%;
+  
+  /* Status Colors - Professional Harmony (Dark Mode) */
+  --success: 120 55% 50%;
+  --success-foreground: 0 0% 98%;
+  --warning: 45 75% 60%;
+  --warning-foreground: 0 0% 96%;
+  --destructive: 0 65% 55%;
+  --destructive-foreground: 0 0% 98%;
+  
+  /* Chart Colors (Dark Mode) */
+  --chart-1: 220 75% 65%;
+  --chart-2: 120 55% 50%;
+  --chart-3: 45 75% 60%;
+  --chart-4: 180 65% 58%;
+  --chart-5: 260 80% 68%;
+
+  /* Subscription Tier Colors (Dark Mode) */
+  --tier-free: 240 5% 55%;
+  --tier-free-foreground: 240 5% 85%;
+  --tier-free-bg: 240 8% 20%;
+  --tier-basic: 220 75% 65%;
+  --tier-basic-foreground: 0 0% 98%;
+  --tier-basic-bg: 220 60% 20%;
+  --tier-pro: 260 80% 68%;
+  --tier-pro-foreground: 0 0% 98%;
+  --tier-pro-bg: 260 60% 20%;
+}
+
+/* Base layer - Apply background colors after Tailwind base */
+@layer base {
+  html {
+    background-color: hsl(220 15% 96%);
+  }
+
+  body {
+    background-color: hsl(220 15% 96%);
+    color: hsl(222 47% 11%);
+    font-family: var(--font-inter), sans-serif;
+  }
+
+  html.dark {
+    background-color: hsl(220 15% 8%);
+  }
+
+  html.dark body {
+    background-color: hsl(220 15% 8%);
+    color: hsl(0 0% 96%);
+  }
+}
+
+/* Additional background enforcement - applies after layers */
+html {
+  background: hsl(220 15% 96%) !important;
+}
+
+body {
+  background: hsl(220 15% 96%) !important;
+}
+
+html.dark {
+  background: hsl(220 15% 8%) !important;
+}
+
+html.dark body {
+  background: hsl(220 15% 8%) !important;
+}
+
+/* Expose CSS Variables as Tailwind Utilities */
+@theme {
+  /* Primary Colors */
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  
+  /* Background System */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  
+  /* Component Surfaces */
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  
+  /* Secondary */
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  
+  /* Borders & Inputs */
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  
+  /* Accent */
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  
+  /* Status Colors */
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  
+  /* Chart Colors */
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  /* Subscription Tier Colors */
+  --color-tier-free: hsl(var(--tier-free));
+  --color-tier-free-foreground: hsl(var(--tier-free-foreground));
+  --color-tier-free-bg: hsl(var(--tier-free-bg));
+  --color-tier-basic: hsl(var(--tier-basic));
+  --color-tier-basic-foreground: hsl(var(--tier-basic-foreground));
+  --color-tier-basic-bg: hsl(var(--tier-basic-bg));
+  --color-tier-pro: hsl(var(--tier-pro));
+  --color-tier-pro-foreground: hsl(var(--tier-pro-foreground));
+  --color-tier-pro-bg: hsl(var(--tier-pro-bg));
+
+  /* Legacy Variables for Backward Compatibility */
+  --color-tactical-black: hsl(220 15% 8%);
+  --color-tactical-dark: hsl(220 12% 15%);
+  --color-tactical-green: hsl(var(--success));
+  --color-tactical-accent: hsl(var(--warning));
+  --color-danger: hsl(var(--destructive));
+
+  /* Border Radius */
+  --radius: 0.5rem;
+}
+
+/* Base Styles */
+* {
+  border-color: hsl(var(--border));
+}
+
+/* Custom Scrollbar - Blue-Tinted */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: hsl(220 12% 15%);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(220 10% 25%);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.7);
+}
+
+/* Smooth scroll behavior for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Category/Emoji Icon Styling - Consistent across all admin screens */
+.category-icon {
+  font-size: 1.5rem !important; /* Large emoji icons for better visibility */
+  line-height: 1 !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  user-select: none !important;
+}
+
+/* Ensure emojis render consistently across browsers */
+.category-icon::before {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+}

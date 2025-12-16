@@ -1,0 +1,3 @@
+[submodule "ai_docs/prep"]
+	path = ai_docs/prep
+	url = https://github.com/tirandagan/emergency-planner-prep.git

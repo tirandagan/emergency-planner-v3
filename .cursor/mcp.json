@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "whois-lookup": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "whodis-mcp-server"
+      ]
+    },    
+    "time": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-time",
+        "--local-timezone=America/New_York"
+      ]
+    }
+  }
+}

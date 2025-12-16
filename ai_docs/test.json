@@ -1,0 +1,742 @@
+[
+    {
+        "content": {
+            "ads": [
+                {
+                    "pos": 1,
+                    "asin": "B0CKGTYXCD",
+                    "type": "sponsored_products",
+                    "price": 0.21,
+                    "title": "Nature's Freedom 12% Hydrogen Peroxide, Food Grade H2O2 and Purified Water Only, 1 Gallon Solution",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/715R4BYsEoL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 5,
+                    "location": "carousel",
+                    "price_upper": 31.04,
+                    "reviews_count": 1608,
+                    "is_prime_eligible": true
+                },
+                {
+                    "pos": 2,
+                    "asin": "B0CZ2FZRMT",
+                    "type": "sponsored_products",
+                    "price": 1.37,
+                    "title": "Blubonic Industries 12% Food Grade Hydrogen Peroxide (H2O2) Pure Oxygen and Water, 16 fl oz",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/61B4qZA715L._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 21.99,
+                    "reviews_count": 1362,
+                    "is_prime_eligible": true
+                },
+                {
+                    "pos": 3,
+                    "asin": "B09MZP88ZF",
+                    "type": "sponsored_products",
+                    "price": 0.14,
+                    "title": "12% Concentrated Food Grade Hydrogen Peroxide (4 Gallons) - Cleaning Solution for Home, Laundry, Bath, Garden and More - derived from 35% Food Grade Hydrogen Peroxide",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/81Xa5ZCyDvL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 73.95,
+                    "reviews_count": 296,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 4,
+                    "asin": "B08WFLVD8G",
+                    "type": "sponsored_products",
+                    "price": 0.17,
+                    "title": "3% Food Grade Hydrogen Peroxide (1 Gallon) - No Added Stabilizers - Made in The USA derived from 35% Food Grade Hydrogen Peroxide",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/71jx+n94rqL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 21.95,
+                    "reviews_count": 548,
+                    "is_prime_eligible": true
+                },
+                {
+                    "pos": 5,
+                    "asin": "B0DF92XXJK",
+                    "type": "sponsored_products",
+                    "price": 0.14,
+                    "title": "Nature's Freedom 12% Hydrogen Peroxide, Food Grade H2O2 and Purified Water Only, 8 Gallons",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/81R6YhbgFPL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 5,
+                    "location": "carousel",
+                    "price_upper": 138.99,
+                    "reviews_count": 52,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 6,
+                    "asin": "B0CYVW6N7C",
+                    "type": "sponsored_products",
+                    "price": 0.21,
+                    "title": "Rivière 12% Scented Hydrogen Peroxide, Gallon, Lemon",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/71Fr8wOFeyL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 5,
+                    "location": "carousel",
+                    "price_upper": 29.99,
+                    "reviews_count": 135,
+                    "is_prime_eligible": true
+                },
+                {
+                    "pos": 7,
+                    "asin": "B0CPTDN3F7",
+                    "type": "sponsored_products",
+                    "price": 0.2,
+                    "title": "Allied Science 6% Hydrogen Peroxide, Food Grade H202 and Water, 1 Gallon",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/611RvjPZ-PL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 24.99,
+                    "reviews_count": 41,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 1,
+                    "asin": "B0CYVJFBBD",
+                    "type": "sponsored_products_bottom",
+                    "price": 0.21,
+                    "title": "Rivière 12% Scented Hydrogen Peroxide, Gallon, Lavender",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/715ngHHkVCL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 5,
+                    "location": "carousel",
+                    "price_upper": 29.99,
+                    "reviews_count": 135,
+                    "is_prime_eligible": true
+                },
+                {
+                    "pos": 2,
+                    "asin": "B0CV1WNPCX",
+                    "type": "sponsored_products_bottom",
+                    "price": 0.5,
+                    "title": "Global Healing Center - Ozonated Activated Charcoal Powder - Advanced Digestive Detox That Adsorbs Internal Unwanted Compounds - Helps Relieve Occasional Gas Discomfort - 60 Activated Charcoal Pills",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/61dpAjflSdL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 29.95,
+                    "reviews_count": 286,
+                    "is_prime_eligible": true
+                },
+                {
+                    "pos": 3,
+                    "asin": "B0CY6L13BD",
+                    "type": "sponsored_products_bottom",
+                    "price": 5,
+                    "title": "HydroProx 35 - Pure Food Grade Hydrogen Peroxide (Diluted to 12% for UPS Shipping),...",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/51cTDw4LqSL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 19.99,
+                    "reviews_count": 50,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 4,
+                    "asin": "B0CPTDN3F7",
+                    "type": "sponsored_products_bottom",
+                    "price": 0.2,
+                    "title": "6% Hydrogen Peroxide, Food Grade H202 and Water, 1 Gallon",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/611RvjPZ-PL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 24.99,
+                    "reviews_count": 41,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 5,
+                    "asin": "B0CKGTYXCD",
+                    "type": "sponsored_products_bottom",
+                    "price": 0.21,
+                    "title": "12% Hydrogen Peroxide, Food Grade H2O2 and Purified Water Only, 1 Gallon Solution",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/715R4BYsEoL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 5,
+                    "location": "carousel",
+                    "price_upper": 31.04,
+                    "reviews_count": 1608,
+                    "is_prime_eligible": true
+                },
+                {
+                    "pos": 6,
+                    "asin": "B09MZP88ZF",
+                    "type": "sponsored_products_bottom",
+                    "price": 0.14,
+                    "title": "12% Concentrated Food Grade Hydrogen Peroxide (4 Gallons) - Cleaning Solution for H...",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/81Xa5ZCyDvL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 73.95,
+                    "reviews_count": 296,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 7,
+                    "asin": "B0DF92XXJK",
+                    "type": "sponsored_products_bottom",
+                    "price": 0.14,
+                    "title": "12% Hydrogen Peroxide, Food Grade H2O2 and Purified Water Only, 8 Gallons",
+                    "images": [
+                        "https://m.media-amazon.com/images/I/81R6YhbgFPL._AC_UF480,480_SR480,480_.jpg"
+                    ],
+                    "rating": 5,
+                    "location": "carousel",
+                    "price_upper": 138.99,
+                    "reviews_count": 52,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 1,
+                    "asin": "B0CKGTYXCD",
+                    "type": "organic_also_viewed",
+                    "price": 26.99,
+                    "title": "Nature's Freedom 12% Hydrogen Peroxide, Food Grade H2O2 and Purified Water Only, 1 Gallon Solution",
+                    "images": [
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                        "https://m.media-amazon.com/images/I/41BPEDDCfdL._AC_SR100,100_QL65_.jpg"
+                    ],
+                    "rating": 4.8,
+                    "location": "carousel",
+                    "price_upper": 31.04,
+                    "reviews_count": 48,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 2,
+                    "asin": "B08DVFZTTG",
+                    "type": "organic_also_viewed",
+                    "price": 19.95,
+                    "title": "Washing Machine Cleaner Descaler 24 Pack - Deep Cleaning Tablets For HE Front Loader & Top Load Washer, Septic Safe Eco-Friendly Deodorizer, Clean Inside Drum and Laundry Tub Seal - 12 Month Supply",
+                    "images": [
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                        "https://m.media-amazon.com/images/I/61YuyeAcLCL._AC_SR100,100_QL65_.jpg"
+                    ],
+                    "rating": 4.6,
+                    "location": "carousel",
+                    "price_upper": 19.95,
+                    "reviews_count": 46,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 3,
+                    "asin": "B0FMRYNTJD",
+                    "type": "organic_also_viewed",
+                    "price": 19.9,
+                    "title": "GRIME LABS Ice Machine Cleaner Tablets Descaler – 24 Pack (1 Year Supply) – Nickel-Safe, Removes Mold & Improves Taste – Compatible with Countertop & Nugget Ice Makers",
+                    "images": [
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                        "https://m.media-amazon.com/images/I/51401YW8jpL._AC_SR100,100_QL65_.jpg"
+                    ],
+                    "rating": 4.7,
+                    "location": "carousel",
+                    "price_upper": 19.9,
+                    "reviews_count": 47,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 4,
+                    "asin": "B07YF3R66F",
+                    "type": "organic_also_viewed",
+                    "price": 94.05,
+                    "title": "Force of Nature Multi-Purpose Cleaner, Disinfectant & Deodorizer Year Supply Bundle - Reusable Bottle, 50 Refills - EPA Registered, Toxin-Free, All-Purpose Natural Cleaning Supplies",
+                    "images": [
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                        "https://m.media-amazon.com/images/I/41B7GWzri2L._AC_SR100,100_QL65_.jpg"
+                    ],
+                    "rating": 4.5,
+                    "location": "carousel",
+                    "price_upper": 99,
+                    "reviews_count": 45,
+                    "is_prime_eligible": false
+                },
+                {
+                    "pos": 5,
+                    "asin": "B0FPZ5LK9V",
+                    "type": "organic_also_viewed",
+                    "price": 18.99,
+                    "title": "Grout Solutions Grout Spray Professional and Cleaner 32 Oz (Spray Bottle, Hand Brush, Cap)",
+                    "images": [
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                        "https://m.media-amazon.com/images/I/31xuo05fAYL._AC_SR100,100_QL65_.jpg"
+                    ],
+                    "rating": 4.1,
+                    "location": "carousel",
+                    "price_upper": 18.99,
+                    "reviews_count": 41,
+                    "is_prime_eligible": false
+                }
+            ],
+            "url": "https://www.amazon.com/dp/B07YD8BFQC?language=en_US",
+            "asin": "B07YD8BFQC",
+            "page": 1,
+            "brand": "PURECHEM PROS",
+            "price": 26.1,
+            "stock": "In Stock",
+            "title": "Hydrogen Peroxide 12 Percent 1 Gallon - Multi-Surface Cleaner for Counters, Bathtubs, Floors, Carpets, Cold Plunge and More.",
+            "buybox": [
+                {
+                    "price": 26.1,
+                    "stock": "In Stock",
+                    "returns": "Non-returnable. Transportation of this item is subject to hazardous materials regulation",
+                    "condition": " One-time purchase: ",
+                    "seller_id": "AVIEEOMR5F52Q",
+                    "seller_url": "https://www.amazon.com/gp/help/seller/at-a-glance.html/ref=dp_merchant_link?ie=UTF8&seller=AVIEEOMR5F52Q&asin=B07YD8BFQC&ref_=dp_merchant_link&isAmazonFulfilled=1",
+                    "seller_name": "PureChemPros",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects.",
+                    "ships_from_name": "PureChemPros",
+                    "delivery_details": [
+                        {
+                            "date": {
+                                "by": "Thursday, December 11"
+                            },
+                            "type": "FREE delivery"
+                        },
+                        {
+                            "date": {
+                                "by": "Thursday, December 11"
+                            },
+                            "type": "FREE delivery"
+                        }
+                    ]
+                },
+                {
+                    "price": 24.79,
+                    "stock": "In Stock",
+                    "returns": "Non-returnable. Transportation of this item is subject to hazardous materials regulation",
+                    "condition": "    ",
+                    "seller_id": "AVIEEOMR5F52Q",
+                    "seller_url": "https://www.amazon.com/gp/help/seller/at-a-glance.html/ref=dp_merchant_link?ie=UTF8&seller=AVIEEOMR5F52Q&asin=B07YD8BFQC&ref_=dp_merchant_link&isAmazonFulfilled=1",
+                    "seller_name": "PureChemPros",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects.",
+                    "ships_from_name": "PureChemPros",
+                    "delivery_details": [
+                        {
+                            "date": {
+                                "by": "Thursday, December 11"
+                            },
+                            "type": "FREE delivery"
+                        },
+                        {
+                            "date": {
+                                "by": "Thursday, December 11"
+                            },
+                            "type": "FREE delivery"
+                        }
+                    ]
+                },
+                {
+                    "price": -1,
+                    "condition": " 2 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 3 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 1 month ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 5 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 6 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 7 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 2 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 3 months (Most common) ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 4 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 5 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 6 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 2 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 3 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 1 month ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 5 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 6 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 7 weeks ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 2 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 3 months (Most common) ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 4 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 5 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                },
+                {
+                    "price": -1,
+                    "condition": " 6 months ",
+                    "return_policy": "This item is non-returnable because of transportation regulation, but if the item arrives damaged or defective, you may request a refund or replacement through Your Orders by providing an image of the item and its defects."
+                }
+            ],
+            "coupon": "",
+            "images": [
+                "https://m.media-amazon.com/images/I/71v6CJ-hvvL._AC_SL1500_.jpg",
+                "https://m.media-amazon.com/images/I/714ZfDHBtmL._AC_SL1500_.jpg",
+                "https://m.media-amazon.com/images/I/61FMmDtN9NL._AC_SL1500_.jpg",
+                "https://m.media-amazon.com/images/I/611PJMpeElL._AC_SL1500_.jpg",
+                "https://m.media-amazon.com/images/I/81bmW9sQSUL._AC_SL1500_.jpg",
+                "https://m.media-amazon.com/images/I/61J+XIQxzUL._AC_SL1500_.jpg",
+                "https://m.media-amazon.com/images/I/612yktUIr2L._AC_SL1280_.jpg",
+                "https://m.media-amazon.com/images/I/51ovVtaEkUL._AC_SL1000_.jpg",
+                "https://m.media-amazon.com/images/I/51FhNn95Q8L._AC_SL1014_.jpg"
+            ],
+            "rating": 4.7,
+            "reviews": [
+                {
+                    "id": "R1OQ4RNL8G8I37",
+                    "title": "5.0 out of 5 stars Hydrogen peroxide",
+                    "author": "Reggie",
+                    "rating": 5,
+                    "content": "Great product I wanna get away from round up and glycinate mainly for the growing plants that I want it’s affecting their roots and hydrogen peroxide doesn’t",
+                    "timestamp": "Reviewed in the United States October 16, 2025",
+                    "profile_id": "AG4PIBP52TQF2UX52M7CK2SE6WNA",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                },
+                {
+                    "id": "RJRCF07AHWIIP",
+                    "title": "5.0 out of 5 stars Best cleaner actually kills bacteria and organic matter",
+                    "author": "stefanie",
+                    "rating": 5,
+                    "content": "I stopped buying those perfume cleaning products that just mask smells…this kills bacteria and if you add lemon or orange oil leaves behind a great scent. You can literally use it on anything make sure you wear gloves though lol",
+                    "timestamp": "Reviewed in the United States August 7, 2025",
+                    "profile_id": "AEX6QBN76BIRKBUDCSTRTTL5L3KQ",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                },
+                {
+                    "id": "R4QRAL78610N5",
+                    "title": "5.0 out of 5 stars Worked well for cotton not so well on polyester.",
+                    "author": "Kris D",
+                    "rating": 5,
+                    "content": "Sweater was used to soak up a lot blood from a head wound. Soaked it in this, according to directions and the blood stain came out. Did not work so well on polyester suit jacket.",
+                    "timestamp": "Reviewed in the United States August 2, 2025",
+                    "profile_id": "AGNTGKQ3CNDNA6YJ4VYX3VPTRC6Q",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                },
+                {
+                    "id": "R2MUE7HVPB73LU",
+                    "title": "5.0 out of 5 stars Got dogs? Get this",
+                    "author": "skeptic",
+                    "rating": 5,
+                    "content": "My windows come down low and I live in an established lovely neighborhood...aka lots of walkers which is wonderful for my dogs and neighbors but hell on the wood work n sills of my Many windows facing the street. I've used everything to clean with varying results but always lots of elbow grease. Getting holiday ready and after seeing a show on cleaning up after hoarders where they show how super peroxide works like a hot knife through butter on any organic mess regardless of the age of the mess I bought this stuff. It's amazing! No fall chemical fall out to worry about when I spray this on my baseboards and sills. Buy a Good spray bottle at like HD, not an old Windex bottle. I'm addicted to using this stuff now lol. I'm all over the place with my gloves, micro fiber towels water pail and spray bottle now. My dogs favorite look out point wiped clean with one application. Sill looks like I painted it! Bleach can't touch the effectiveness of this and no worries about getting it on my clothes. BTW...WEAR GLOVES like the label says. Got a drop on my arm and it felt like a fire ant bite. Also...my bathroom? Perfection, even those hard to reach tiny corners that had gunk in them forever. spray, wait, wipe and gone. Even the bathroom rug came back to new.",
+                    "timestamp": "Reviewed in the United States December 5, 2022",
+                    "profile_id": "AGJ7URXGVI5EUUVEAVE25V65PDDA",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "helpful_count": 31,
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                },
+                {
+                    "id": "R2ZNPCS1HFGG5Q",
+                    "title": "5.0 out of 5 stars Awesome",
+                    "author": "Roving rover",
+                    "rating": 5,
+                    "content": "I wish I'd known about this years ago. I got it when my mother had a recurring c. difficile infection and discovered that a 7% hydrogen peroxide solution was as good or better than bleach at killing this nasty bug. So I got this and diluted it slightly and put it in a spray bottle. So much better than having those horrible chlorine fumes, and I didn't have to worry about accidentally bleaching fabrics. My mother is all better and now I use this for all my bathroom cleaning.",
+                    "timestamp": "Reviewed in the United States December 18, 2024",
+                    "profile_id": "AH2DNDRMHTFO7A4LMFOSGNLB4NSA",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "helpful_count": 3,
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                },
+                {
+                    "id": "R3UTCY63T0L1VT",
+                    "title": "4.0 out of 5 stars Very helpful cleaning ingredient!",
+                    "author": "abell2fly",
+                    "rating": 4,
+                    "content": "I have used this as an ingredient in a diy cleaner recipe that has transformed my cleaning to take less strength and the cleaner has no toxic fumes.",
+                    "timestamp": "Reviewed in the United States August 4, 2025",
+                    "profile_id": "AFPFN4CFJ2FNCEXFXTIMGESHD7KA",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                },
+                {
+                    "id": "R371YGITY91J1N",
+                    "title": "5.0 out of 5 stars Food grade - great for cleaning so many things! Even an ice machine!",
+                    "author": "E. S.",
+                    "rating": 5,
+                    "content": "My favorite use for this stuff is to clean my ice machine. The self clean mode pulls it through the machine and tubes and kills any pink slime or whatever might be lurking. I use distilled water to minimize it, but this is great stuff to use for security! I've used it down the floor drain in my furnace room as well. Great for killing mold from constant water dripping.",
+                    "timestamp": "Reviewed in the United States October 29, 2024",
+                    "profile_id": "AGZC2LKQJW77V3PKTKDQDXPPSF5Q",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "helpful_count": 2,
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                },
+                {
+                    "id": "R3C9XMNS2Q484L",
+                    "title": "5.0 out of 5 stars Peroxide",
+                    "author": "Debbie - Plymouth MI",
+                    "rating": 5,
+                    "content": "I like this peroxide. It doesn't have a scent added.",
+                    "timestamp": "Reviewed in the United States April 26, 2025",
+                    "profile_id": "AE5O25GEOSHWZYZI6MAJPZZFEE2Q",
+                    "is_verified": true,
+                    "review_from": "Top reviews from the United States",
+                    "product_attributes": "Size: 128 Fl Oz (Pack of 1)"
+                }
+            ],
+            "category": [
+                {
+                    "ladder": [
+                        {
+                            "url": "/industrial-scientific-supplies/b/ref=dp_bc_1?ie=UTF8&node=16310091",
+                            "name": "Industrial & Scientific"
+                        },
+                        {
+                            "url": "/Janitorial-Sanitation-Supplies/b/ref=dp_bc_2?ie=UTF8&node=317971011",
+                            "name": "Janitorial & Sanitation Supplies"
+                        },
+                        {
+                            "url": "/commercial-cleaning-supplies/b/ref=dp_bc_3?ie=UTF8&node=3310240011",
+                            "name": "Cleaning Chemicals"
+                        },
+                        {
+                            "url": "/Commercial-All-Purpose-Cleaners/b/ref=dp_bc_4?ie=UTF8&node=3310241011",
+                            "name": "All-Purpose Cleaners"
+                        }
+                    ]
+                }
+            ],
+            "currency": "USD",
+            "delivery": [
+                {
+                    "date": {
+                        "by": "Thursday, December 11"
+                    },
+                    "type": "FREE delivery"
+                }
+            ],
+            "item_form": "Liquid",
+            "page_type": "Product",
+            "price_sns": 2,
+            "store_url": "/stores/PureChemPros/page/4CDDE7D6-2CF9-4C28-9C77-36D98B4EBAE4?lp_asin=B07YD8BFQC&ref_=ast_bln&store_ref=bl_ast_dp_brandLogo_sto",
+            "variation": [
+                {
+                    "asin": "B07YD8BFQC",
+                    "selected": true,
+                    "dimensions": {
+                        "Size": "128 Fl Oz (Pack of 1)"
+                    }
+                }
+            ],
+            "has_videos": false,
+            "sales_rank": [
+                {
+                    "rank": 35889,
+                    "ladder": [
+                        {
+                            "url": "/gp/bestsellers/industrial/ref=pd_zg_ts_industrial",
+                            "name": "Industrial & Scientific"
+                        }
+                    ]
+                },
+                {
+                    "rank": 143,
+                    "ladder": [
+                        {
+                            "url": "/gp/bestsellers/industrial/3310241011/ref=pd_zg_hrsr_industrial",
+                            "name": "Commercial All-Purpose Cleaners"
+                        }
+                    ]
+                }
+            ],
+            "asin_in_url": "B07YD8BFQC",
+            "buy_it_with": [
+                {
+                    "asin": "B01N49KQLQ",
+                    "price": 23.69,
+                    "title": "Hydrogen Peroxide H2O2 0-100 ppm Test Strip Kit, Low Level [Vial of 100 Strips]"
+                }
+            ],
+            "description": "Hydrogen peroxide, in its myriad forms such as hydrogen peroxide spray, 12% hydrogen peroxide, and 35% food grade hydrogen peroxide, stands as a testament to versatility in cleaning and maintenance realms. This remarkable compound, ranging from the milder food grade hydrogen peroxide 12 percent to the more robust 35 hydrogen peroxide, caters to a spectrum of needs. The utility of hydrogen peroxide spray bottle is evident in its ease of application, making it a staple in household and commercial settings. Whether it's for sprucing up public areas or maintaining cleanliness at home, the peroxide spray offers a practical solution. In particular, hydrogen peroxide 12% has gained popularity for its balanced efficacy, suitable for a variety of surfaces without the harshness of stronger chemicals. For tasks requiring a bit more vigor, such as carpet cleaning or tackling stubborn residues, higher concentrations like 30% hydrogen peroxide or hydrogen peroxide 35% come into play. These variants, including the specialized 35 food grade hydrogen peroxide, are designed for more challenging scenarios, offering robust cleaning capabilities. In the laundry sphere, hydrogen peroxide laundry applications are numerous. It serves as a natural alternative to traditional cleaning agents, helping to keep fabrics fresh and bright. The use of 12 hydrogen peroxide in laundry is particularly noted for its gentle yet effective cleaning properties. The role of hydrogen peroxide extends into the realm of food safety and preparation. Food grade hydrogen peroxide, particularly in concentrations like food grade hydrogen peroxide 3 percent, is utilized in food processing environments. It ensures that surfaces and equipment are maintained in a condition that is suitable for food handling, without resorting to harsh chemicals. The environmental profile of hydrogen peroxide is a key aspect of its appeal. As a friendly option, it breaks down into water and oxygen, aligning with the growing demand for sustainable cleaning solutions. This attribute is especially important in the context of hydrogen peroxide water treatment, where it contributes to environmental conservation efforts. For larger-scale applications, hydrogen peroxide is available in various formats, including hydrogen peroxide gallon containers, ensuring ample supply for extensive cleaning operations. This makes it a cost-effective and efficient solution for large-scale users, such as in industrial settings or for extensive public area maintenance.\nExpanding the scope of hydrogen peroxide's applications, we delve into its use in more specialized areas. The hydrogen peroxide 40%, known for its high concentration, serves specific purposes where a more potent solution is required. This includes tasks like water treatment, where hydrogen peroxide's oxidizing properties play a crucial role. In agricultural settings, hydrogen peroxide demonstrates its utility in a unique way. Products like hydrogen peroxide for plants have become popular for their effectiveness in maintaining plant health. The use of diluted hydrogen peroxide in gardening, particularly in concentrations like 8 percent hydrogen peroxide or 10% hydrogen peroxide, helps in supporting the growth of plants by providing a cleaner environment. The cleaning power of hydrogen peroxide is not limited to liquid forms. Innovations such as hydrogen peroxide gel and powdered hydrogen peroxide have broadened its use. These forms are particularly useful in scenarios where a more controlled application of hydrogen peroxide is necessary, such as in specific cleaning tasks or in certain industrial processes. Hydrogen peroxide's role in environmental management extends to various applications. For instance, hydrogen peroxide bulk quantities are used in large-scale water treatment processes. The use of concentrated hydrogen peroxide in these settings demonstrates its effectiveness in managing water quality, contributing to environmental sustainability efforts. In public spaces, hydrogen peroxide solutions like hydrogen peroxide spray cleaner and hydrogen peroxide floor cleaner are increasingly being used. These products ensure that areas such as public transportation, schools, and other communal spaces are maintained in a clean and presentable manner. The versatility of hydrogen peroxide, available in forms like 12% peroxide or even 40 volume hydrogen peroxide, makes it suitable for a wide range of public maintenance tasks.\nFor those seeking friendly options, products like food grade hydrogen peroxide 35% and oxygen peroxide 35 food grade offer solutions that align with sustainable practices. These variants of hydrogen peroxide are particularly favored in settings where environmental impact is a key consideration.\nThe packaging and distribution of hydrogen peroxide also cater to diverse needs. From small containers like hydrogen peroxide travel size to larger options like 5 gallon hydrogen peroxide and peroxide gallon, there is a format suitable for every requirement. This flexibility in packaging ensures that hydrogen peroxide is accessible for both personal and professional use, in quantities that are practical and efficient.\nIn summary, the extensive range of hydrogen peroxide products, from specialized high-concentration solutions to versatile forms like hydrogen peroxide cleaning spray, underscores its adaptability and effectiveness. Whether it's for agricultural use, large-scale environmental management, or maintaining public spaces, hydrogen peroxide offers a solution that is effective and conscious. Its continued evolution and application in various fields highlight its indispensable role in modern cleaning and maintenance practices.\nOur hydrogen peroxide is produced in the USA, allowing us to closely monitor quality and purity.\nAt 12%, this hydrogen peroxide is is extremely powerful. Your stains won't stand a chance!\nIngredients on other cleaning product labels can get confusing. This solution has zero stabilizers or additives, just simple H2O2.\nHydrogen Peroxide breaks down over time, making it a friendlier option for your family and the Earth.\nHydrogen peroxide, in its various forms, serves diverse purposes. As a hydrogen peroxide contact solution, it offers a safe way to maintain contact lenses. In pool maintenance, 35% hydrogen peroxide pool solutions ensure water cleanliness. Agriculturally, 35 food grade hydrogen peroxide organic is used for equipment cleaning, while 35 food grade peroxide caters to other farming needs. Hair care sees the use of peroxide 20 volume for hair and salon 40 hydrogen peroxide for coloring. For friendly home cleaning, 5% hydrogen peroxide is a popular choice. In larger quantities, 35 percent hydrogen peroxide gallon containers are used for extensive agricultural and industrial applications.\nHydrogen peroxide's versatility extends to industrial cleaning and personal care. Industrial peroxide, particularly in concentrations like 40% peroxide and 40% volume hydrogen peroxide, is crucial for heavy-duty cleaning tasks. In homes, hydrogen peroxide for laundry and hydrogen peroxide toilet bowl cleaner are effective for daily chores. Gardeners use hydrogen peroxide for plants insects, ensuring plant health. Food grade hydrogen peroxide 35 percent, especially in organic forms like food grade hydrogen peroxide 35 percent organic, is safe for food processing areas. For water treatment, 35% hydrogen peroxide solution and 30 h2o2 are employed in purification processes. In hair care, peroxide 40 volume and peroxide hydrogen 35 food grade are used for professional coloring and bleaching.\n35% hydrogen peroxide food grade undiluted is essential for pool maintenance, ensuring water clarity. In agriculture, 35 percent hydrogen peroxide food grade is used for equipment, while 35 food grade hydrogen peroxide 1 gallon serves larger farming needs. For extensive applications, 5 gallon peroxide is ideal. In hair care, peroxido 20 volumenes and salon hydrogen peroxide are used for coloring. Hydrogen peroxide for cleaning, available as hydrogen peroxide 10% and 20%, offers friendly solutions. Gardeners use hydrogen peroxide for plants insects. For water treatment, 35% hydrogen peroxide solution and 30 hydrogen peroxide are employed in purification and educational activities.\nContinuing with the diverse uses of hydrogen peroxide, its role in industrial applications is significant. Industrial peroxide, particularly in higher concentrations like 40% peroxide and 40% volume hydrogen peroxide, is vital for heavy-duty cleaning tasks in manufacturing and processing plants. In homes, hydrogen peroxide for laundry and hydrogen peroxide toilet bowl cleaner are effective for daily chores. Gardeners use hydrogen peroxide for plants insects, ensuring plant health. Food grade hydrogen peroxide 35 percent, especially in its organic form, is used in food processing areas, ensuring safe and chemical-free cleaning.\nFor water treatment, 35% hydrogen peroxide solution and 30 h2o2 are employed in large-scale purification processes, aiding in the management of water quality. In hair care, peroxide 40 volume and peroxide hydrogen 35 food grade are used for professional coloring and bleaching, demonstrating the compound's versatility.\nHydrogen peroxide 35%, with its high concentration and potent cleaning capabilities, stands as a powerful tool in the realm of advanced cleaning and industrial use. This particular concentration, often referred to as 35 food grade hydrogen peroxide or simply 35% hydrogen peroxide, offers a range of benefits for more demanding cleaning tasks. In industrial settings, the efficacy of hydrogen peroxide 35% is unparalleled, especially in areas where thorough cleaning is paramount. Its oxidizing properties make it an excellent choice for breaking down tough residues and build-ups. This is particularly beneficial in manufacturing plants, where machinery and surfaces often accumulate stubborn substances that can hinder operational efficiency. The use of hydrogen peroxide 35% extends to large-scale water treatment processes. In this context, its role is crucial in managing water quality, especially in industrial wastewater treatment. The compound helps in breaking down organic compounds in the water, contributing to the overall improvement of water quality before it is released back into the environment or reused in industrial processes. In the realm of carpet cleaning, hydrogen peroxide 35% demonstrates its versatility. It can be used as a carpet cleaning solution, effectively tackling stains and odors without leaving harmful residues. This makes it a suitable choice for commercial spaces where maintaining a clean and presentable environment is essential. Hydrogen peroxide 35% also finds its application in various forms of environmental management. It is used in processes that require a robust solution for managing pollutants and impurities. In these scenarios, the compound's ability to break down into water and oxygen post-application is a significant advantage, aligning with environmental sustainability goals. For large-scale cleaning operations, the availability of hydrogen peroxide in bulk, such as hydrogen peroxide gallon or even 5 gallon hydrogen peroxide containers, ensures that there is always an ample supply. This is beneficial for industries and institutions that require a consistent and reliable source of cleaning agents. In addition to its primary cleaning functions, hydrogen peroxide 35% is utilized in specific industrial processes. For instance, in certain manufacturing operations, it is used as a processing agent due to its reactive properties. This underscores the compound's versatility beyond conventional cleaning applications. The packaging of hydrogen peroxide 35% is designed to cater to various needs. From smaller containers like hydrogen peroxide 1 gallon to larger formats like hydrogen peroxide 5 gallon, users can choose the quantity that best suits their requirements. This flexibility in packaging ensures that hydrogen peroxide is accessible for both small-scale and large-scale users, making it a practical and efficient solution. Hydrogen peroxide 35%, with its potent concentration and versatile applications, is an invaluable asset in advanced cleaning and industrial use. Whether it's for tackling challenging cleaning tasks, managing water quality, or being utilized in industrial processes, hydrogen peroxide 35% offers a solution that combines efficacy with practicality. Its role in various industrial and environmental management scenarios highlights its importance as a staple in modern cleaning and maintenance practices.\nContinuing the exploration of hydrogen peroxide 35%'s applications, its utility in the field of agriculture is noteworthy. In this sector, hydrogen peroxide is used in water treatment for irrigation, ensuring that the water is suitable for crop cultivation. This application is crucial for maintaining the health of crops and ensuring that agricultural practices are sustainable and efficient. In the realm of food preservation and processing, hydrogen peroxide demonstrates its versatility and effectiveness. Food grade hydrogen peroxide, especially in concentrations like 35% hydrogen peroxide food grade, is used to wash fruits and vegetables. This process helps in removing residues from the surfaces of produce, thereby contributing to the overall quality and safety of the food. Hydrogen peroxide also finds its place in the world of aquaculture. It is used in maintaining water quality in fish farms, helping to manage the oxygen levels in the water. This is vital for the health and well-being of aquatic life, ensuring that the conditions in fish farms are optimal for growth and development.\nIn the field of environmental management, hydrogen peroxide is employed in various water treatment processes. It is used in the treatment of wastewater, where its oxidizing properties help in breaking down organic compounds. This process is essential for reducing the environmental impact of wastewater, making it safer to return to natural water bodies.\nThe use of hydrogen peroxide in cleaning and maintenance extends to public spaces and institutions. It is utilized in cleaning public transport, educational institutions, and other communal areas. Its effectiveness in these settings is due to its ability to clean surfaces thoroughly, contributing to the overall cleanliness and maintenance of these spaces.\nHydrogen peroxide's role in carpet cleaning is another area where its benefits shine. As a carpet cleaning solution, it effectively tackles stains and odors, leaving carpets looking refreshed and well-maintained. For those seeking friendly options, products like food grade hydrogen peroxide 35% and oxygen peroxide 35 food grade offer solutions that align with sustainable practices. These variants of hydrogen peroxide are particularly favored in settings where environmental impact is a key consideration. The packaging and distribution of hydrogen peroxide also cater to diverse needs. From small containers like hydrogen peroxide travel size to larger options like 5 gallon hydrogen peroxide and peroxide gallon, there is a format suitable for every requirement.\nExploring further, the role of food grade hydrogen peroxide in agricultural practices is noteworthy. Utilized in concentrations such as food grade hydrogen peroxide 12% and food grade hydrogen peroxide 3 percent, it aids in ensuring the cleanliness of equipment used in farming, contributing to healthier crop production. In the arena of environmental sustainability, hydrogen peroxide solutions, particularly variants like h2o2 hydrogen peroxide and food-grade hydrogen peroxide, play a crucial role. These are employed in friendly water treatment processes, aiding in the purification of water for various uses, including agricultural irrigation and industrial applications. The use of peroxide in industrial cleaning is also significant. Concentrations like 35% hydrogen peroxide and 40% hydrogen peroxide are particularly effective for heavy-duty cleaning tasks in manufacturing and processing plants. These higher concentrations, such as 35 hydrogen peroxide and 40 percent hydrogen peroxide, offer powerful cleaning capabilities, essential in maintaining industrial equipment and facilities. In commercial settings, products like hydrogen peroxide cleaner and peroxide cleaner spray have become indispensable tools. They are used for maintaining cleanliness in spaces such as offices, schools, and public transport, ensuring a clean environment in high-traffic areas. The versatility of hydrogen peroxide extends to its various forms. Hydrogen peroxide gel, for instance, offers a more controlled application, useful in specific cleaning tasks where precision is required. Similarly, the convenience of a hydrogen peroxide spray bottle makes it a popular choice for quick and easy cleaning tasks. For larger-scale needs, the availability of hydrogen peroxide in bulk, such as hydrogen peroxide gallon or 5 gallon hydrogen peroxide, ensures a consistent supply for extensive cleaning operations. This is particularly beneficial for large institutions and industrial settings where a high volume of cleaning agent is required regularly. The extensive range of hydrogen peroxide products, from food-grade solutions to industrial-strength concentrations, highlights its adaptability and effectiveness. Whether it's for agricultural use, environmental management, industrial cleaning, or maintaining public spaces, hydrogen peroxide offers a solution that is both effective and versatile. Its continued application across various fields underscores its indispensable role in modern maintenance and cleaning practices.\nMoving beyond traditional applications, hydrogen peroxide demonstrates its versatility in various specialized uses. In the field of aquaculture, for instance, products like hydrogen peroxide for plants and hydrogen peroxide for nebulizer systems play a crucial role. These applications leverage the compound's properties to maintain optimal conditions in aquatic environments, contributing to the health and growth of aquatic life.\nIn the realm of carpet cleaning, hydrogen peroxide-based solutions, such as carpet cleaning solution with hydrogen peroxide, offer effective stain removal and refreshing of fabrics without the use of harsh chemicals. This makes it an ideal choice for both residential and commercial settings, where maintaining a clean and presentable environment is essential. Hydrogen peroxide's role in water treatment extends to large-scale applications as well. Here, variants like 30% hydrogen peroxide and 35% hydrogen peroxide are used in more demanding scenarios, such as in industrial wastewater treatment facilities. These higher concentrations, including 30 percent hydrogen peroxide and hydrogen peroxide 35 percent solution, are effective in managing water quality, ensuring that it meets safety and environmental standards.\nIn industrial cleaning, the efficacy of hydrogen peroxide is unmatched, especially in concentrations like 40 volume peroxide and 35 food grade hydrogen peroxide. These high-strength solutions are capable of tackling tough industrial residues, making them indispensable in maintaining machinery and production areas.\nThe adaptability of hydrogen peroxide is further evident in its various packaging options. From smaller, convenient packages like hydrogen peroxide travel size to larger quantities like peroxide gallon and hydrogen peroxide gallon jug, it caters to a wide range of needs. This flexibility ensures that hydrogen peroxide is accessible for both individual and industrial-scale use.\nMoreover, hydrogen peroxide finds its use in environmental conservation efforts. Products like food grade hydrogen peroxide 35 percent and hydrogen peroxide 35 food grade are employed in friendly practices, aligning with the growing emphasis on sustainable and responsible use of cleaning agents.\nIn public maintenance, hydrogen peroxide solutions are used for cleaning and maintaining communal spaces. This includes the use of hydrogen peroxide spray cleaner and hydrogen peroxide floor cleaner in public transportation systems, educational institutions, and other high-traffic areas, ensuring these spaces are kept clean and hygienic.\nIn conclusion, the broad spectrum of applications for hydrogen peroxide, especially in its 12% formulation, underscores its versatility and effectiveness. From specialized industrial uses to everyday cleaning and maintenance, hydrogen peroxide provides a reliable, efficient, and friendly solution. Its wide range of forms and concentrations ensures that there is a hydrogen peroxide product suitable for virtually any cleaning or maintenance need, highlighting its indispensable role in various sectors.",
+            "parent_asin": "B081GH1TQV",
+            "price_upper": 26.1,
+            "pricing_str": "New (5) from $26.10$26.10 & FREE Shipping",
+            "pricing_url": "https://www.amazon.com/gp/offer-listing/B07YD8BFQC/ref=dp_olp_NEW_mbc?ie=UTF8&condition=NEW",
+            "manufacturer": "PureChemPros",
+            "max_quantity": 30,
+            "price_buybox": 26.1,
+            "product_name": "Hydrogen Peroxide 12 Percent 1 Gallon - Multi-Surface Cleaner for Counters, Bathtubs, Floors, Carpets, Cold Plunge and More.",
+            "sales_volume": "100+ bought",
+            "amazon_choice": true,
+            "bullet_points": "Food Grade Cleaner : Choose our hydrogen peroxide food grade for a high-quality, versatile solution. 12% food grade hydrogen peroxide is safe, strong and pure. Great for elephant toothpaste.\nHigh Concentration Hydrogen Peroxide : Experience the power of hydrogen peroxide 12%, created from 35% food grade hydrogen peroxide, this agua oxigenada is a strong and versatile cleaner.\nEco-Friendly: Create a hydrogen peroxide spray from our 12% percent hydrogen peroxide. A Peroxide cleaner spray evaporates and leaves nothing behind. Concentrated hydrogen peroxide should be diluted.\nCold Plunge Cleaner Perfection: Elevate your cold plunge water treatment with 35% hydrogen peroxide diluted to, designed to enhance your wellness routine with its exceptional purity and effectiveness.\nFood Grade Hydrogen Peroxide 12% : Sometimes called accelerated hydrogen peroxide is equivalent to a hydrogen peroxide 30 percent solution for most applications. 12 hydrogen peroxide is very strong.",
+            "other_sellers": "New (5) from    $26.10   & FREE Shipping",
+            "price_initial": 0,
+            "pricing_count": 1,
+            "reviews_count": 402,
+            "sns_discounts": [],
+            "developer_info": [],
+            "price_per_unit": {
+                "unit": "fluid ounce",
+                "price": 0.2,
+                "currency": "USD"
+            },
+            "price_shipping": 0,
+            "product_details": {
+                "asin": "B07YD8BFQC",
+                "manufacturer": "Purechem Pros",
+                "best_sellers_rank": "#143 in Commercial All-Purpose Cleaners",
+                "item_model_number": "PCPFG121G",
+                "product_dimensions": "6 x 6 x 11.5 inches; 8 Pounds",
+                "date_first_available": "September 26, 2019"
+            },
+            "featured_merchant": {
+                "link": "/gp/help/seller/at-a-glance.html/ref=dp_merchant_link?ie=UTF8&seller=AVIEEOMR5F52Q&asin=B07YD8BFQC&ref_=dp_merchant_link&isAmazonFulfilled=1",
+                "name": "PureChemPros",
+                "seller_id": "AVIEEOMR5F52Q",
+                "shipped_from": "Amazon",
+                "is_amazon_fulfilled": true
+            },
+            "is_prime_eligible": true,
+            "parse_status_code": 12000,
+            "review_ai_summary": "Customers find the hydrogen peroxide effective, with one mentioning it works well against bacteria and fungi, and another noting its success in killing mold from constant water dripping. The product receives positive feedback for its quality, with one customer highlighting its effectiveness for laundry and carpet care. Opinions are mixed regarding the scent, with some customers reporting that the odor is completely gone while others mention it has a strong smell. Customers disagree on whether the product produces bubbles.",
+            "product_dimensions": "6 x 6 x 11.5 inches; 8 Pounds",
+            "discount_percentage": 5,
+            "price_strikethrough": 26.1,
+            "important_information": [
+                {
+                    "title": "Ingredients",
+                    "description": "Water, Food Grade Hydrogen Peroxide"
+                },
+                {
+                    "title": "Legal Disclaimer",
+                    "description": "Statements regarding dietary supplements have not been evaluated by the FDA and are not intended to diagnose, treat, cure, or prevent any disease or health condition."
+                }
+            ],
+            "answered_questions_count": 0,
+            "rating_stars_distribution": [
+                {
+                    "rating": 5,
+                    "percentage": 85
+                },
+                {
+                    "rating": 4,
+                    "percentage": 8
+                },
+                {
+                    "rating": 3,
+                    "percentage": 3
+                },
+                {
+                    "rating": 2,
+                    "percentage": 2
+                },
+                {
+                    "rating": 1,
+                    "percentage": 2
+                }
+            ]
+        },
+        "created_at": "2025-12-05 05:43:26",
+        "updated_at": "2025-12-05 05:43:31",
+        "page": 1,
+        "url": "https://www.amazon.com/dp/B07YD8BFQC?language=en_US",
+        "is_render_forced": false,
+        "status_code": 200,
+        "type": "parsed",
+        "parser_type": "",
+        "parser_preset": null,
+        "task_id": "7402583361211895809"
+    }
+]
