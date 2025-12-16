@@ -1,0 +1,76 @@
+services:
+  # FastAPI API Server
+  api:
+    build: .
+    container_name: llm-api
+    env_file:
+      - .env.local
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ENVIRONMENT=development
+      - TZ=America/New_York
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./migrations:/app/migrations
+    depends_on:
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - llm-network
+
+  # Celery Worker
+  worker:
+    build: .
+    container_name: llm-worker
+    env_file:
+      - .env.local
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ENVIRONMENT=development
+      - TZ=America/New_York
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      - redis
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    networks:
+      - llm-network
+
+  # Redis (Message Broker)
+  redis:
+    image: redis:7-alpine
+    container_name: llm-redis
+    ports:
+      - "6379:6379"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - redis-data:/data
+    networks:
+      - llm-network
+
+  # Celery Flower (Monitoring Dashboard)
+  flower:
+    build: .
+    container_name: llm-flower
+    env_file:
+      - .env.local
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - TZ=America/New_York
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    command: celery -A app.celery_app flower --port=5555
+    networks:
+      - llm-network
+
+volumes:
+  redis-data:
+
+networks:
+  llm-network:
+    driver: bridge
