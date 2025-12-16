@@ -52,7 +52,7 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
 
   const openEditModal = (supplier: any) => {
     setEditingSupplier(supplier);
-    setLogoUrl(supplier.logo_url);
+    setLogoUrl(supplier.logoUrl);
     setIsModalOpen(true);
   };
 
@@ -132,8 +132,8 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
           <div key={supplier.id} className="bg-card border border-border rounded-xl p-6 hover:border-primary/20 transition-colors flex flex-col h-full relative overflow-hidden shadow-sm">
              {/* Logo Background / Header */}
              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                 {supplier.logo_url ? (
-                     <img src={supplier.logo_url} alt="" className="w-32 h-32 object-contain" />
+                 {supplier.logoUrl ? (
+                     <img src={supplier.logoUrl} alt="" className="w-32 h-32 object-contain" />
                  ) : (
                      <Factory className="w-32 h-32 text-muted-foreground" />
                  )}
@@ -141,8 +141,8 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
 
             <div className="flex justify-between items-start mb-4 relative z-10">
               <div className="flex items-center gap-3">
-                  {supplier.logo_url ? (
-                      <img src={supplier.logo_url} alt={supplier.name} className="w-12 h-12 rounded-lg object-cover bg-background p-1 border border-border" />
+                  {supplier.logoUrl ? (
+                      <img src={supplier.logoUrl} alt={supplier.name} className="w-12 h-12 rounded-lg object-cover bg-background p-1 border border-border" />
                   ) : (
                       <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center border border-border">
                           <Factory className="w-6 h-6 text-muted-foreground" />
@@ -151,22 +151,22 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                   <div>
                       <h3 className="text-xl font-semibold text-foreground truncate pr-2">{supplier.name}</h3>
                       <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide ${
-                        (supplier.fulfillment_type === 'dropship' || supplier.fulfillment_type === 'DROP_SHIP')
+                        (supplier.fulfillmentType === 'dropship' || supplier.fulfillmentType === 'DROP_SHIP')
                           ? 'bg-primary/10 text-primary border border-primary/20'
                           : 'bg-success/10 text-success border border-success/20'
                       }`}>
-                        {supplier.fulfillment_type === 'dropship' ? 'DROP-SHIP' : supplier.fulfillment_type === 'affiliate' ? 'AFFILIATE' : supplier.fulfillment_type}
+                        {supplier.fulfillmentType === 'dropship' ? 'DROP-SHIP' : supplier.fulfillmentType === 'affiliate' ? 'AFFILIATE' : supplier.fulfillmentType}
                       </span>
                   </div>
               </div>
             </div>
 
             <div className="space-y-2 text-sm text-muted-foreground flex-grow relative z-10 pl-1">
-              {supplier.website_url && (
+              {supplier.websiteUrl && (
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 shrink-0 text-muted-foreground" />
-                  <a href={supplier.website_url} target="_blank" rel="noopener noreferrer" className="hover:text-primary truncate underline decoration-dotted decoration-border underline-offset-2">
-                    {supplier.website_url}
+                  <a href={supplier.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary truncate underline decoration-dotted decoration-border underline-offset-2">
+                    {supplier.websiteUrl}
                   </a>
                 </div>
               )}

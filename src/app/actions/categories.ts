@@ -102,6 +102,33 @@ export async function updateCategory(
 
 export async function deleteCategory(id: string): Promise<{ success: boolean; message?: string }> {
   try {
+    // Check for child categories that would become orphaned
+    const [childCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(categories)
+      .where(eq(categories.parentId, id));
+
+    if (childCount.count > 0) {
+      return {
+        success: false,
+        message: `Cannot delete: ${childCount.count} subcategories must be moved or deleted first`
+      };
+    }
+
+    // Check for master items that would lose their category
+    const [itemCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(masterItems)
+      .where(eq(masterItems.categoryId, id));
+
+    if (itemCount.count > 0) {
+      return {
+        success: false,
+        message: `Cannot delete: ${itemCount.count} master items must be moved or deleted first`
+      };
+    }
+
+    // Safe to delete - no dependencies exist
     await db.delete(categories).where(eq(categories.id, id));
 
     revalidatePath('/admin/categories');

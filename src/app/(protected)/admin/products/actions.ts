@@ -57,14 +57,16 @@ export async function getMasterItems() {
         name: masterItems.name,
         categoryId: masterItems.categoryId,
         description: masterItems.description,
+        status: masterItems.status,
         timeframes: masterItems.timeframes,
         demographics: masterItems.demographics,
         locations: masterItems.locations,
         scenarios: masterItems.scenarios,
+        createdAt: masterItems.createdAt,
       })
       .from(masterItems)
       .orderBy(masterItems.name);
-    
+
     return data;
   }
 

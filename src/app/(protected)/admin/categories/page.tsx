@@ -224,7 +224,7 @@ export default function CategoryManager() {
     const [selectedCat, setSelectedCat] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingDescription, setEditingDescription] = useState<{id: string, name: string, description: string, icon: string} | null>(null);
+    const [editingDescription, setEditingDescription] = useState<{id: string, name: string, description: string, icon: string, createdAt: Date} | null>(null);
     
     // Actions
     const [isCreating, setIsCreating] = useState(false);
@@ -588,6 +588,7 @@ export default function CategoryManager() {
     const handleUpdateDescription = async () => {
         if (!editingDescription) return;
         const res = await updateCategory(editingDescription.id, {
+            name: editingDescription.name,
             description: editingDescription.description,
             icon: editingDescription.icon
         });
@@ -787,7 +788,7 @@ export default function CategoryManager() {
                                            })(tree, contextMenu.categoryId);
 
                                 if (cat) {
-                                    setEditingDescription({ id: cat.id, name: cat.name, description: cat.description || '', icon: cat.icon || '🗂️' });
+                                    setEditingDescription({ id: cat.id, name: cat.name, description: cat.description || '', icon: cat.icon || '🗂️', createdAt: cat.createdAt });
                                     setContextMenu(prev => ({ ...prev, visible: false }));
                                 }
                             }
@@ -1092,15 +1093,27 @@ export default function CategoryManager() {
 
             {/* Edit Category Dialog */}
             <Dialog open={!!editingDescription} onOpenChange={(open) => !open && setEditingDescription(null)}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Edit Category: {editingDescription?.name}</DialogTitle>
+                        <DialogTitle>Edit Category</DialogTitle>
                         <DialogDescription>
-                            Update the category icon and description.
+                            Update the category name, icon, and description.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
+                        {/* Name Field */}
+                        <div>
+                            <label htmlFor="edit-name" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Name *</label>
+                            <Input
+                                id="edit-name"
+                                value={editingDescription?.name || ''}
+                                onChange={e => setEditingDescription(prev => prev ? {...prev, name: e.target.value} : null)}
+                                placeholder="Category Name"
+                            />
+                        </div>
+
+                        {/* Icon Picker */}
                         <div>
                             <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Icon</label>
                             <div className="flex items-center gap-3">
@@ -1123,6 +1136,21 @@ export default function CategoryManager() {
                             </div>
                         </div>
 
+                        {/* Slug Preview (Read-only) */}
+                        <div>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">URL Slug (Auto-generated)</label>
+                            <div className="text-sm text-muted-foreground font-mono bg-muted p-2 rounded border border-border">
+                                {editingDescription?.name
+                                    .toLowerCase()
+                                    .replace(/\s+/g, '-')
+                                    .replace(/[^a-z0-9-]/g, '') || 'preview-slug'}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Used in URLs and API endpoints
+                            </p>
+                        </div>
+
+                        {/* Description Field */}
                         <div>
                             <label htmlFor="edit-desc" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Description</label>
                             <Textarea
@@ -1133,14 +1161,29 @@ export default function CategoryManager() {
                                 className="h-32"
                             />
                         </div>
+
+                        {/* Creation Date (Read-only) */}
+                        <div>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Created</label>
+                            <div className="text-sm text-muted-foreground">
+                                {editingDescription?.createdAt
+                                    ? new Date(editingDescription.createdAt).toLocaleString()
+                                    : 'Unknown'}
+                            </div>
+                        </div>
                     </div>
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setEditingDescription(null)}>
                             Cancel
                         </Button>
-                        <Button type="button" onClick={handleUpdateDescription} className="bg-blue-600 hover:bg-blue-700 text-white">
-                            Save
+                        <Button
+                            type="button"
+                            onClick={handleUpdateDescription}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            disabled={!editingDescription?.name?.trim()}
+                        >
+                            Save Changes
                         </Button>
                     </DialogFooter>
                 </DialogContent>

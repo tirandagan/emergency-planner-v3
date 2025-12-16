@@ -31,16 +31,10 @@ if (process.env.NODE_ENV === 'production') {
     idle_timeout: 20, // Close idle connections after 20 seconds
     max_lifetime: 60 * 30, // Close connections after 30 minutes
     connect_timeout: 10, // 10 second connection timeout
+    statement_timeout: 10000, // 10 second statement timeout
     fetch_types: false, // Disable fetching types from DB (performance)
-    debug: (connection, query, params) => {
-      console.log(`[DB] Query: ${query?.slice(0, 100)}...`);
-    },
-    onnotice: (notice) => {
-      console.log(`[DB] Notice: ${notice.message}`);
-    },
   });
   db = drizzle(queryClient, { schema });
-  console.log('[DB] Production connection pool initialized (max: 10)');
 } else {
   // Development: use singleton to avoid connection exhaustion with hot reloading
   if (!global.__queryClient) {
@@ -49,16 +43,9 @@ if (process.env.NODE_ENV === 'production') {
       max: 3, // Increase to 3 connections in development to prevent exhaustion
       idle_timeout: 20,
       connect_timeout: 30, // 30 second connection timeout (shared pooler can be slower)
+      statement_timeout: 10000, // 10 second statement timeout
       fetch_types: false, // Disable fetching types from DB (performance)
-      debug: (connection, query, params) => {
-        const queryPreview = query?.slice(0, 150) || 'unknown';
-        console.log(`[DB] Query: ${queryPreview}${query && query.length > 150 ? '...' : ''}`);
-      },
-      onnotice: (notice) => {
-        console.log(`[DB] Notice: ${notice.message}`);
-      },
     });
-    console.log('[DB] Development connection pool initialized (max: 3)');
   }
   queryClient = global.__queryClient;
 
