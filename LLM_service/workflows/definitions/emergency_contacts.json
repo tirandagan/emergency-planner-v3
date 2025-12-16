@@ -1,0 +1,31 @@
+{
+  "name": "emergency_contacts",
+  "version": "1.0.0",
+  "description": "Generate personalized emergency contact recommendations based on location, scenarios, and provided data sources",
+  "steps": [
+    {
+      "id": "generate_contacts",
+      "type": "llm",
+      "config": {
+        "model": "anthropic/claude-3.5-sonnet",
+        "prompt_template": "emergency-contacts/workflow-prompt.md",
+        "temperature": 0.7,
+        "max_tokens": 4000,
+        "variables": {
+          "city": "${input.city}",
+          "state": "${input.state}",
+          "country": "${input.country}",
+          "scenarios": "${input.scenarios}",
+          "family_size": "${input.family_size}",
+          "duration": "${input.duration}",
+          "user_tier": "${input.user_tier}",
+          "static_contacts": "${input.static_contacts}",
+          "google_places": "${input.google_places}"
+        }
+      },
+      "error_mode": "fail"
+    }
+  ],
+  "default_error_mode": "fail",
+  "timeout_seconds": 300
+}

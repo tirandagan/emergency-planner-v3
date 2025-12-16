@@ -272,14 +272,24 @@ class TransformStepConfig(BaseModel):
         description="Transformation operation name (extract_fields, filter, map, etc.)"
     )
 
-    input_path: str = Field(
-        ...,
-        description="Path to input data (e.g., '${steps.llm.output.content}')"
+    input: Optional[str] = Field(
+        default=None,
+        description="Input data path (e.g., '${steps.llm.output.content}', omit to use entire context)"
     )
 
-    parameters: Dict[str, Any] = Field(
+    config: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Operation-specific parameters"
+        description="Operation-specific configuration parameters"
+    )
+
+    error_mode: Optional[ErrorMode] = Field(
+        default=None,
+        description="Error handling mode (overrides workflow default)"
+    )
+
+    default_value: Any = Field(
+        default=None,
+        description="Default value to return if transformation fails (used with error_mode='default')"
     )
 
     class Config:
@@ -287,9 +297,20 @@ class TransformStepConfig(BaseModel):
             "examples": [
                 {
                     "operation": "markdown_to_json",
-                    "input_path": "${steps.generate_analysis.output.content}",
-                    "parameters": {
-                        "sections": ["Emergency Contacts Analysis", "Meeting Locations"]
+                    "input": "${steps.generate_analysis.output.content}",
+                    "config": {
+                        "schema": "emergency_contacts"
+                    },
+                    "error_mode": "fail"
+                },
+                {
+                    "operation": "extract_fields",
+                    "input": "${steps.fetch_data.output}",
+                    "config": {
+                        "paths": {
+                            "name": "user.name",
+                            "email": "user.email"
+                        }
                     }
                 }
             ]

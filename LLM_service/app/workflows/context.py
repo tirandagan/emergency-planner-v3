@@ -284,6 +284,15 @@ class WorkflowContext:
             "context": self.variables
         }
 
+    def get_all_data(self) -> Dict[str, Any]:
+        """
+        Get all context data (alias for to_dict()).
+
+        Returns:
+            Dict with input, steps, and context namespaces
+        """
+        return self.to_dict()
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkflowContext":
         """

@@ -1,0 +1,22 @@
+{
+  "name": "test_simple",
+  "version": "1.0.0",
+  "description": "Simple test workflow for integration testing",
+  "steps": [
+    {
+      "id": "greet",
+      "type": "llm",
+      "config": {
+        "model": "anthropic/claude-3-haiku",
+        "prompt_template": "test/hello.md",
+        "temperature": 0.7,
+        "max_tokens": 100,
+        "variables": {
+          "name": "${input.name}",
+          "location": "${input.location}"
+        }
+      }
+    }
+  ],
+  "timeout_seconds": 60
+}

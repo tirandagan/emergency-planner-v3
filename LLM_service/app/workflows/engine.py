@@ -26,10 +26,12 @@ from app.workflows.schema import (
     WorkflowStep,
     StepType,
     ErrorMode,
+    TransformStepConfig,
 )
 from app.workflows.context import WorkflowContext
 from app.workflows.prompt_loader import PromptLoader
 from app.workflows.llm_executor import LLMStepExecutor, LLMStepExecutionError
+from app.workflows.transform_executor import execute_transform_step
 from app.services import LLMResponse
 
 logger = logging.getLogger(__name__)
@@ -383,9 +385,9 @@ class WorkflowEngine:
 
             elif step.type == StepType.TRANSFORM:
                 # Phase 4: Transform step execution
-                raise NotImplementedError(
-                    f"Transform steps not implemented (step '{step.id}')"
-                )
+                config = TransformStepConfig(**step.config)
+                result = await execute_transform_step(step.id, config, context)
+                return result["output"]
 
             elif step.type == StepType.EXTERNAL_API:
                 # Phase 5: External API step execution
