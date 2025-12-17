@@ -15,7 +15,7 @@ services:
 
     # Build configuration
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: node .next/standalone/server.js
 
     # Health check
     healthCheckPath: /api/health
