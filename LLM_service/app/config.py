@@ -56,6 +56,36 @@ class Settings(BaseSettings):
         ..., validation_alias="NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY"
     )
 
+    # WeatherAPI (alias to match main app's env var name)
+    WEATHERAPI_API_KEY: str = Field(
+        default="",  # Optional for development
+        validation_alias="NEXT_PUBLIC_WEATHERAPI_API_KEY"
+    )
+    WEATHERAPI_BASE_URL: str = "https://api.weatherapi.com/v1"
+
+    # External Services Configuration
+    RATE_LIMIT_PER_USER: int = 10
+    RATE_LIMIT_GLOBAL: int = 100
+    CACHE_TTL_DEFAULT: int = 604800  # 7 days
+    CACHE_MEMORY_SIZE: int = 500
+
+    # Webhook Configuration
+    LLM_WEBHOOK_SECRET: str = "default-webhook-secret-change-in-production"
+    WEBHOOK_TIMEOUT: int = 30  # seconds
+    WEBHOOK_MAX_RETRIES: int = 3
+    WEBHOOK_RETRY_DELAYS: str = "5,15,45"  # comma-separated seconds
+
+    # Email Configuration (Resend API) - Optional for development
+    RESEND_API_KEY: str = ""
+    FROM_EMAIL: str = "noreply@example.com"
+    ADMIN_EMAIL: str = "admin@example.com"
+
+    # Error Handling Configuration
+    DEBUG_MODE: bool = Field(
+        default=False,
+        description="Enable debug mode (includes stack traces in error context). Set to true in development, false in production."
+    )
+
     class Config:
         env_file = ".env.local"
         case_sensitive = True

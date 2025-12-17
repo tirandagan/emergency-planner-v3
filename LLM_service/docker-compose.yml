@@ -14,6 +14,8 @@ services:
     volumes:
       - ./app:/app/app
       - ./migrations:/app/migrations
+      - ./workflows:/app/workflows
+      - ./prompts:/app/prompts
     depends_on:
       - redis
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -32,9 +34,11 @@ services:
       - TZ=America/New_York
     volumes:
       - ./app:/app/app
+      - ./workflows:/app/workflows
+      - ./prompts:/app/prompts
     depends_on:
       - redis
-    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    command: celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=10
     networks:
       - llm-network
 

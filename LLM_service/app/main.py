@@ -6,6 +6,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import get_db, test_connection, engine
 from app.celery_app import celery_app
+from app.api import router as api_router
 import redis
 import logging
 
@@ -22,6 +23,7 @@ app = FastAPI(
     version=settings.API_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
+    description="LLM Microservice for asynchronous AI workflow execution",
 )
 
 # CORS middleware
@@ -32,6 +34,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routes
+app.include_router(api_router, prefix="/api")
 
 
 @app.on_event("startup")
@@ -91,13 +96,21 @@ async def health_check(db: Session = Depends(get_db)):
         health["services"]["database"] = {"status": "unhealthy", "error": str(e)}
 
     # Check Redis
+    redis_client = None
     try:
-        redis_client = redis.from_url(settings.REDIS_URL)
+        redis_client = redis.from_url(
+            settings.REDIS_URL,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+        )
         redis_client.ping()
         health["services"]["redis"] = {"status": "healthy"}
     except Exception as e:
-        health["status"] = "unhealthy"
+        health["status"] = "degraded"
         health["services"]["redis"] = {"status": "unhealthy", "error": str(e)}
+    finally:
+        if redis_client:
+            redis_client.close()
 
     # Check Celery workers
     try:

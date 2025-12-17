@@ -67,7 +67,7 @@ Recommend 1-3 safe meeting locations for family reunification:
 
 ## Output Requirements
 
-{{include:emergency-contacts/output-format.md}}
+{{include:output-format.md}}
 
 ## Important Guidelines
 

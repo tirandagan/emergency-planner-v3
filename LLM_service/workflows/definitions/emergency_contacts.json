@@ -1,8 +1,86 @@
 {
   "name": "emergency_contacts",
-  "version": "1.0.0",
-  "description": "Generate personalized emergency contact recommendations based on location, scenarios, and provided data sources",
+  "version": "2.0.0",
+  "description": "Generate personalized emergency contact recommendations with real-time weather and location data from external APIs",
   "steps": [
+    {
+      "id": "fetch_weather",
+      "type": "external_api",
+      "config": {
+        "service": "weatherapi",
+        "operation": "current",
+        "config": {
+          "lat": "${input.lat}",
+          "lng": "${input.lng}",
+          "aqi": false
+        },
+        "cache_ttl": 3600
+      },
+      "error_mode": "fail"
+    },
+    {
+      "id": "fetch_hospitals",
+      "type": "external_api",
+      "config": {
+        "service": "google_places",
+        "operation": "nearby_search",
+        "config": {
+          "location": "${input.lat},${input.lng}",
+          "radius": 8000,
+          "type": "hospital",
+          "keyword": "emergency"
+        },
+        "cache_ttl": 604800
+      },
+      "error_mode": "continue"
+    },
+    {
+      "id": "fetch_police",
+      "type": "external_api",
+      "config": {
+        "service": "google_places",
+        "operation": "nearby_search",
+        "config": {
+          "location": "${input.lat},${input.lng}",
+          "radius": 8000,
+          "type": "police"
+        },
+        "cache_ttl": 604800
+      },
+      "error_mode": "continue"
+    },
+    {
+      "id": "fetch_fire_stations",
+      "type": "external_api",
+      "config": {
+        "service": "google_places",
+        "operation": "nearby_search",
+        "config": {
+          "location": "${input.lat},${input.lng}",
+          "radius": 8000,
+          "type": "fire_station"
+        },
+        "cache_ttl": 604800
+      },
+      "error_mode": "continue"
+    },
+    {
+      "id": "format_places_data",
+      "type": "transform",
+      "config": {
+        "operation": "template",
+        "config": {
+          "template": "Hospitals: ${hospitals}\nPolice Stations: ${police}\nFire Stations: ${fire_stations}",
+          "variables": {
+            "hospitals": "${steps.fetch_hospitals.data.results}",
+            "police": "${steps.fetch_police.data.results}",
+            "fire_stations": "${steps.fetch_fire_stations.data.results}"
+          }
+        },
+        "error_mode": "continue"
+      },
+      "error_mode": "continue"
+    },
     {
       "id": "generate_contacts",
       "type": "llm",
@@ -15,13 +93,29 @@
           "city": "${input.city}",
           "state": "${input.state}",
           "country": "${input.country}",
+          "lat": "${input.lat}",
+          "lng": "${input.lng}",
           "scenarios": "${input.scenarios}",
           "family_size": "${input.family_size}",
           "duration": "${input.duration}",
           "user_tier": "${input.user_tier}",
           "static_contacts": "${input.static_contacts}",
-          "google_places": "${input.google_places}"
+          "weather_data": "${steps.fetch_weather.output.data}",
+          "google_places": "${steps.format_places_data.output}"
         }
+      },
+      "error_mode": "fail"
+    },
+    {
+      "id": "parse_contacts",
+      "type": "transform",
+      "config": {
+        "operation": "markdown_to_json",
+        "input": "${steps.generate_contacts.output.content}",
+        "config": {
+          "schema": "emergency_contacts"
+        },
+        "error_mode": "fail"
       },
       "error_mode": "fail"
     }

@@ -7,18 +7,21 @@ Orchestrates workflow execution by:
 - Handling errors according to step error modes
 - Storing step outputs for subsequent steps
 - Returning final workflow results with metadata
+- Preserving error context through all execution layers
 
 Integration:
 - Phase 3: Supports LLM steps via LLMStepExecutor
-- Phase 4: Will support transformation steps (placeholder)
-- Phase 5: Will support external API steps (placeholder)
+- Phase 4: Supports transformation steps via TransformExecutor
+- Phase 5: Supports external API steps via ExternalAPIExecutor
+- Phase 9: Enhanced error handling with comprehensive context
 """
 
 import logging
 import json
 import time
+import asyncio
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Callable
 from pydantic import ValidationError
 
 from app.workflows.schema import (
@@ -32,6 +35,8 @@ from app.workflows.context import WorkflowContext
 from app.workflows.prompt_loader import PromptLoader
 from app.workflows.llm_executor import LLMStepExecutor, LLMStepExecutionError
 from app.workflows.transform_executor import execute_transform_step
+from app.workflows.external_api_executor import execute_external_api_step
+from app.workflows.errors import WorkflowErrorContext, WorkflowErrorBase
 from app.services import LLMResponse
 
 logger = logging.getLogger(__name__)
@@ -199,11 +204,68 @@ class WorkflowEngine:
                 f"Error loading workflow '{workflow_name}': {e}"
             ) from e
 
+    def execute(
+        self,
+        workflow_name: str,
+        input_data: Dict[str, Any],
+        progress_callback: Optional[Callable] = None,
+        timeout_override: Optional[int] = None
+    ) -> WorkflowResult:
+        """
+        Synchronous wrapper for workflow execution (for Celery tasks).
+
+        Args:
+            workflow_name: Name of workflow to execute
+            input_data: Input data for workflow
+            progress_callback: Optional callback function(step_id, step_index, total_steps, output)
+            timeout_override: Optional timeout override (seconds)
+
+        Returns:
+            WorkflowResult with output, step history, and metadata
+
+        Raises:
+            WorkflowLoadError: Workflow not found or invalid
+            WorkflowExecutionError: Workflow execution failed
+            WorkflowTimeoutError: Workflow exceeded timeout
+
+        Example:
+            engine = WorkflowEngine()
+            result = engine.execute(
+                workflow_name="emergency_contacts",
+                input_data={"location": "Seattle, WA"},
+                progress_callback=lambda sid, idx, total, out: print(f"{idx}/{total}")
+            )
+        """
+        # Load workflow
+        workflow = self.load_workflow(workflow_name)
+
+        # Execute workflow asynchronously
+        # Get or create event loop (Celery eventlet/gevent pools manage their own loops)
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        result = loop.run_until_complete(
+            self.execute_workflow(
+                workflow=workflow,
+                input_data=input_data,
+                timeout_override=timeout_override,
+                progress_callback=progress_callback
+            )
+        )
+        return result
+
     async def execute_workflow(
         self,
         workflow: Workflow,
         input_data: Dict[str, Any],
-        timeout_override: Optional[int] = None
+        timeout_override: Optional[int] = None,
+        progress_callback: Optional[Callable] = None
     ) -> WorkflowResult:
         """
         Execute workflow with provided input data.
@@ -250,6 +312,7 @@ class WorkflowEngine:
         steps_executed = []
         total_cost = 0.0
         total_tokens = 0
+        llm_calls = []  # Track LLM calls for storage
 
         logger.info(
             f"Executing workflow '{workflow.name}' with {len(workflow.steps)} steps"
@@ -286,8 +349,14 @@ class WorkflowEngine:
 
                 # Store output in context if step succeeded
                 if step_result is not None:
-                    # Store in context for subsequent steps
-                    context.set_step_output(step.id, step_result)
+                    # Convert Pydantic models to dict for context storage
+                    # This ensures dictionary access works in variable resolution
+                    if isinstance(step_result, LLMResponse):
+                        # Convert LLMResponse to dict before storing
+                        context.set_step_output(step.id, step_result.model_dump())
+                    else:
+                        # Store dict directly
+                        context.set_step_output(step.id, step_result)
 
                     # Track metadata for LLM steps
                     if isinstance(step_result, LLMResponse):
@@ -296,6 +365,21 @@ class WorkflowEngine:
                         total_cost += step_result.cost_usd
                         total_tokens += step_result.usage.total_tokens
 
+                        # Collect LLM call data for database storage
+                        llm_calls.append({
+                            "provider": step_result.provider,
+                            "model": step_result.model,
+                            "input_tokens": step_result.usage.input_tokens,
+                            "output_tokens": step_result.usage.output_tokens,
+                            "total_tokens": step_result.usage.total_tokens,
+                            "cost_usd": step_result.cost_usd,
+                            "duration_ms": step_result.duration_ms,
+                            "metadata": {
+                                "step_id": step.id,
+                                "response_id": getattr(step_result, 'response_id', None)
+                            }
+                        })
+
                     step_info["output"] = self._serialize_output(step_result)
 
                 steps_executed.append(step_info)
@@ -303,6 +387,13 @@ class WorkflowEngine:
                 logger.info(
                     f"Step '{step.id}' completed in {step_duration}ms"
                 )
+
+                # Call progress callback if provided
+                if progress_callback:
+                    try:
+                        progress_callback(step.id, i, len(workflow.steps), step_result)
+                    except Exception as e:
+                        logger.warning(f"Progress callback failed: {e}")
 
             # Calculate total duration
             total_duration = int((time.time() - start_time) * 1000)
@@ -320,7 +411,8 @@ class WorkflowEngine:
                     "total_steps": len(workflow.steps),
                     "duration_ms": total_duration,
                     "total_tokens": total_tokens,
-                    "total_cost_usd": round(total_cost, 6)
+                    "total_cost_usd": round(total_cost, 6),
+                    "llm_calls": llm_calls  # Include LLM calls for database storage
                 }
             )
 
@@ -335,10 +427,20 @@ class WorkflowEngine:
             raise  # Re-raise timeout errors
 
         except Exception as e:
-            logger.error(f"Workflow '{workflow.name}' failed: {e}")
+            logger.error(f"Workflow '{workflow.name}' failed: {e}", exc_info=True)
 
-            # Build error result
+            # Build error result with context preservation
             total_duration = int((time.time() - start_time) * 1000)
+
+            # Extract error context if available
+            error_metadata = {"error": str(e)}
+            if isinstance(e, WorkflowErrorBase) and hasattr(e, 'context'):
+                # Preserve structured error context in metadata
+                error_metadata["error_context"] = e.context.to_dict(include_sensitive=False)
+                logger.error(
+                    f"Workflow error details: type={e.context.error_type}, "
+                    f"category={e.context.category}, step_id={e.context.step_id}"
+                )
 
             result = WorkflowResult(
                 workflow_name=workflow.name,
@@ -350,7 +452,7 @@ class WorkflowEngine:
                     "total_steps": len(workflow.steps),
                     "steps_completed": len(steps_executed),
                     "duration_ms": total_duration,
-                    "error": str(e)
+                    **error_metadata  # Include error and error_context
                 }
             )
 
@@ -391,9 +493,7 @@ class WorkflowEngine:
 
             elif step.type == StepType.EXTERNAL_API:
                 # Phase 5: External API step execution
-                raise NotImplementedError(
-                    f"External API steps not implemented (step '{step.id}')"
-                )
+                return await execute_external_api_step(step, context)
 
             else:
                 raise WorkflowExecutionError(
@@ -408,10 +508,15 @@ class WorkflowEngine:
                 )
                 return None
 
-            # Re-raise for error_mode=fail
-            raise WorkflowExecutionError(
-                f"Step '{step.id}' execution failed: {e}"
-            ) from e
+            # Re-raise for error_mode=fail, preserving error context
+            if isinstance(e, WorkflowErrorBase):
+                # Preserve existing error context
+                raise e
+            else:
+                # Wrap exceptions without context
+                raise WorkflowExecutionError(
+                    f"Step '{step.id}' execution failed: {e}"
+                ) from e
 
     def _build_final_output(
         self,

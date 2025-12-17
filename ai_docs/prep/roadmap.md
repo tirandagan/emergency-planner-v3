@@ -785,6 +785,19 @@ All database schemas, migrations, storage buckets, and Stripe integration comple
   - [x] Added collapsible "Catalog" group (Categories, Suppliers, Products, Bundles) ✓
   - [x] Auto-expand Catalog group when on catalog pages ✓
   - [x] Added Import and Debug navigation links ✓
+- [ ] **LLM Microservice Monitoring** (Future):
+  - [ ] Add "LLM Service" tab to `/admin/debug` page
+  - [ ] Real-time queue monitoring (pending, processing, completed jobs)
+  - [ ] Celery worker status and health checks
+  - [ ] Stale job detection and cleanup tools
+  - [ ] Job failure logs with error details and retry history
+  - [ ] Webhook delivery status and retry attempts
+  - [ ] LLM usage metrics (tokens, costs, duration per workflow)
+  - [ ] Manual job retry and cancellation controls
+  - [ ] Workflow performance analytics (avg duration, success rate)
+  - [ ] Integration with LLM microservice REST API endpoints
+  - **Dependencies:** Task 046 Phase 7+ completion (webhook system operational)
+  - **Related:** LLM_service API provides `/api/v1/status/{job_id}` and admin endpoints
 - **Phase 3.9 Status:** ✅ COMPLETE - All admin additional tools implemented with Trust Blue theme
 
 ### 3.10 Admin Email Tools - Full Implementation
