@@ -12,9 +12,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const result = await extractProductFromUrl(url);
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, message: error.message, errors: [error.message] },
+      { success: false, message, errors: [message] },
       { status: 500 }
     );
   }

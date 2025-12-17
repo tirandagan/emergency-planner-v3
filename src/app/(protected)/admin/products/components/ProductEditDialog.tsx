@@ -606,6 +606,48 @@ export default function ProductEditDialog({
         }
     };
 
+    const extractDomainFromUrl = (url: string): string => {
+        try {
+            const urlObj = new URL(url);
+            return urlObj.hostname.replace('www.', '');
+        } catch {
+            return 'website';
+        }
+    };
+
+    const normalizeWeightUnit = (unit: string): string => {
+        const normalized = unit.toLowerCase().trim();
+        const weightUnitMap: Record<string, string> = {
+            'lbs': 'lb',
+            'pounds': 'lb',
+            'pound': 'lb',
+            'lb': 'lb',
+            'kg': 'kg',
+            'kgs': 'kg',
+            'kilograms': 'kg',
+            'kilogram': 'kg',
+            'oz': 'oz',
+            'ounces': 'oz',
+            'ounce': 'oz',
+            'g': 'g',
+            'grams': 'g',
+            'gram': 'g',
+        };
+        return weightUnitMap[normalized] || normalized;
+    };
+
+    const parseWeight = (weightString: string): { value: string; unit: string } | null => {
+        if (!weightString) return null;
+
+        const match = weightString.match(/^([\d.]+)\s*([a-zA-Z]+)$/);
+        if (match) {
+            const [, value, unit] = match;
+            return { value, unit: normalizeWeightUnit(unit) };
+        }
+
+        return null;
+    };
+
     const handleAsinChange = (newAsin: string) => {
         setFormState({ ...formState, asin: newAsin });
 
@@ -655,6 +697,7 @@ export default function ProductEditDialog({
     const handleConfirmFetchFromAmazon = async () => {
         setIsFetchingDetails(true);
         setProductSuggestions(null);
+        setWebScrapeUrl('');
 
         try {
             const queryValue = fetchContext.method === 'url' ? fetchContext.value : fetchContext.value;
@@ -721,10 +764,19 @@ export default function ProductEditDialog({
         addSuggestion('metadata_color', scrapedData.color, currentMeta.color);
         addSuggestion('metadata_size', scrapedData.size, currentMeta.size);
         addSuggestion('metadata_dimensions', scrapedData.dimensions, currentMeta.dimensions);
-        addSuggestion('metadata_weight', scrapedData.weight, currentMeta.weight);
         addSuggestion('metadata_quantity', scrapedData.quantity, currentMeta.quantity);
         addSuggestion('metadata_model_number', scrapedData.model_number, currentMeta.model_number);
         addSuggestion('metadata_upc', scrapedData.upc, currentMeta.upc);
+
+        if (scrapedData.weight) {
+            const parsedWeight = parseWeight(scrapedData.weight);
+            if (parsedWeight) {
+                addSuggestion('metadata_weight', parsedWeight.value, currentMeta.weight);
+                addSuggestion('metadata_weight_unit', parsedWeight.unit, currentMeta.weight_unit);
+            } else {
+                addSuggestion('metadata_weight', scrapedData.weight, currentMeta.weight);
+            }
+        }
 
         if (Object.keys(suggestions).length > 0) {
             setProductSuggestions(suggestions);
@@ -745,7 +797,7 @@ export default function ProductEditDialog({
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-card border border-border rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl flex flex-col overflow-hidden relative">
 
-            {/* Loading Overlay - Shows when fetching from Amazon */}
+            {/* Loading Overlay - Shows when fetching product details */}
             {isFetchingDetails && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center rounded-2xl">
                     <div className="bg-card border border-primary/50 rounded-xl p-8 shadow-2xl flex flex-col items-center gap-6 animate-in fade-in zoom-in-95">
@@ -759,7 +811,9 @@ export default function ProductEditDialog({
                             </div>
                         </div>
                         <div className="text-center space-y-2">
-                            <h3 className="text-lg font-bold text-foreground">Fetching from Amazon</h3>
+                            <h3 className="text-lg font-bold text-foreground">
+                                {webScrapeUrl ? `Fetching from ${extractDomainFromUrl(webScrapeUrl)}` : 'Fetching from Amazon'}
+                            </h3>
                             <p className="text-sm text-muted-foreground max-w-xs">
                                 Retrieving product details... This may take a few seconds.
                             </p>

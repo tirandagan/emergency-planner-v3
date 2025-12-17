@@ -93,7 +93,7 @@ export default function FetchFromWebModal({
               </div>
             </div>
             <div className="mt-3 text-xs text-muted-foreground italic">
-              You'll be able to review and accept/reject each suggestion individually.
+              You&apos;ll be able to review and accept/reject each suggestion individually.
             </div>
           </div>
         </div>

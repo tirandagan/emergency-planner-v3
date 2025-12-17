@@ -15,11 +15,11 @@ const productSchema = {
     sku: { type: 'string', description: 'SKU or product code' },
     color: { type: 'string', description: 'Product color' },
     size: { type: 'string', description: 'Product size' },
-    dimensions: { type: 'string', description: 'Product dimensions' },
-    weight: { type: 'string', description: 'Product weight with unit' },
-    quantity: { type: 'string', description: 'Quantity or capacity' },
-    model_number: { type: 'string', description: 'Model number' },
-    upc: { type: 'string', description: 'UPC barcode' },
+    dimensions: { type: 'string', description: 'Product dimensions (e.g., 10 x 5 x 3 inches)' },
+    weight: { type: 'string', description: 'Product weight with unit (e.g., 150 lb, 2.5 kg)' },
+    quantity: { type: 'number', description: 'Quantity in package (default 1 if not specified)' },
+    model_number: { type: 'string', description: 'Model number or part number' },
+    upc: { type: 'string', description: 'UPC barcode number' },
   },
 };
 
@@ -77,11 +77,12 @@ export async function extractProductFromUrl(url: string): Promise<FirecrawlRespo
       message:
         errors.length > 0 ? 'Partial data extracted' : 'Product data extracted successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
       data: null,
-      errors: [error.message || 'Unknown error'],
+      errors: [errorMessage],
       message: 'Extraction failed',
     };
   }
