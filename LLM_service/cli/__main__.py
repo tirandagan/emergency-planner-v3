@@ -36,14 +36,11 @@ console = Console()
 
 
 def print_banner() -> None:
-    """Print CLI banner"""
-    banner = """
-[bold cyan]╔══════════════════════════════════════╗[/bold cyan]
-[bold cyan]║   LLM Workflow CLI Tools v1.0.0      ║[/bold cyan]
-[bold cyan]║   Workflow Development & Management  ║[/bold cyan]
-[bold cyan]╚══════════════════════════════════════╝[/bold cyan]
-    """
-    console.print(banner)
+    """Print modern compact CLI banner"""
+    console.print(
+        "[bold cyan]LLM Workflow CLI[/bold cyan] [dim]v1.0.0[/dim]  "
+        "[dim]│[/dim]  Workflow Development & Management"
+    )
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -121,8 +118,8 @@ For more information, visit: https://github.com/your-org/llm-service
     # Diagram command
     diagram_parser = subparsers.add_parser(
         'diagram',
-        help='Generate Mermaid diagram using LLM',
-        description='Generate visual workflow diagram in Mermaid format'
+        help='Generate PNG workflow diagram using LLM',
+        description='Generate visual workflow diagram as PNG with white or transparent background'
     )
     diagram_parser.add_argument(
         'workflow',
@@ -130,8 +127,14 @@ For more information, visit: https://github.com/your-org/llm-service
     )
     diagram_parser.add_argument(
         '-o', '--output',
-        help='Output path for diagram file (default: workflows/diagrams/<name>.mmd)',
+        help='Output path for PNG file (default: workflows/diagrams/<name>.png)',
         default=None
+    )
+    diagram_parser.add_argument(
+        '-b', '--background',
+        choices=['white', 'transparent'],
+        default='white',
+        help='PNG background color (default: white)'
     )
 
     return parser
@@ -180,7 +183,7 @@ def cmd_edit(args: argparse.Namespace) -> int:
 def cmd_diagram(args: argparse.Namespace) -> int:
     """Execute diagram command"""
     try:
-        generate_diagram(args.workflow, args.output)
+        generate_diagram(args.workflow, args.output, args.background)
         return 0
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")

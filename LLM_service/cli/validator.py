@@ -14,7 +14,7 @@ Validates workflow JSON files for:
 import json
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Set, Tuple
+from typing import List, Dict, Any, Set, Tuple, Optional
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -181,8 +181,8 @@ class WorkflowValidator:
 
         for step in self.workflow.steps:
             if step.type == StepType.LLM and step.config:
-                # Check template file
-                template = step.config.get('template')
+                # Check for prompt_template (correct field name per schema)
+                template = step.config.get('prompt_template')
                 if template:
                     template_path = self.prompts_dir / template
                     if not template_path.exists():
@@ -190,8 +190,8 @@ class WorkflowValidator:
                     else:
                         self.info.append(f"✓ Prompt file exists: {template}")
 
-                # Check inline prompt
-                elif 'prompt' not in step.config:
+                # Check for prompt_text as alternative (correct field name per schema)
+                elif 'prompt_text' not in step.config:
                     self.warnings.append(f"Step '{step.id}': No prompt template or inline prompt specified")
 
     def _validate_external_services(self) -> None:
@@ -228,14 +228,48 @@ class WorkflowValidator:
 
             # Check all string values in config
             if step.config:
-                self._check_config_variables(step.id, step.config, available_vars, var_pattern)
+                # Extract template-local variables for this step
+                template_vars = self._get_template_variables(step.config)
+                # Pass template_vars to config checker
+                self._check_config_variables(
+                    step.id,
+                    step.config,
+                    available_vars,
+                    var_pattern,
+                    template_vars
+                )
+
+    def _get_template_variables(self, step_config: Dict[str, Any]) -> Set[str]:
+        """
+        Extract variable names defined in template transform config.
+
+        For template operations, variables defined in config.config.variables
+        are valid local namespaces for the template string.
+
+        Args:
+            step_config: Step configuration dictionary
+
+        Returns:
+            Set of variable names that are valid in template context
+        """
+        template_vars: Set[str] = set()
+
+        # Check if this is a template transform operation
+        if step_config.get('operation') == 'template':
+            # Extract variables from config.config.variables
+            nested_config = step_config.get('config', {})
+            variables = nested_config.get('variables', {})
+            template_vars = set(variables.keys())
+
+        return template_vars
 
     def _check_config_variables(
         self,
         step_id: str,
         config: Dict[str, Any],
         available_vars: Set[str],
-        var_pattern: re.Pattern
+        var_pattern: re.Pattern,
+        template_vars: Optional[Set[str]] = None
     ) -> None:
         """Recursively check config for variable references"""
         for key, value in config.items():
@@ -246,15 +280,20 @@ class WorkflowValidator:
                     # Check if variable is available
                     var_base = var_ref.split('.')[0] if '.' in var_ref else var_ref
 
+                    # Valid namespaces: global (input, context, steps) + template-local
+                    valid_namespaces = {'input', 'context', 'steps'}
+                    if template_vars:
+                        valid_namespaces.update(template_vars)
+
                     # Check if it's a valid reference
-                    if var_base not in ['input', 'context', 'steps']:
+                    if var_base not in valid_namespaces:
                         self.warnings.append(
                             f"Step '{step_id}': Unknown variable namespace '{var_base}' in ${{{var_ref}}}"
                         )
 
             elif isinstance(value, dict):
                 # Recursively check nested dicts
-                self._check_config_variables(step_id, value, available_vars, var_pattern)
+                self._check_config_variables(step_id, value, available_vars, var_pattern, template_vars)
 
             elif isinstance(value, list):
                 # Check list items
@@ -263,12 +302,84 @@ class WorkflowValidator:
                         matches = var_pattern.findall(item)
                         for var_ref in matches:
                             var_base = var_ref.split('.')[0] if '.' in var_ref else var_ref
-                            if var_base not in ['input', 'context', 'steps']:
+
+                            # Valid namespaces: global (input, context, steps) + template-local
+                            valid_namespaces = {'input', 'context', 'steps'}
+                            if template_vars:
+                                valid_namespaces.update(template_vars)
+
+                            if var_base not in valid_namespaces:
                                 self.warnings.append(
                                     f"Step '{step_id}': Unknown variable namespace '{var_base}' in ${{{var_ref}}}"
                                 )
                     elif isinstance(item, dict):
-                        self._check_config_variables(step_id, item, available_vars, var_pattern)
+                        self._check_config_variables(step_id, item, available_vars, var_pattern, template_vars)
+
+    def _collect_variable_summary(self) -> Dict[str, List[str]]:
+        """
+        Collect summary of all variables used in workflow.
+
+        Returns:
+            Dict with categories: input_vars, step_outputs, template_vars
+        """
+        if not self.workflow:
+            return {'input_vars': [], 'step_outputs': [], 'template_vars': []}
+
+        var_pattern = re.compile(r'\$\{([^}]+)\}')
+
+        input_vars: Set[str] = set()
+        step_outputs: Set[str] = set()
+        template_vars: Set[str] = set()
+
+        for step in self.workflow.steps:
+            # This step produces an output
+            step_outputs.add(f"steps.{step.id}")
+
+            # Collect template-local variables
+            if step.type == StepType.TRANSFORM and step.config:
+                local_vars = self._get_template_variables(step.config)
+                template_vars.update(local_vars)
+
+            # Find all variable references in config
+            if step.config:
+                self._collect_vars_from_config(
+                    step.config, var_pattern, input_vars, step_outputs
+                )
+
+        return {
+            'input_vars': sorted(input_vars),
+            'step_outputs': sorted(step_outputs),
+            'template_vars': sorted(template_vars)
+        }
+
+    def _collect_vars_from_config(
+        self,
+        config: Dict[str, Any],
+        var_pattern: re.Pattern,
+        input_vars: Set[str],
+        step_refs: Set[str]
+    ) -> None:
+        """Recursively collect variable references from config"""
+        for value in config.values():
+            if isinstance(value, str):
+                matches = var_pattern.findall(value)
+                for var_ref in matches:
+                    if var_ref.startswith('input.'):
+                        input_vars.add(var_ref)
+                    elif var_ref.startswith('steps.'):
+                        # Already tracked in step_outputs
+                        pass
+            elif isinstance(value, dict):
+                self._collect_vars_from_config(value, var_pattern, input_vars, step_refs)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, str):
+                        matches = var_pattern.findall(item)
+                        for var_ref in matches:
+                            if var_ref.startswith('input.'):
+                                input_vars.add(var_ref)
+                    elif isinstance(item, dict):
+                        self._collect_vars_from_config(item, var_pattern, input_vars, step_refs)
 
     def _print_results(self) -> None:
         """Print validation results with rich formatting"""
@@ -302,6 +413,22 @@ class WorkflowValidator:
             console.print("\n[bold red]✗ Errors:[/bold red]")
             for msg in self.errors:
                 console.print(f"  {msg}")
+
+        # Variable summary (show before final status)
+        if self.workflow:
+            var_summary = self._collect_variable_summary()
+
+            if any(var_summary.values()):
+                console.print("\n[bold cyan]📊 Variable Summary:[/bold cyan]")
+
+                if var_summary['input_vars']:
+                    console.print(f"  Input Variables: {', '.join(var_summary['input_vars'])}")
+
+                if var_summary['step_outputs']:
+                    console.print(f"  Step Outputs: {len(var_summary['step_outputs'])} steps")
+
+                if var_summary['template_vars']:
+                    console.print(f"  Template Variables: {', '.join(var_summary['template_vars'])}")
 
         # Final status
         console.print()

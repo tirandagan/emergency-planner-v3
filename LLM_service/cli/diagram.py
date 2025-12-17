@@ -7,15 +7,24 @@ The LLM analyzes the workflow structure and creates a beautiful diagram.
 
 import json
 import asyncio
+import base64
+import zlib
 from pathlib import Path
 from typing import Dict, Any
+from io import BytesIO
+import httpx
+from PIL import Image
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.text import Text
+from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.columns import Columns
 from rich import print as rprint
 
 from app.workflows.schema import Workflow
-from app.services import get_llm_provider
+from app.services import get_llm_provider, Message
 from app.config import settings
 
 
@@ -31,24 +40,25 @@ WORKFLOW JSON:
 
 REQUIREMENTS:
 1. Use Mermaid flowchart syntax (flowchart TD or LR)
-2. Show all steps with clear labels
-3. Include step types in parentheses (e.g., "Fetch Data (external_api)")
-4. Show dependencies with arrows
-5. Use different node shapes for different step types:
+2. Show all steps with clear labels - IMPORTANT: Use ONLY alphanumeric characters, spaces, and underscores in labels
+3. DO NOT use HTML tags like <br/> - use simple text labels only
+4. Include step type in parentheses after the step name (e.g., "Fetch Weather (external_api)")
+5. Show dependencies with arrows
+6. Use different node shapes for different step types:
    - LLM steps: rounded boxes ((text))
    - Transform steps: trapezoids [/text\\]
    - External API steps: stadium-shaped ([text])
-   - Conditional steps: diamonds {text}
-6. Color-code by step type using classDef
-7. Add a legend explaining colors and shapes
+   - Conditional steps: diamonds {{text}}
+7. Color-code by step type using classDef
+8. Keep node labels concise (under 40 characters)
 
 OUTPUT ONLY THE MERMAID CODE - no explanation, no markdown code blocks, just the raw Mermaid syntax.
 
 Example format:
 flowchart TD
-    A[Start] --> B((LLM Step))
-    B --> C[/Transform\\]
-    C --> D([External API])
+    A[Start] --> B((Generate Analysis))
+    B --> C[/Transform Data\\]
+    C --> D([Call External API])
 
     classDef llmStyle fill:#e1f5ff,stroke:#2196f3
     classDef transformStyle fill:#fff3e0,stroke:#ff9800
@@ -81,26 +91,17 @@ class MermaidDiagramGenerator:
         Returns:
             Mermaid diagram code or None if failed
         """
-        console.print(f"\n[bold cyan]Generating diagram for:[/bold cyan] {self.workflow_path.name}")
-        console.print("━" * 80)
-
         # Load workflow
         if not self._load_workflow():
             return None
 
-        # Display workflow info
+        # Display workflow info in a clean panel
         self._display_workflow_info()
 
-        # Generate diagram using LLM
-        console.print("\n[cyan]🤖 Calling LLM to generate diagram...[/cyan]")
+        # Generate diagram using LLM with progress indicator
         diagram_code = await self._call_llm()
 
-        if diagram_code:
-            console.print("\n[bold green]✓ Diagram generated successfully[/bold green]")
-            return diagram_code
-        else:
-            console.print("\n[bold red]✗ Failed to generate diagram[/bold red]")
-            return None
+        return diagram_code
 
     def _load_workflow(self) -> bool:
         """Load and validate workflow"""
@@ -116,36 +117,46 @@ class MermaidDiagramGenerator:
             return False
 
     def _display_workflow_info(self) -> None:
-        """Display workflow metadata"""
+        """Display workflow metadata in a compact format"""
         if not self.workflow:
             return
-
-        console.print(f"\n[bold]Workflow:[/bold] {self.workflow.name} (v{self.workflow.version})")
-        console.print(f"[bold]Steps:[/bold] {len(self.workflow.steps)}")
 
         # Count step types
         from collections import Counter
         step_types = Counter(step.type.value for step in self.workflow.steps)
-        console.print(f"[bold]Step Types:[/bold]")
-        for step_type, count in step_types.items():
-            console.print(f"  - {step_type}: {count}")
+
+        # Create compact info display
+        console.print(
+            f"\n[cyan]Workflow[/cyan] [bold]{self.workflow.name}[/bold] [dim]v{self.workflow.version}[/dim]  "
+            f"[dim]│[/dim]  [cyan]{len(self.workflow.steps)}[/cyan] steps  "
+            f"[dim]│[/dim]  " +
+            " ".join([f"[dim]{st}[/dim] [cyan]{ct}[/cyan]" for st, ct in sorted(step_types.items())])
+        )
+        console.print()
 
     async def _call_llm(self) -> str | None:
         """Call LLM to generate diagram"""
         try:
             # Get LLM provider
-            provider = get_llm_provider(settings.LLM_PROVIDER)
+            provider = get_llm_provider("openrouter")
 
             # Build prompt
             prompt = DIAGRAM_PROMPT.format(workflow_json=self.workflow_json)
 
-            # Call LLM
-            response = await provider.generate(
-                messages=[{"role": "user", "content": prompt}],
-                model=settings.LLM_MODEL,
-                temperature=0.3,  # Lower temperature for more consistent output
-                max_tokens=2000
-            )
+            # Call LLM with progress indicator
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[cyan]{task.description}"),
+                console=console
+            ) as progress:
+                task = progress.add_task("Generating diagram with Claude...", total=None)
+
+                response = await provider.generate(
+                    messages=[Message(role="user", content=prompt)],
+                    model="anthropic/claude-3.5-sonnet",
+                    temperature=0.3,
+                    max_tokens=2000
+                )
 
             # Extract diagram code
             diagram_code = response.content.strip()
@@ -153,65 +164,146 @@ class MermaidDiagramGenerator:
             # Remove markdown code blocks if present
             if diagram_code.startswith("```"):
                 lines = diagram_code.split('\n')
-                # Remove first and last lines (```)
                 diagram_code = '\n'.join(lines[1:-1])
 
-            # Display cost
-            console.print(f"\n[dim]LLM Usage: {response.usage.total_tokens} tokens, ${response.cost_usd:.4f}[/dim]")
+            # Display success with compact metrics
+            console.print(
+                f"[green]✓[/green] Diagram generated  "
+                f"[dim]│[/dim]  {response.usage.total_tokens:,} tokens  "
+                f"[dim]│[/dim]  ${response.cost_usd:.4f}  "
+                f"[dim]│[/dim]  Claude 3.5 Sonnet"
+            )
 
             return diagram_code
 
         except Exception as e:
-            console.print(f"[red]LLM error: {str(e)}[/red]")
+            console.print(f"[red]✗[/red] Generation failed  [dim]│[/dim]  {str(e)}")
             return None
 
 
-async def generate_diagram_async(workflow_path: str, output_path: str | None = None) -> None:
+async def generate_png_from_mermaid(diagram_code: str, output_path: Path, background: str = 'white') -> bool:
     """
-    Generate Mermaid diagram from workflow
+    Generate image from Mermaid diagram code using Kroki API.
+
+    Kroki is an open-source diagram rendering service that supports Mermaid
+    and handles larger diagrams using compressed payloads.
+
+    For white backgrounds, uses JPEG format (no transparency support).
+    For transparent backgrounds, uses PNG format.
+
+    Args:
+        diagram_code: Mermaid diagram syntax
+        output_path: Path to save image file
+        background: Background color ('white' or 'transparent')
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Compress and encode diagram for Kroki API
+        # Kroki expects: base64(zlib(diagram_code))
+        compressed = zlib.compress(diagram_code.encode('utf-8'), level=9)
+        encoded = base64.urlsafe_b64encode(compressed).decode('utf-8')
+
+        # Always download as PNG from Kroki (Mermaid doesn't support JPEG)
+        api_url = f"https://kroki.io/mermaid/png/{encoded}"
+
+        # Download PNG with progress indicator
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[cyan]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("Rendering PNG image...", total=None)
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(api_url)
+                response.raise_for_status()
+                png_data = response.content
+
+        # Ensure output directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Process image based on background preference
+        if background == 'white':
+            # Composite transparent PNG onto white background
+            img = Image.open(BytesIO(png_data))
+
+            # Create white background
+            if img.mode in ('RGBA', 'LA'):
+                background_img = Image.new('RGB', img.size, (255, 255, 255))
+                # Paste PNG onto white background using alpha channel as mask
+                if img.mode == 'RGBA':
+                    background_img.paste(img, (0, 0), img.split()[3])
+                else:
+                    background_img.paste(img, (0, 0), img.split()[1])
+                img = background_img
+
+            # Save as PNG with white background
+            img.save(output_path, 'PNG', optimize=True)
+            bytes_written = output_path.stat().st_size
+
+        else:  # transparent
+            # Save PNG as-is
+            with open(output_path, 'wb') as f:
+                bytes_written = f.write(png_data)
+
+        # Display success with compact file info
+        bg_icon = "⬜" if background == 'white' else "▢"
+        console.print(
+            f"[green]✓[/green] PNG saved  "
+            f"[dim]│[/dim]  {bytes_written:,} bytes  "
+            f"[dim]│[/dim]  {bg_icon} {background}  "
+            f"[dim]│[/dim]  [blue]{output_path}[/blue]"
+        )
+        console.print()
+
+        return True
+
+    except Exception as e:
+        console.print(f"\n[red]✗[/red] PNG generation failed  [dim]│[/dim]  {str(e)}\n")
+        return False
+
+
+async def generate_diagram_async(workflow_path: str, output_path: str | None = None, background: str = 'white') -> None:
+    """
+    Generate diagram image from workflow
 
     Args:
         workflow_path: Path to workflow JSON file
-        output_path: Optional path to save diagram (defaults to <workflow>.mmd)
+        output_path: Optional path to save image file (defaults to workflows/diagrams/<workflow>.jpg for white, .png for transparent)
+        background: Background color ('white' or 'transparent')
     """
     generator = MermaidDiagramGenerator(Path(workflow_path))
     diagram_code = await generator.generate()
 
     if diagram_code:
-        # Display diagram
-        console.print("\n[bold cyan]Generated Mermaid Diagram:[/bold cyan]")
-        console.print(Panel(diagram_code, border_style="green"))
-
-        # Save to file
+        # Determine output path
         if not output_path:
             workflow_stem = Path(workflow_path).stem
-            output_path = f"workflows/diagrams/{workflow_stem}.mmd"
+            output_path = f"workflows/diagrams/{workflow_stem}.png"
 
         output_file = Path(output_path)
+        # Ensure .png extension
+        if output_file.suffix.lower() != '.png':
+            output_file = output_file.with_suffix('.png')
+
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_file, 'w') as f:
-            f.write(diagram_code)
-
-        console.print(f"\n[green]✓ Diagram saved to {output_file}[/green]")
-
-        # Instructions
-        console.print("\n[bold cyan]How to view:[/bold cyan]")
-        console.print("1. Copy the diagram code above")
-        console.print("2. Visit https://mermaid.live/")
-        console.print("3. Paste the code to see the visual diagram")
-        console.print(f"4. Or open {output_file} with a Mermaid viewer\n")
+        # Generate PNG with specified background
+        await generate_png_from_mermaid(diagram_code, output_file, background)
 
 
-def generate_diagram(workflow_path: str, output_path: str | None = None) -> None:
+def generate_diagram(workflow_path: str, output_path: str | None = None, background: str = 'white') -> None:
     """
-    Generate Mermaid diagram (synchronous wrapper)
+    Generate PNG diagram (synchronous wrapper)
 
     Args:
         workflow_path: Path to workflow JSON file
-        output_path: Optional path to save diagram
+        output_path: Optional path to save PNG file
+        background: Background color ('white' or 'transparent')
     """
-    asyncio.run(generate_diagram_async(workflow_path, output_path))
+    asyncio.run(generate_diagram_async(workflow_path, output_path, background))
 
 
 if __name__ == "__main__":
