@@ -4,11 +4,28 @@
 # conflicts with Gunicorn + Uvicorn workers and SQLAlchemy connection pooling.
 # The Celery worker process will handle its own monkey patching if using --pool=eventlet
 
+import ssl
 from celery import Celery
 from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Configure SSL for Redis connections if using rediss://
+broker_use_ssl = {}
+backend_use_ssl = {}
+
+if settings.BROKER_URL.startswith("rediss://"):
+    broker_use_ssl = {
+        "ssl_cert_reqs": ssl.CERT_NONE,
+        "ssl_check_hostname": False,
+    }
+
+if settings.RESULT_BACKEND.startswith("rediss://"):
+    backend_use_ssl = {
+        "ssl_cert_reqs": ssl.CERT_NONE,
+        "ssl_check_hostname": False,
+    }
 
 # Initialize Celery app
 celery_app = Celery(
@@ -30,6 +47,8 @@ celery_app.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     result_expires=3600,  # 1 hour
+    broker_use_ssl=broker_use_ssl if broker_use_ssl else None,
+    redis_backend_use_ssl=backend_use_ssl if backend_use_ssl else None,
 )
 
 # Auto-discover tasks

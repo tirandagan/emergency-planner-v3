@@ -8,6 +8,7 @@ Implements sliding window rate limiting with two tiers:
 Uses Redis for distributed rate limiting across multiple workers.
 """
 
+import ssl
 import time
 from typing import Optional, Tuple
 import redis.asyncio as redis
@@ -68,11 +69,21 @@ class RateLimiter:
         self.window_seconds = window_seconds
 
     async def _get_redis(self) -> redis.Redis:
-        """Get or create Redis client."""
+        """Get or create Redis client with SSL support."""
         if self.redis_client is None:
+            # Configure SSL if using rediss:// URL
+            redis_kwargs = {"decode_responses": False}
+
+            if settings.REDIS_URL.startswith("rediss://"):
+                # Create SSL context for secure Redis connections (Render, etc.)
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                redis_kwargs["ssl"] = ssl_context
+
             self.redis_client = redis.from_url(
                 settings.REDIS_URL,
-                decode_responses=False  # We'll handle encoding
+                **redis_kwargs
             )
         return self.redis_client
 

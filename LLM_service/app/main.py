@@ -1,4 +1,5 @@
 """FastAPI application with health check endpoint."""
+import ssl
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -98,10 +99,22 @@ def health_check(db: Session = Depends(get_db)):
     # Check Redis
     redis_client = None
     try:
+        # Configure SSL if using rediss:// URL
+        redis_kwargs = {
+            "socket_connect_timeout": 5,
+            "socket_timeout": 5,
+        }
+
+        if settings.REDIS_URL.startswith("rediss://"):
+            # Create SSL context for secure Redis connections (Render, etc.)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            redis_kwargs["ssl"] = ssl_context
+
         redis_client = redis.from_url(
             settings.REDIS_URL,
-            socket_connect_timeout=5,
-            socket_timeout=5,
+            **redis_kwargs
         )
         redis_client.ping()
         health["services"]["redis"] = {"status": "healthy"}
