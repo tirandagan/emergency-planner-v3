@@ -1,9 +1,11 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, UseFormSetValue } from 'react-hook-form';
-import { Cloud, Zap, Activity, Radiation, Users, Sprout } from 'lucide-react';
+import { Cloud, Zap, Activity, Radiation, Users, Sprout, Info } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { ScenarioInfoModal } from '../ScenarioInfoModal';
 import type { WizardFormData, ScenarioType } from '@/types/wizard';
 
 interface ScenarioStepProps {
@@ -16,6 +18,7 @@ interface ScenarioStepProps {
 const SCENARIOS: Array<{
   id: ScenarioType;
   name: string;
+  shortDescription: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
@@ -23,6 +26,7 @@ const SCENARIOS: Array<{
   {
     id: 'natural-disaster',
     name: 'Natural Disaster',
+    shortDescription: 'Weather & geological events',
     description:
       'Hurricanes, earthquakes, floods, wildfires, tornadoes, and severe weather events',
     icon: Cloud,
@@ -31,6 +35,7 @@ const SCENARIOS: Array<{
   {
     id: 'emp-grid-down',
     name: 'EMP / Grid Down',
+    shortDescription: 'Long-term power loss',
     description: 'Electromagnetic pulse, cyber attacks, or prolonged power grid failures',
     icon: Zap,
     color: 'text-yellow-600 dark:text-yellow-400',
@@ -38,20 +43,23 @@ const SCENARIOS: Array<{
   {
     id: 'pandemic',
     name: 'Pandemic',
+    shortDescription: 'Disease outbreak & quarantine',
     description: 'Widespread disease outbreak requiring quarantine and medical preparedness',
     icon: Activity,
     color: 'text-red-600 dark:text-red-400',
   },
   {
     id: 'nuclear',
-    name: 'Nuclear Event',
-    description: 'Nuclear accident, attack, or fallout requiring shelter and decontamination',
+    name: 'CBRN',
+    shortDescription: 'Chemical, Biological, Radiological, Nuclear',
+    description: 'Nuclear events, dirty bombs, chemical attacks, or radiological incidents requiring immediate shelter and decontamination',
     icon: Radiation,
     color: 'text-orange-600 dark:text-orange-400',
   },
   {
     id: 'civil-unrest',
     name: 'Civil Unrest',
+    shortDescription: 'Social disorder & instability',
     description: 'Social disorder, riots, political instability, or breakdown of law and order',
     icon: Users,
     color: 'text-purple-600 dark:text-purple-400',
@@ -59,6 +67,7 @@ const SCENARIOS: Array<{
   {
     id: 'multi-year-sustainability',
     name: 'Multi-Year Sustainability',
+    shortDescription: 'Long-term self-sufficiency',
     description:
       'Long-term self-sufficiency, homesteading, and extended off-grid living preparation',
     icon: Sprout,
@@ -68,6 +77,8 @@ const SCENARIOS: Array<{
 
 export function ScenarioStep({ register, watch, setValue, errors }: ScenarioStepProps) {
   const selectedScenarios = watch('scenarios') || [];
+  const [infoModalScenario, setInfoModalScenario] = useState<ScenarioType | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   // Register the scenarios field
   React.useEffect(() => {
@@ -81,6 +92,18 @@ export function ScenarioStep({ register, watch, setValue, errors }: ScenarioStep
       : [...currentScenarios, scenarioId];
 
     setValue('scenarios', newScenarios, { shouldValidate: true });
+  };
+
+  const openInfoModal = (scenarioId: ScenarioType, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the scenario selection
+    setInfoModalScenario(scenarioId);
+    setIsInfoModalOpen(true);
+  };
+
+  const closeInfoModal = () => {
+    setIsInfoModalOpen(false);
+    // Delay clearing the scenario to allow modal close animation
+    setTimeout(() => setInfoModalScenario(null), 200);
   };
 
   return (
@@ -130,13 +153,30 @@ export function ScenarioStep({ register, watch, setValue, errors }: ScenarioStep
               </div>
 
               {/* Content */}
-              <div className="text-left pr-8">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+              <div className="text-left pr-8 flex-1">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
                   {scenario.name}
                 </h3>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500 font-medium mb-2">
+                  {scenario.shortDescription}
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   {scenario.description}
                 </p>
+              </div>
+
+              {/* Info Button - Bottom Right */}
+              <div className="absolute bottom-3 right-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => openInfoModal(scenario.id, e)}
+                  className="w-7 h-7 p-0 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 focus:ring-2 focus:ring-primary transition-colors"
+                  aria-label={`View detailed information about ${scenario.name}`}
+                >
+                  <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300" />
+                </Button>
               </div>
             </button>
           );
@@ -161,6 +201,13 @@ export function ScenarioStep({ register, watch, setValue, errors }: ScenarioStep
           </p>
         </div>
       )}
+
+      {/* Info Modal */}
+      <ScenarioInfoModal
+        scenario={infoModalScenario}
+        isOpen={isInfoModalOpen}
+        onClose={closeInfoModal}
+      />
     </div>
   );
 }

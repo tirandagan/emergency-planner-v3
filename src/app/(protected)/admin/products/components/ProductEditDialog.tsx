@@ -181,6 +181,15 @@ export default function ProductEditDialog({
         }
     }, [isOpen, product]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Cleanup debounce timer on unmount or dialog close
+    useEffect(() => {
+        return () => {
+            if (asinDebounceTimer.current) {
+                clearTimeout(asinDebounceTimer.current);
+            }
+        };
+    }, []);
+
     // Auto-fill tags from Master Item on creation
     useEffect(() => {
         // Only if we are creating a new product (no ID) and a master item is selected
