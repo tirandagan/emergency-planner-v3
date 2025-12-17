@@ -1018,8 +1018,8 @@ export default function ProductEditDialog({
                                     </InputGroup>
                                 </div>
                                 {filteredMasterItems.length === 0 && selectedCategory && (
-                                    <div className="mt-3 flex items-center gap-2 text-xs text-warning bg-warning/10 p-3 rounded-lg border border-warning/30">
-                                        <AlertCircle className="w-4 h-4" strokeWidth={2.5} />
+                                    <div className="mt-3 flex items-center gap-2 text-xs text-foreground bg-warning/20 p-3 rounded-lg border border-warning/50">
+                                        <AlertCircle className="w-4 h-4 text-warning" strokeWidth={2.5} />
                                         No master items found in this category. Please add a Master Item first or check the category selection.
                                     </div>
                                 )}
@@ -1052,8 +1052,8 @@ export default function ProductEditDialog({
                                 }`}>
                                     {/* Warning Banner - At top of frame when active */}
                                     {(formState.timeframes || formState.demographics || formState.locations || formState.scenarios) && (
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-warning/10 border-b border-warning/30 text-warning text-xs">
-                                            <AlertCircle className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-warning/20 border-b border-warning/50 text-foreground text-xs">
+                                            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-warning" strokeWidth={2.5} />
                                             <span>Custom classification — overriding Master Item defaults</span>
                                         </div>
                                     )}
@@ -1366,9 +1366,9 @@ export default function ProductEditDialog({
                             const pendingFields = keys.map(k => fieldLabels[k] || k).join(', ');
                             alert(`Please resolve suggestions for: ${pendingFields}`);
                         }}
-                        className="flex items-center gap-2 px-3 py-2 bg-warning/10 border border-warning/30 text-warning rounded-lg text-xs font-medium mr-auto animate-pulse hover:bg-warning/20 transition-all"
+                        className="flex items-center gap-2 px-3 py-2 bg-warning/20 border border-warning/50 text-foreground rounded-lg text-xs font-medium mr-auto animate-pulse hover:bg-warning/30 transition-all"
                     >
-                        <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                        <AlertCircle className="w-4 h-4 shrink-0 text-warning" strokeWidth={2.5} />
                         <span>Please accept or ignore all Amazon suggestions above.</span>
                     </button>
                 )}
