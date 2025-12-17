@@ -312,10 +312,10 @@ services:
 # - LLM API Service:        $7/month (Starter)
 # - LLM Worker Service:     $7/month (Starter)
 # - LLM Flower Dashboard:   $0/month (Free)
-# - Redis:                  $7/month (Starter)
-# - Supabase Database:      $0/month (Free tier) or included in existing plan
+# - Supabase Database:      $0/month (Free tier - external)
+# - Upstash Redis:          $0/month (Free tier - external)
 # ────────────────────────────────────────────────
-# TOTAL:                    ~$28/month
+# TOTAL:                    ~$21/month
 #
 # Scaling Options:
 # - Upgrade individual services to Standard ($25/mo) or Pro ($85/mo)
