@@ -266,48 +266,19 @@ async def execute_external_api_step(
 
     # Execute synchronous service call
     try:
-        # Detect if running under eventlet
-        try:
-            import eventlet
-            running_under_eventlet = True
-        except ImportError:
-            running_under_eventlet = False
+        import asyncio
 
         # Use synchronous context manager
         with service_class() as service:
-            if running_under_eventlet:
-                # Under eventlet, use eventlet's thread pool (tpool)
-                # This is compatible with eventlet's green threading
-                import asyncio
-
-                # Create a wrapper to call tpool.execute and return the result
-                def call_in_eventlet_tpool():
-                    return eventlet.tpool.execute(
-                        service.call,
-                        operation,
-                        resolved_params,
-                        user_id,
-                        cache_ttl
-                    )
-
-                # Run in event loop without executor (eventlet handles it)
-                loop = asyncio.get_event_loop()
-                response: ExternalServiceResponse = await loop.run_in_executor(
-                    None,
-                    call_in_eventlet_tpool
-                )
-            else:
-                # Standard asyncio without eventlet
-                import asyncio
-                loop = asyncio.get_event_loop()
-                response: ExternalServiceResponse = await loop.run_in_executor(
-                    None,
-                    service.call,
-                    operation,
-                    resolved_params,
-                    user_id,
-                    cache_ttl
-                )
+            # Use asyncio.to_thread() which properly handles sync calls in async context
+            # This works correctly under both eventlet and pure asyncio
+            response: ExternalServiceResponse = await asyncio.to_thread(
+                service.call,
+                operation,
+                resolved_params,
+                user_id,
+                cache_ttl
+            )
 
             # Record successful request for rate limiting (async infrastructure)
             if response.success:
