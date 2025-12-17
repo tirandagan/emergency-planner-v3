@@ -292,17 +292,16 @@ services:
     dockerCommand: celery -A app.celery_app flower --port=$PORT
 
 # ==============================================================================
-# MANAGED DATABASES
+# EXTERNAL SERVICES (Not managed by Render)
 # ==============================================================================
-
-databases:
-  # Redis for LLM service (message broker & cache)
-  - name: llm-service-redis
-    databaseName: llm_service_redis
-    user: redis
-    plan: starter  # $7/month
-    region: oregon
-    ipAllowList: []  # Allow all IPs (Render internal services)
+#
+# DATABASE: Supabase PostgreSQL (set DATABASE_URL in services)
+# REDIS: Upstash or Redis Labs (set REDIS_URL in services)
+#
+# Upstash Redis Setup (FREE tier):
+# 1. https://console.upstash.com → Create Database
+# 2. Copy Redis URL: redis://default:xxx@xxx.upstash.io:6379
+# 3. Set as REDIS_URL in llm-service-api, llm-service-worker, llm-service-flower
 
 # ==============================================================================
 # DEPLOYMENT NOTES
