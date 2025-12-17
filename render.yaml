@@ -151,12 +151,9 @@ services:
       - key: DATABASE_URL
         sync: false  # Use same Supabase DB as Next.js
 
-      # Redis (Managed by Render)
+      # Redis (Use external service like Upstash - see setup instructions below)
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: llm-service-redis
-          property: connectionString
+        sync: false  # Set to your external Redis URL (e.g., Upstash, Redis Labs)
 
       # AI Service
       - key: OPENROUTER_API_KEY
