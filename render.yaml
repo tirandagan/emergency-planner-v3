@@ -159,11 +159,11 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
 
-      # External APIs
-      - key: WEATHERAPI_API_KEY
+      # External APIs (use NEXT_PUBLIC_ prefix to match config validation aliases)
+      - key: NEXT_PUBLIC_WEATHERAPI_API_KEY
         sync: false
 
-      - key: GOOGLE_SERVICES_API_KEY
+      - key: NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY
         sync: false
 
       # Webhook Security

@@ -29,6 +29,14 @@ docker-compose up
 - 📊 Flower (Monitoring): http://localhost:5555
 - 🔴 Redis: localhost:6379
 
+**⚠️ Important: User ID Format**
+
+When submitting workflows with a `user_id` field, it **must be a valid UUID** format:
+- ✅ Valid: `"user_id": "550e8400-e29b-41d4-a716-446655440000"`
+- ❌ Invalid: `"user_id": "test-user-123"` (will fail validation)
+- ℹ️ In standalone mode (Phases 1-9), `user_id` is optional and can be omitted
+- ℹ️ After Phase 10 integration, `user_id` will be required and must reference a valid user
+
 ---
 
 ## Phase 1: Core Infrastructure Tests
@@ -158,12 +166,26 @@ pytest tests/test_api_endpoints.py -v
 ### Submit Workflow via API
 
 ```bash
-# Submit workflow
+# Submit workflow (with user_id - use valid UUID)
 curl -X POST http://localhost:8000/api/v1/workflow \
   -H "Content-Type: application/json" \
   -d '{
     "workflow_name": "emergency_contacts",
-    "user_id": "test-user-123",
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "input_data": {
+      "lat": 40.7128,
+      "lng": -74.0060,
+      "city": "New York"
+    },
+    "webhook_url": "http://localhost:5001/webhook",
+    "webhook_secret": "test-secret"
+  }'
+
+# Alternative: Submit without user_id (standalone mode only)
+curl -X POST http://localhost:8000/api/v1/workflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_name": "emergency_contacts",
     "input_data": {
       "lat": 40.7128,
       "lng": -74.0060,
@@ -239,8 +261,12 @@ curl -X POST http://localhost:8000/api/v1/workflow \
   -H "Content-Type: application/json" \
   -d '{
     "workflow_name": "emergency_contacts",
-    "user_id": "test-user-123",
-    "input_data": {"lat": 40.7128, "lng": -74.0060},
+    "user_id": "550e8400-e29b-41d4-a716-446655440001",
+    "input_data": {
+      "lat": 40.7128,
+      "lng": -74.0060,
+      "city": "New York"
+    },
     "webhook_url": "http://localhost:5001/webhook",
     "webhook_secret": "test-secret"
   }'
@@ -262,8 +288,12 @@ curl -X POST http://localhost:8000/api/v1/workflow \
   -H "Content-Type: application/json" \
   -d '{
     "workflow_name": "emergency_contacts",
-    "user_id": "test-user-123",
-    "input_data": {"lat": 40.7128, "lng": -74.0060},
+    "user_id": "550e8400-e29b-41d4-a716-446655440002",
+    "input_data": {
+      "lat": 40.7128,
+      "lng": -74.0060,
+      "city": "New York"
+    },
     "webhook_url": "http://localhost:5001/webhook",
     "webhook_secret": "test-secret"
   }'
@@ -490,14 +520,23 @@ pytest tests/ -v --tb=short
 
 ```bash
 # Submit 10 workflows concurrently
+# Note: Using different UUIDs for each request
 for i in {1..10}; do
+  # Generate a simple UUID variant for testing (not cryptographically secure)
+  UUID="550e8400-e29b-41d4-a716-4466554400$(printf '%02d' $i)"
+
   curl -X POST http://localhost:8000/api/v1/workflow \
     -H "Content-Type: application/json" \
     -d "{
       \"workflow_name\": \"emergency_contacts\",
-      \"user_id\": \"load-test-$i\",
-      \"input_data\": {\"lat\": 40.7128, \"lng\": -74.0060},
-      \"webhook_url\": \"http://localhost:5001/webhook\"
+      \"user_id\": \"$UUID\",
+      \"input_data\": {
+        \"lat\": 40.7128,
+        \"lng\": -74.0060,
+        \"city\": \"New York\"
+      },
+      \"webhook_url\": \"http://localhost:5001/webhook\",
+      \"webhook_secret\": \"test-secret\"
     }" &
 done
 wait
@@ -578,15 +617,34 @@ The microservice is in **STANDALONE MODE** for testing:
 
 - **Migration 004 Applied**: Foreign key constraint on `user_id` **DROPPED**
 - **Reason**: Allows testing without access to `profiles` table
-- **Testing**: Submit workflows without `user_id` field (will be NULL)
+- **Testing**: Submit workflows with or without `user_id` field
+  - **With user_id**: Must be a valid UUID format (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+  - **Without user_id**: Field will be NULL in database
 
 ```bash
-# ✅ Works in standalone mode (no user_id required)
+# ✅ Works in standalone mode (with UUID user_id)
 curl -X POST http://localhost:8000/api/v1/workflow \
   -H "Content-Type: application/json" \
   -d '{
     "workflow_name": "emergency_contacts",
-    "input_data": {"lat": 40.7128, "lng": -74.0060}
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "input_data": {
+      "lat": 40.7128,
+      "lng": -74.0060,
+      "city": "New York"
+    }
+  }'
+
+# ✅ Also works in standalone mode (no user_id - will be NULL)
+curl -X POST http://localhost:8000/api/v1/workflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_name": "emergency_contacts",
+    "input_data": {
+      "lat": 40.7128,
+      "lng": -74.0060,
+      "city": "New York"
+    }
   }'
 ```
 
@@ -697,8 +755,14 @@ curl -X POST http://localhost:8000/api/v1/workflow \
   -H "Content-Type: application/json" \
   -d '{
     "workflow_name": "emergency_contacts",
-    "input_data": {"location": "Seattle, WA"},
-    "webhook_url": "https://webhook.site/your-unique-id"
+    "user_id": "550e8400-e29b-41d4-a716-446655440010",
+    "input_data": {
+      "lat": 47.6062,
+      "lng": -122.3321,
+      "city": "Seattle"
+    },
+    "webhook_url": "https://webhook.site/your-unique-id",
+    "webhook_secret": "test-secret"
   }'
 ```
 
@@ -727,9 +791,20 @@ curl -X POST http://localhost:8000/api/v1/workflow \
 ```bash
 # Trigger multiple rapid requests to hit rate limit
 for i in {1..15}; do
+  UUID="550e8400-e29b-41d4-a716-4466554400$(printf '%02d' $((20 + i)))"
   curl -X POST http://localhost:8000/api/v1/workflow \
     -H "Content-Type: application/json" \
-    -d '{"workflow_name": "emergency_contacts", "input_data": {"location": "NYC"}}'
+    -d "{
+      \"workflow_name\": \"emergency_contacts\",
+      \"user_id\": \"$UUID\",
+      \"input_data\": {
+        \"lat\": 40.7128,
+        \"lng\": -74.0060,
+        \"city\": \"New York\"
+      },
+      \"webhook_url\": \"http://localhost:5001/webhook\",
+      \"webhook_secret\": \"test-secret\"
+    }"
 done
 ```
 
@@ -756,12 +831,18 @@ done
 #### 3. Invalid User Input (User Error)
 
 ```bash
-# Send invalid coordinates
+# Send invalid workflow data
 curl -X POST http://localhost:8000/api/v1/workflow \
   -H "Content-Type: application/json" \
   -d '{
     "workflow_name": "emergency_contacts",
-    "input_data": {"location": "invalid-coordinates"}
+    "user_id": "550e8400-e29b-41d4-a716-446655440040",
+    "input_data": {
+      "lat": "invalid-latitude",
+      "lng": "invalid-longitude"
+    },
+    "webhook_url": "http://localhost:5001/webhook",
+    "webhook_secret": "test-secret"
   }'
 ```
 
@@ -804,10 +885,19 @@ docker-compose restart
 #### Verify Stack Traces Included
 
 ```bash
-# Trigger an error
+# Trigger an error with invalid workflow name
 curl -X POST http://localhost:8000/api/v1/workflow \
   -H "Content-Type: application/json" \
-  -d '{"workflow_name": "invalid_workflow", "input_data": {}}'
+  -d '{
+    "workflow_name": "invalid_workflow",
+    "user_id": "550e8400-e29b-41d4-a716-446655440050",
+    "input_data": {
+      "lat": 40.7128,
+      "lng": -74.0060
+    },
+    "webhook_url": "http://localhost:5001/webhook",
+    "webhook_secret": "test-secret"
+  }'
 
 # Check webhook - should include stack_trace field
 ```
