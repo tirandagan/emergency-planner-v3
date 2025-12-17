@@ -1,16 +1,139 @@
+# Render Blueprint Configuration for BePreparedd.ai Monorepo
+# This file deploys both the Next.js web app and the LLM microservice
+
 services:
-  # FastAPI Web Service (API)
+  # ============================================================================
+  # NEXT.JS WEB APPLICATION
+  # ============================================================================
+
+  - type: web
+    name: beprepared-nextjs
+    runtime: node
+    region: oregon  # Change based on your primary user base
+    plan: starter  # $7/month - upgrade to standard/pro for production
+    branch: main
+
+    # Build configuration
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+
+    # Health check
+    healthCheckPath: /api/health
+
+    # Auto-deploy on git push
+    autoDeploy: true
+
+    # Environment variables for Next.js
+    envVars:
+      # Node Environment
+      - key: NODE_ENV
+        value: production
+
+      # Site Configuration
+      - key: NEXT_PUBLIC_SITE_URL
+        value: https://beprepared-nextjs.onrender.com  # Update with custom domain
+
+      # Supabase (Database & Auth)
+      - key: DATABASE_URL
+        sync: false  # Set manually - use IPv4 resolved if needed
+
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # AI Services
+      - key: OPENROUTER_API_KEY
+        sync: false
+
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # Google Services
+      - key: NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY
+        sync: false
+
+      - key: GOOGLE_CUSTOM_SEARCH_CX
+        sync: false
+
+      # Weather API
+      - key: NEXT_PUBLIC_WEATHERAPI_API_KEY
+        sync: false
+
+      # Stripe Payments
+      - key: STRIPE_BASIC_PRICE_ID
+        sync: false
+
+      - key: STRIPE_PRO_PRICE_ID
+        sync: false
+
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
+
+      - key: STRIPE_SECRET_KEY
+        sync: false
+
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      - key: STRIPE_CUSTOMER_PORTAL_URL
+        sync: false
+
+      # Email Service (Resend)
+      - key: RESEND_API_KEY
+        sync: false
+
+      - key: FROM_EMAIL
+        sync: false
+
+      - key: ADMIN_EMAIL
+        sync: false
+
+      # LLM Service Integration
+      - key: LLM_SERVICE_URL
+        value: https://llm-service-api.onrender.com  # Internal URL to LLM service
+
+      - key: LLM_WEBHOOK_SECRET
+        sync: false  # Must match LLM service secret
+
+      # Optional Features
+      - key: NEXT_PUBLIC_STREAMING_DISPLAY_MODE
+        value: full
+
+      - key: SERPAPI_API_KEY
+        sync: false
+
+      - key: DECODO_USER
+        sync: false
+
+      - key: DECODO_PASS
+        sync: false
+
+      - key: ZOOM_API_KEY
+        sync: false
+
+      - key: ZOOM_API_SECRET
+        sync: false
+
+  # ============================================================================
+  # LLM MICROSERVICE - FASTAPI API SERVER
+  # ============================================================================
+
   - type: web
     name: llm-service-api
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: ./
-    plan: starter  # Upgrade to standard/pro based on needs
-    region: oregon  # Change based on your primary user base
+    plan: starter  # $7/month - upgrade based on load
+    region: oregon
     branch: main
     rootDir: LLM_service
 
-    # Health check configuration
+    # Health check
     healthCheckPath: /health
 
     # Auto-deploy on git push
@@ -24,29 +147,35 @@ services:
       - key: PORT
         value: 10000
 
+      # Database (Shared with Next.js)
       - key: DATABASE_URL
-        sync: false  # Set manually or link to database
+        sync: false  # Use same Supabase DB as Next.js
 
+      # Redis (Managed by Render)
       - key: REDIS_URL
         fromService:
           type: redis
           name: llm-service-redis
           property: connectionString
 
+      # AI Service
       - key: OPENROUTER_API_KEY
-        sync: false  # Set manually in Render dashboard
+        sync: false
 
+      # External APIs
       - key: WEATHERAPI_API_KEY
         sync: false
 
       - key: GOOGLE_SERVICES_API_KEY
         sync: false
 
+      # Webhook Security
       - key: LLM_WEBHOOK_SECRET
         sync: false  # Must match Next.js app secret
 
+      # Email Notifications
       - key: RESEND_API_KEY
-        sync: false  # For email notifications
+        sync: false
 
       - key: FROM_EMAIL
         sync: false
@@ -54,6 +183,7 @@ services:
       - key: ADMIN_EMAIL
         sync: false
 
+      # Service Configuration
       - key: DEBUG_MODE
         value: false
 
@@ -72,13 +202,16 @@ services:
     # Startup command
     dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
 
-  # Celery Background Worker
+  # ============================================================================
+  # LLM MICROSERVICE - CELERY BACKGROUND WORKER
+  # ============================================================================
+
   - type: worker
     name: llm-service-worker
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: ./
-    plan: starter  # Upgrade based on workload
+    plan: starter  # $7/month
     region: oregon
     branch: main
     rootDir: LLM_service
@@ -130,10 +263,13 @@ services:
       - key: CELERY_TASK_ALWAYS_EAGER
         value: false
 
-    # Celery worker command
+    # Celery worker command with eventlet pool for async tasks
     dockerCommand: celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=10
 
-  # Celery Flower Monitoring (Optional)
+  # ============================================================================
+  # LLM MICROSERVICE - CELERY FLOWER MONITORING (OPTIONAL)
+  # ============================================================================
+
   - type: web
     name: llm-service-flower
     runtime: docker
@@ -161,14 +297,61 @@ services:
       - key: CELERY_TASK_ALWAYS_EAGER
         value: false
 
-    # Flower monitoring command
+    # Flower monitoring dashboard command
     dockerCommand: celery -A app.celery_app flower --port=$PORT
 
-# Managed Redis instance
+# ==============================================================================
+# MANAGED DATABASES
+# ==============================================================================
+
 databases:
+  # Redis for LLM service (message broker & cache)
   - name: llm-service-redis
     databaseName: llm-service-redis
     user: redis
     plan: starter  # $7/month
     region: oregon
-    ipAllowList: []  # Allow all IPs (Render services)
+    ipAllowList: []  # Allow all IPs (Render internal services)
+
+# ==============================================================================
+# DEPLOYMENT NOTES
+# ==============================================================================
+#
+# Total Monthly Cost Estimate:
+# - Next.js Web App:        $7/month (Starter)
+# - LLM API Service:        $7/month (Starter)
+# - LLM Worker Service:     $7/month (Starter)
+# - LLM Flower Dashboard:   $0/month (Free)
+# - Redis:                  $7/month (Starter)
+# - Supabase Database:      $0/month (Free tier) or included in existing plan
+# ────────────────────────────────────────────────
+# TOTAL:                    ~$28/month
+#
+# Scaling Options:
+# - Upgrade individual services to Standard ($25/mo) or Pro ($85/mo)
+# - Add more worker instances for parallel processing
+# - Use custom domain (add DNS records after deployment)
+#
+# Database Setup:
+# 1. Use existing Supabase database (recommended)
+# 2. Run LLM service migrations: LLM_service/migrations/*.sql
+# 3. Ensure both services use same DATABASE_URL
+#
+# Environment Variables:
+# 1. Set all "sync: false" variables in Render Dashboard
+# 2. Generate LLM_WEBHOOK_SECRET: openssl rand -hex 32
+# 3. Use same secret in both Next.js and LLM service
+#
+# IPv6 Connectivity (Supabase):
+# - If using Supabase and seeing ENETUNREACH errors
+# - Use IPv4 resolution script in scripts/resolve-db-ipv4.js
+# - Or use Supabase Transaction Mode pooler URL
+#
+# Post-Deployment:
+# 1. Test Next.js app: https://beprepared-nextjs.onrender.com
+# 2. Test LLM API health: https://llm-service-api.onrender.com/health
+# 3. Monitor Flower: https://llm-service-flower.onrender.com
+# 4. Set up custom domain in Render Dashboard
+# 5. Configure Stripe webhooks with production URLs
+#
+# ==============================================================================
