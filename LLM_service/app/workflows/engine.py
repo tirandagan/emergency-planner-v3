@@ -266,8 +266,18 @@ class WorkflowEngine:
 
         # Execute workflow with eventlet-aware event loop management
         if RUNNING_UNDER_EVENTLET:
-            # Under eventlet, use the existing event loop instead of creating a new one
-            # Eventlet manages a global event loop and creating new ones causes conflicts
+            # Under eventlet, we need special handling for the already-running event loop
+            # Ensure nest_asyncio is applied to allow nested run_until_complete
+            try:
+                import nest_asyncio
+                nest_asyncio.apply()
+                logger.debug("nest_asyncio applied for eventlet compatibility")
+            except ImportError:
+                logger.warning("nest_asyncio not available - concurrent execution may fail")
+            except (ValueError, RuntimeError) as e:
+                # Already applied or conflict - safe to continue
+                logger.debug(f"nest_asyncio state: {e}")
+
             try:
                 loop = asyncio.get_event_loop()
             except RuntimeError:

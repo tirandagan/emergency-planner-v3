@@ -1,8 +1,16 @@
 """Celery application configuration."""
-# NOTE: eventlet.monkey_patch() should ONLY be called in Celery worker processes,
-# NOT in the FastAPI application. Monkey patching in FastAPI causes threading
-# conflicts with Gunicorn + Uvicorn workers and SQLAlchemy connection pooling.
-# The Celery worker process will handle its own monkey patching if using --pool=eventlet
+# CRITICAL: eventlet.monkey_patch() MUST be called before any other imports
+# when using --pool=eventlet. This ensures all blocking operations are patched.
+import sys
+
+# Only monkey patch in Celery worker context (not FastAPI/Gunicorn)
+if 'celery' in sys.argv[0] or 'worker' in sys.argv:
+    try:
+        import eventlet
+        eventlet.monkey_patch()
+        print("✅ eventlet.monkey_patch() applied successfully")
+    except ImportError:
+        print("⚠️  eventlet not available")
 
 import ssl
 from celery import Celery
