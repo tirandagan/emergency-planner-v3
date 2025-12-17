@@ -1,0 +1,174 @@
+services:
+  # FastAPI Web Service (API)
+  - type: web
+    name: llm-service-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    plan: starter  # Upgrade to standard/pro based on needs
+    region: oregon  # Change based on your primary user base
+    branch: main
+    rootDir: LLM_service
+
+    # Health check configuration
+    healthCheckPath: /health
+
+    # Auto-deploy on git push
+    autoDeploy: true
+
+    # Environment variables
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+
+      - key: PORT
+        value: 10000
+
+      - key: DATABASE_URL
+        sync: false  # Set manually or link to database
+
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: llm-service-redis
+          property: connectionString
+
+      - key: OPENROUTER_API_KEY
+        sync: false  # Set manually in Render dashboard
+
+      - key: WEATHERAPI_API_KEY
+        sync: false
+
+      - key: GOOGLE_SERVICES_API_KEY
+        sync: false
+
+      - key: LLM_WEBHOOK_SECRET
+        sync: false  # Must match Next.js app secret
+
+      - key: RESEND_API_KEY
+        sync: false  # For email notifications
+
+      - key: FROM_EMAIL
+        sync: false
+
+      - key: ADMIN_EMAIL
+        sync: false
+
+      - key: DEBUG_MODE
+        value: false
+
+      - key: LOG_LEVEL
+        value: info
+
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: false
+
+      - key: WEBHOOK_TIMEOUT
+        value: 30
+
+      - key: CACHE_DEFAULT_TTL
+        value: 3600
+
+    # Startup command
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+
+  # Celery Background Worker
+  - type: worker
+    name: llm-service-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    plan: starter  # Upgrade based on workload
+    region: oregon
+    branch: main
+    rootDir: LLM_service
+
+    # Auto-deploy on git push
+    autoDeploy: true
+
+    # Environment variables (same as API)
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+
+      - key: DATABASE_URL
+        sync: false
+
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: llm-service-redis
+          property: connectionString
+
+      - key: OPENROUTER_API_KEY
+        sync: false
+
+      - key: WEATHERAPI_API_KEY
+        sync: false
+
+      - key: GOOGLE_SERVICES_API_KEY
+        sync: false
+
+      - key: LLM_WEBHOOK_SECRET
+        sync: false
+
+      - key: RESEND_API_KEY
+        sync: false
+
+      - key: FROM_EMAIL
+        sync: false
+
+      - key: ADMIN_EMAIL
+        sync: false
+
+      - key: DEBUG_MODE
+        value: false
+
+      - key: LOG_LEVEL
+        value: info
+
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: false
+
+    # Celery worker command
+    dockerCommand: celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=10
+
+  # Celery Flower Monitoring (Optional)
+  - type: web
+    name: llm-service-flower
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    plan: free  # Free tier sufficient for monitoring
+    region: oregon
+    branch: main
+    rootDir: LLM_service
+
+    # Auto-deploy on git push
+    autoDeploy: true
+
+    # Environment variables
+    envVars:
+      - key: PORT
+        value: 10000
+
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: llm-service-redis
+          property: connectionString
+
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: false
+
+    # Flower monitoring command
+    dockerCommand: celery -A app.celery_app flower --port=$PORT
+
+# Managed Redis instance
+databases:
+  - name: llm-service-redis
+    databaseName: llm-service-redis
+    user: redis
+    plan: starter  # $7/month
+    region: oregon
+    ipAllowList: []  # Allow all IPs (Render services)
