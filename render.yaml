@@ -332,6 +332,10 @@ services:
 # 1. Set all "sync: false" variables in Render Dashboard
 # 2. Generate LLM_WEBHOOK_SECRET: openssl rand -hex 32
 # 3. Use same secret in both Next.js and LLM service
+# 4. IMPORTANT: LLM service requires NEXT_PUBLIC_ prefixed variables:
+#    - NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY (required)
+#    - NEXT_PUBLIC_WEATHERAPI_API_KEY (optional)
+#    These match the validation aliases in app/config.py
 #
 # IPv6 Connectivity (Supabase):
 # - If using Supabase and seeing ENETUNREACH errors
