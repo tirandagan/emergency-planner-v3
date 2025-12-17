@@ -217,17 +217,49 @@ function mapProductDetails(data: any): SimplifiedProduct {
     };
 }
 
+/**
+ * Expands a shortened URL by following redirects to get the final destination URL
+ */
+async function expandShortenedUrl(shortUrl: string): Promise<string> {
+    try {
+        // Make a HEAD request to follow redirects without downloading the body
+        const response = await fetch(shortUrl, {
+            method: 'HEAD',
+            redirect: 'follow' // Follow redirects automatically
+        });
+
+        // The response.url contains the final URL after all redirects
+        return response.url;
+    } catch (error) {
+        console.error('[Decodo] Failed to expand shortened URL:', error);
+        // If expansion fails, return the original URL
+        return shortUrl;
+    }
+}
+
 export async function getDecodoProductDetails(urlOrAsin: string, country = 'US'): Promise<SimplifiedProduct | null> {
-    // Try to extract ASIN first
-    const asinMatch = urlOrAsin.match(/(?:\/dp\/|\/gp\/product\/|\/product\/)([A-Z0-9]{10})/);
-    const isAsin = /^[A-Z0-9]{10}$/.test(urlOrAsin);
-    
-    let query = urlOrAsin;
-    
+    let processedUrl = urlOrAsin;
+
+    // Check if this is a shortened Amazon URL that needs expansion
+    const isShortenedUrl = urlOrAsin.includes('a.co/') || urlOrAsin.includes('amzn.to/');
+
+    if (isShortenedUrl) {
+        console.log('[Decodo] Detected shortened URL, expanding:', urlOrAsin);
+        processedUrl = await expandShortenedUrl(urlOrAsin);
+        console.log('[Decodo] Expanded URL:', processedUrl);
+    }
+
+    // Try to extract ASIN from the (possibly expanded) URL
+    const asinMatch = processedUrl.match(/(?:\/dp\/|\/gp\/product\/|\/product\/)([A-Z0-9]{10})/);
+    const isAsin = /^[A-Z0-9]{10}$/.test(processedUrl);
+
+    let query = processedUrl;
+
     if (isAsin) {
-        query = urlOrAsin;
+        query = processedUrl;
     } else if (asinMatch && asinMatch[1]) {
         query = asinMatch[1];
+        console.log('[Decodo] Extracted ASIN:', query);
     } else {
         // If we cannot extract ASIN but it is a URL, we might need to use a different target or assume 'query' allows URL?
         // However, the error message specifically said "amazon_product target is not available with url parameter, use query parameter instead".
@@ -236,7 +268,7 @@ export async function getDecodoProductDetails(urlOrAsin: string, country = 'US')
         // But let's assume it is an Amazon URL and we can extract ASIN.
         // If we fail to extract ASIN, we will try to pass the whole URL as query, as some scrapers allow that.
         // But better to warn.
-        console.warn('[Decodo] Could not extract ASIN from URL, sending URL as query:', urlOrAsin);
+        console.warn('[Decodo] Could not extract ASIN from URL, sending URL as query:', processedUrl);
     }
 
     // Based on error: "amazon_product target is not available with url parameter, use query parameter instead."

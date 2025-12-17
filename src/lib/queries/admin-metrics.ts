@@ -77,27 +77,34 @@ export interface AdminDashboardMetrics {
 
 /**
  * Fetch all admin dashboard metrics in parallel
+ * OPTIMIZED: Reduced from 14 database queries to 5 queries (64% reduction)
+ * - User stats: 2 queries → 1 query (with active users)
+ * - Revenue stats: 3 queries → 1 query
+ * - Engagement stats: 4 queries → 1 query
+ * - Conversion stats: 4 queries → 1 query
+ * - Scenario stats: 1 query (unchanged)
  * @returns Complete dashboard metrics object
  */
 export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
   const overallStart = Date.now();
-  console.log('[Admin Metrics] Starting metrics fetch...');
+  console.log('[Admin Metrics] Starting optimized metrics fetch...');
 
   try {
     // CRITICAL: Add global timeout to prevent entire dashboard from hanging
-    // Increased to 20s for WSL2 network latency (avg query time on WSL2: 200-500ms each)
+    // Reduced to 10s due to query optimizations (expected time: 2-5s on WSL2, <2s on production)
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Admin metrics fetch timeout after 20 seconds")), 20000)
+      setTimeout(() => reject(new Error("Admin metrics fetch timeout after 10 seconds")), 10000)
     );
 
     // Fetch all metrics in parallel for performance
+    // NOTE: Each function now executes a single optimized query using CTEs and FILTER
     const metricsStart = Date.now();
     const metricsPromise = Promise.all([
-      getUserDistributionByTier(),
-      getMonthlyRecurringRevenue(),
-      getPlansCreatedThisMonth(),
-      getTopScenarios(10),
-      getConversionRates(),
+      getUserDistributionByTier(), // 1 query (was 2)
+      getMonthlyRecurringRevenue(), // 1 query (was 3)
+      getPlansCreatedThisMonth(), // 1 query (was 4)
+      getTopScenarios(10), // 1 query (unchanged)
+      getConversionRates(), // 1 query (was 4)
       // TEMPORARILY DISABLED: Activity log query timing out (>5s even without JOIN)
       // Database performance issue - need to check table size and run ANALYZE
       // getRecentActivity(20),
@@ -167,38 +174,59 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
 /**
  * Get user distribution across subscription tiers
  * Includes active user count (users with plans in last 30 days)
+ * OPTIMIZED: Single query using CASE statements and CTEs
  */
 export async function getUserDistributionByTier(): Promise<UserStats> {
   try {
-    // Aggregate users by subscription tier
-    const tierCounts = await db
-      .select({
-        tier: profiles.subscriptionTier,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(profiles)
-      .groupBy(profiles.subscriptionTier);
-
-    // Calculate active users (users with plans in last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
 
-    const activeUsersResult = await db
-      .selectDistinct({ userId: missionReports.userId })
-      .from(missionReports)
-      .where(gte(missionReports.createdAt, thirtyDaysAgo));
+    // OPTIMIZED: Single query combining tier counts and active users
+    const result = await db.execute<{
+      total_users: number;
+      free_users: number;
+      basic_users: number;
+      pro_users: number;
+      active_users: number;
+    }>(sql`
+      WITH tier_stats AS (
+        SELECT
+          COUNT(*) as total_users,
+          COUNT(*) FILTER (WHERE subscription_tier = 'FREE') as free_users,
+          COUNT(*) FILTER (WHERE subscription_tier = 'BASIC') as basic_users,
+          COUNT(*) FILTER (WHERE subscription_tier = 'PRO') as pro_users
+        FROM profiles
+      ),
+      active_stats AS (
+        SELECT COUNT(DISTINCT user_id) as active_users
+        FROM mission_reports
+        WHERE created_at >= ${thirtyDaysAgoStr}::timestamptz
+          AND deleted_at IS NULL
+      )
+      SELECT
+        ts.total_users::int,
+        ts.free_users::int,
+        ts.basic_users::int,
+        ts.pro_users::int,
+        COALESCE(acts.active_users, 0)::int as active_users
+      FROM tier_stats ts
+      CROSS JOIN active_stats acts
+    `);
 
-    const totalUsers = tierCounts.reduce((sum, t) => sum + Number(t.count), 0);
-    const freeUsers = Number(tierCounts.find((t) => t.tier === 'FREE')?.count || 0);
-    const basicUsers = Number(tierCounts.find((t) => t.tier === 'BASIC')?.count || 0);
-    const proUsers = Number(tierCounts.find((t) => t.tier === 'PRO')?.count || 0);
+    const row = result[0];
+    const totalUsers = Number(row?.total_users || 0);
+    const freeUsers = Number(row?.free_users || 0);
+    const basicUsers = Number(row?.basic_users || 0);
+    const proUsers = Number(row?.pro_users || 0);
+    const activeUsers = Number(row?.active_users || 0);
 
     return {
       totalUsers,
       freeUsers,
       basicUsers,
       proUsers,
-      activeUsers: activeUsersResult.length,
+      activeUsers,
       tierDistribution: [
         { name: 'Free', value: freeUsers, color: 'hsl(220, 85%, 55%)' }, // Trust Blue
         { name: 'Basic', value: basicUsers, color: 'hsl(120, 60%, 45%)' }, // Green
@@ -223,46 +251,49 @@ export async function getUserDistributionByTier(): Promise<UserStats> {
 /**
  * Calculate Monthly Recurring Revenue (MRR) and Average Revenue Per User (ARPU)
  * Based on subscription tiers and billing transactions
+ * OPTIMIZED: Single query combining revenue sum and user counts
  */
 export async function getMonthlyRecurringRevenue(): Promise<RevenueStats> {
   try {
-    // Sum all successful subscription charges this month
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstDayOfMonthStr = firstDayOfMonth.toISOString();
 
-    const monthlyRevenueResult = await db
-      .select({
-        total: sql<string>`COALESCE(SUM(amount), 0)`,
-      })
-      .from(billingTransactions)
-      .where(
-        and(
-          gte(billingTransactions.transactionDate, firstDayOfMonth),
-          eq(billingTransactions.status, 'succeeded')
-        )
-      );
+    // OPTIMIZED: Single query for revenue and tier counts
+    const result = await db.execute<{
+      total_revenue: number;
+      basic_users: number;
+      pro_users: number;
+    }>(sql`
+      WITH revenue_stats AS (
+        SELECT COALESCE(SUM(amount), 0) as total_revenue
+        FROM billing_transactions
+        WHERE transaction_date >= ${firstDayOfMonthStr}::timestamptz
+          AND status = 'succeeded'
+      ),
+      user_stats AS (
+        SELECT
+          COUNT(*) FILTER (WHERE subscription_tier = 'BASIC') as basic_users,
+          COUNT(*) FILTER (WHERE subscription_tier = 'PRO') as pro_users
+        FROM profiles
+      )
+      SELECT
+        rs.total_revenue::numeric,
+        us.basic_users::int,
+        us.pro_users::int
+      FROM revenue_stats rs
+      CROSS JOIN user_stats us
+    `);
 
-    const totalRevenue = Number(monthlyRevenueResult[0]?.total || 0);
-
-    // Calculate MRR based on subscription tiers
-    // Note: In production, this should come from Stripe subscription data
-    const basicMrr = 9.99; // $9.99/month
-    const proMrr = 19.99; // $19.99/month
-
-    const basicCount = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(profiles)
-      .where(eq(profiles.subscriptionTier, 'BASIC'));
-
-    const proCount = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(profiles)
-      .where(eq(profiles.subscriptionTier, 'PRO'));
-
-    const basicUsers = Number(basicCount[0]?.count || 0);
-    const proUsers = Number(proCount[0]?.count || 0);
+    const row = result[0];
+    const totalRevenue = Number(row?.total_revenue || 0);
+    const basicUsers = Number(row?.basic_users || 0);
+    const proUsers = Number(row?.pro_users || 0);
     const totalPaidUsers = basicUsers + proUsers;
 
+    // Calculate MRR based on subscription tiers
+    const basicMrr = 9.99; // $9.99/month
+    const proMrr = 19.99; // $19.99/month
     const mrr = basicUsers * basicMrr + proUsers * proMrr;
     const arpu = totalPaidUsers > 0 ? mrr / totalPaidUsers : 0;
 
@@ -283,50 +314,48 @@ export async function getMonthlyRecurringRevenue(): Promise<RevenueStats> {
 /**
  * Calculate plan creation metrics
  * Total plans, plans this month, plans today, average per user
+ * OPTIMIZED: Single query using FILTER conditions for date ranges
  */
 export async function getPlansCreatedThisMonth(): Promise<EngagementStats> {
   try {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const firstDayOfMonthStr = firstDayOfMonth.toISOString();
+    const startOfTodayStr = startOfToday.toISOString();
 
-    // Total plans all time (exclude soft-deleted)
-    const totalPlansResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(missionReports)
-      .where(sql`${missionReports.deletedAt} IS NULL`);
+    // OPTIMIZED: Single query for all plan counts and user count
+    const result = await db.execute<{
+      total_plans: number;
+      plans_this_month: number;
+      plans_today: number;
+      total_users: number;
+    }>(sql`
+      WITH plan_stats AS (
+        SELECT
+          COUNT(*) FILTER (WHERE deleted_at IS NULL) as total_plans,
+          COUNT(*) FILTER (WHERE created_at >= ${firstDayOfMonthStr}::timestamptz AND deleted_at IS NULL) as plans_this_month,
+          COUNT(*) FILTER (WHERE created_at >= ${startOfTodayStr}::timestamptz AND deleted_at IS NULL) as plans_today
+        FROM mission_reports
+      ),
+      user_stats AS (
+        SELECT COUNT(*) as total_users
+        FROM profiles
+      )
+      SELECT
+        ps.total_plans::int,
+        ps.plans_this_month::int,
+        ps.plans_today::int,
+        us.total_users::int
+      FROM plan_stats ps
+      CROSS JOIN user_stats us
+    `);
 
-    // Plans this month
-    const plansThisMonthResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(missionReports)
-      .where(
-        and(
-          gte(missionReports.createdAt, firstDayOfMonth),
-          sql`${missionReports.deletedAt} IS NULL`
-        )
-      );
-
-    // Plans today
-    const plansTodayResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(missionReports)
-      .where(
-        and(
-          gte(missionReports.createdAt, startOfToday),
-          sql`${missionReports.deletedAt} IS NULL`
-        )
-      );
-
-    const totalPlans = Number(totalPlansResult[0]?.count || 0);
-    const plansThisMonth = Number(plansThisMonthResult[0]?.count || 0);
-    const plansToday = Number(plansTodayResult[0]?.count || 0);
-
-    // Calculate average plans per user
-    const totalUsersResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(profiles);
-    const totalUsers = Number(totalUsersResult[0]?.count || 0);
+    const row = result[0];
+    const totalPlans = Number(row?.total_plans || 0);
+    const plansThisMonth = Number(row?.plans_this_month || 0);
+    const plansToday = Number(row?.plans_today || 0);
+    const totalUsers = Number(row?.total_users || 0);
     const avgPlansPerUser = totalUsers > 0 ? totalPlans / totalUsers : 0;
 
     return {
@@ -396,32 +425,30 @@ export async function getTopScenarios(limit: number = 10): Promise<ScenarioStats
  * Calculate conversion rates
  * - Free to Paid (Basic or Pro)
  * - Basic to Pro
+ * OPTIMIZED: Single query using FILTER conditions
  */
 export async function getConversionRates(): Promise<ConversionStats> {
   try {
-    const totalUsersResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(profiles);
-    const totalUsers = Number(totalUsersResult[0]?.count || 0);
+    // OPTIMIZED: Single query for all tier counts
+    const result = await db.execute<{
+      total_users: number;
+      free_users: number;
+      basic_users: number;
+      pro_users: number;
+    }>(sql`
+      SELECT
+        COUNT(*) as total_users,
+        COUNT(*) FILTER (WHERE subscription_tier = 'FREE') as free_users,
+        COUNT(*) FILTER (WHERE subscription_tier = 'BASIC') as basic_users,
+        COUNT(*) FILTER (WHERE subscription_tier = 'PRO') as pro_users
+      FROM profiles
+    `);
 
-    const freeUsersResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(profiles)
-      .where(eq(profiles.subscriptionTier, 'FREE'));
-    const totalFreeUsers = Number(freeUsersResult[0]?.count || 0);
-
-    const basicUsersResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(profiles)
-      .where(eq(profiles.subscriptionTier, 'BASIC'));
-    const totalBasicUsers = Number(basicUsersResult[0]?.count || 0);
-
-    const proUsersResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(profiles)
-      .where(eq(profiles.subscriptionTier, 'PRO'));
-    const totalProUsers = Number(proUsersResult[0]?.count || 0);
-
+    const row = result[0];
+    const totalUsers = Number(row?.total_users || 0);
+    const totalFreeUsers = Number(row?.free_users || 0);
+    const totalBasicUsers = Number(row?.basic_users || 0);
+    const totalProUsers = Number(row?.pro_users || 0);
     const totalPaidUsers = totalBasicUsers + totalProUsers;
 
     // Calculate conversion rates

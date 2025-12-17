@@ -10,6 +10,8 @@ import { createProduct, updateProduct, deleteProduct, summarizeProductDescriptio
 import { getProductDetailsFromAmazon, searchProductsFromAmazon } from "../actions";
 import ProductSearchModal from "../modals/ProductSearchModal";
 import DuplicateProductWarningModal from "../modals/DuplicateProductWarningModal";
+import CleanUrlModal from "../modals/CleanUrlModal";
+import FetchFromAmazonModal from "../modals/FetchFromAmazonModal";
 import SupplierModal from "./SupplierModal";
 import MasterItemModal from "./MasterItemModal";
 import DecodoErrorModal from "../modals/DecodoErrorModal";
@@ -102,6 +104,10 @@ export default function ProductEditDialog({
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
     const [isVariationsModalOpen, setIsVariationsModalOpen] = useState(false);
     const [isVariationsTableModalOpen, setIsVariationsTableModalOpen] = useState(false);
+    const [isCleanUrlModalOpen, setIsCleanUrlModalOpen] = useState(false);
+    const [isFetchFromAmazonModalOpen, setIsFetchFromAmazonModalOpen] = useState(false);
+    const [urlToClean, setUrlToClean] = useState({ original: '', clean: '' });
+    const [fetchContext, setFetchContext] = useState<{ method: 'url' | 'asin'; value: string }>({ method: 'url', value: '' });
     const [decodoError, setDecodoError] = useState<string | null>(null);
     
     // Inheritance Warning State
@@ -557,6 +563,95 @@ export default function ProductEditDialog({
         }));
     };
 
+    // URL Cleaning Functions
+    const isAmazonUrl = (url: string): boolean => {
+        return url.includes('amazon.com') || url.includes('a.co') || url.includes('amzn.to');
+    };
+
+    const hasQueryParams = (url: string): boolean => {
+        return url.includes('?');
+    };
+
+    const getCleanUrl = (url: string): string => {
+        // Remove everything after the first '?'
+        const questionMarkIndex = url.indexOf('?');
+        return questionMarkIndex !== -1 ? url.substring(0, questionMarkIndex) : url;
+    };
+
+    const handleProductUrlChange = (newUrl: string) => {
+        // Check if this is an Amazon URL with query parameters
+        if (isAmazonUrl(newUrl) && hasQueryParams(newUrl)) {
+            const cleanUrl = getCleanUrl(newUrl);
+
+            // Show the modal to offer cleaning
+            setUrlToClean({ original: newUrl, clean: cleanUrl });
+            setIsCleanUrlModalOpen(true);
+
+            // Don't update the form state yet - wait for user decision
+            return;
+        }
+
+        // Update the form state
+        setFormState({ ...formState, productUrl: newUrl });
+
+        // If it's an Amazon URL (no query params or non-Amazon), check if we should offer to fetch
+        if (newUrl && isAmazonUrl(newUrl)) {
+            setFetchContext({ method: 'url', value: newUrl });
+            setIsFetchFromAmazonModalOpen(true);
+        }
+    };
+
+    const handleAcceptCleanUrl = (cleanUrl: string) => {
+        setFormState({ ...formState, productUrl: cleanUrl });
+
+        // After accepting clean URL, offer to fetch from Amazon
+        setFetchContext({ method: 'url', value: cleanUrl });
+        setIsFetchFromAmazonModalOpen(true);
+    };
+
+    const handleAsinChange = (newAsin: string) => {
+        setFormState({ ...formState, asin: newAsin });
+
+        // Check if we should offer to fetch: ASIN exists AND supplier is Amazon
+        const currentSupplier = localSuppliers.find(s => s.id === formState.supplierId);
+        if (newAsin && currentSupplier?.name === 'Amazon') {
+            setFetchContext({ method: 'asin', value: newAsin });
+            setIsFetchFromAmazonModalOpen(true);
+        }
+    };
+
+    const handleSupplierChange = (newSupplierId: string) => {
+        setFormState({ ...formState, supplierId: newSupplierId });
+
+        // Check if we should offer to fetch: supplier is Amazon AND ASIN exists
+        const newSupplier = localSuppliers.find(s => s.id === newSupplierId);
+        if (newSupplier?.name === 'Amazon' && formState.asin) {
+            setFetchContext({ method: 'asin', value: formState.asin });
+            setIsFetchFromAmazonModalOpen(true);
+        }
+    };
+
+    const handleConfirmFetchFromAmazon = async () => {
+        setIsFetchingDetails(true);
+        setProductSuggestions(null);
+
+        try {
+            const queryValue = fetchContext.method === 'url' ? fetchContext.value : fetchContext.value;
+            const res = await getProductDetailsFromAmazon(queryValue);
+
+            if (res.success && res.data) {
+                applyAutoFillData(res.data);
+            } else {
+                setDecodoError(res.message || 'Unknown error');
+            }
+        } catch (error: any) {
+            console.error(error);
+            setDecodoError("Error fetching details: " + error.message);
+        } finally {
+            setIsFetchingDetails(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -585,73 +680,86 @@ export default function ProductEditDialog({
                         {/* LEFT COLUMN */}
                         <div className="col-span-12 lg:col-span-8 p-8 border-r border-border space-y-8">
                             
-                            {/* Auto-Fill Bar */}
-                            {(() => {
-                                const productUrl = formState.productUrl || '';
-                                const currentSupplierId = formState.supplierId;
-                                const currentSupplier = localSuppliers.find(s => s.id === currentSupplierId);
-                                const isAmazonSupplier = currentSupplier?.name === 'Amazon';
-                                const isAmazonUrl = productUrl.includes('amazon.com');
-                                const hasSuggestions = productSuggestions && Object.keys(productSuggestions).length > 0;
-
-                                if (!productUrl || isAmazonSupplier || isAmazonUrl) {
-                                    return (
-                                        <div className={`flex justify-between items-center p-4 rounded-xl border ${hasSuggestions ? 'bg-primary/10 border-primary/50' : 'bg-muted border-border'}`}>
-                                            <div className="text-xs text-muted-foreground">
-                                                {hasSuggestions
-                                                    ? `${Object.keys(productSuggestions).length} field(s) ready to update from Amazon`
-                                                    : 'Auto-fill details from Amazon using Title or ASIN.'
-                                                }
-                                            </div>
-                                            {hasSuggestions ? (
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={acceptAllSuggestions}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-success/90 text-white rounded-lg text-xs font-bold transition-colors shadow-success/20"
-                                                    >
-                                                        <Check className="w-3 h-3" strokeWidth={2.5} />
-                                                        Accept All
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={rejectAllSuggestions}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-bold transition-colors"
-                                                    >
-                                                        <X className="w-3 h-3" strokeWidth={2.5} />
-                                                        Reject All
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleFetchProductDetails}
-                                                    disabled={isFetchingDetails || (!formState.name && !formState.productUrl)}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-lg text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-secondary/20"
-                                                >
-                                                    {isFetchingDetails ? <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} /> : <Sparkles className="w-3 h-3" strokeWidth={2.5} />}
-                                                    Auto-Fill from Amazon
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                }
-                                return null;
-                            })()}
+                            {/* Suggestions Bar - Only shows when there are auto-fill suggestions */}
+                            {productSuggestions && Object.keys(productSuggestions).length > 0 && (
+                                <div className="flex justify-between items-center p-4 rounded-xl border bg-primary/10 border-primary/50">
+                                    <div className="text-xs text-muted-foreground">
+                                        {Object.keys(productSuggestions).length} field(s) ready to update from Amazon
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={acceptAllSuggestions}
+                                            className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-success/90 text-white rounded-lg text-xs font-bold transition-colors shadow-success/20"
+                                        >
+                                            <Check className="w-3 h-3" strokeWidth={2.5} />
+                                            Accept All
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={rejectAllSuggestions}
+                                            className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-bold transition-colors"
+                                        >
+                                            <X className="w-3 h-3" strokeWidth={2.5} />
+                                            Reject All
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Identity Section */}
                             <section>
                                 <SectionTitle icon={Package}>Product Identity</SectionTitle>
                                 <InputGroup label="Product Name" required>
-                                    <TextInput 
-                                        name="name" 
-                                        value={formState.name || ''} 
+                                    <TextInput
+                                        name="name"
+                                        value={formState.name || ''}
                                         onChange={e => setFormState({ ...formState, name: e.target.value })}
-                                        placeholder="e.g. Sawyer Squeeze Water Filter" 
-                                        required 
+                                        placeholder="e.g. Sawyer Squeeze Water Filter"
+                                        required
                                     />
                                     {renderSuggestion('name')}
                                 </InputGroup>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <InputGroup label="Product Page URL" required>
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex gap-2">
+                                                <TextInput
+                                                    name="productUrl"
+                                                    type="url"
+                                                    value={formState.productUrl || ''}
+                                                    onChange={e => handleProductUrlChange(e.target.value)}
+                                                    placeholder="https://amazon.com/..."
+                                                    required
+                                                />
+                                                {formState.productUrl && (
+                                                    <a href={formState.productUrl} target="_blank" className="p-2.5 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                                                        <ExternalLink className="w-4 h-4 text-muted-foreground" strokeWidth={2.5} />
+                                                    </a>
+                                                )}
+                                            </div>
+                                            {renderSuggestion('productUrl')}
+                                        </div>
+                                    </InputGroup>
+                                    <InputGroup label="Image URL">
+                                        <TextInput
+                                            name="imageUrl"
+                                            type="url"
+                                            value={formState.imageUrl || ''}
+                                            onChange={e => setFormState({ ...formState, imageUrl: e.target.value })}
+                                            placeholder="https://..."
+                                        />
+                                        {renderSuggestion('imageUrl')}
+                                    </InputGroup>
+                                </div>
+
+                                {(formState.imageUrl) && (
+                                    <div className="w-32 h-32 bg-muted rounded-lg border border-border flex items-center justify-center overflow-hidden relative group">
+                                        <img src={formState.imageUrl} alt="Preview" className="w-full h-full object-contain" />
+                                    </div>
+                                )}
+
                                 <InputGroup
                                     label="Description"
                                     action={
@@ -666,11 +774,11 @@ export default function ProductEditDialog({
                                         </button>
                                     }
                                 >
-                                    <TextArea 
-                                        name="description" 
+                                    <TextArea
+                                        name="description"
                                         value={formState.description || ''}
                                         onChange={e => setFormState({ ...formState, description: e.target.value })}
-                                        placeholder="Detailed product description, features, and specs..." 
+                                        placeholder="Detailed product description, features, and specs..."
                                     />
                                     {renderSuggestion('description')}
                                 </InputGroup>
@@ -835,48 +943,6 @@ export default function ProductEditDialog({
                                 </div>
                             </div>
                         </section>
-
-                            {/* Media Section */}
-                            <section>
-                                <SectionTitle icon={ImageIcon}>Media & Links</SectionTitle>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <InputGroup label="Product Page URL" required>
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex gap-2">
-                                                <TextInput
-                                                    name="productUrl"
-                                                    type="url"
-                                                    value={formState.productUrl || ''}
-                                                    onChange={e => setFormState({ ...formState, productUrl: e.target.value })}
-                                                    placeholder="https://amazon.com/..."
-                                                    required
-                                                />
-                                                {formState.productUrl && (
-                                                    <a href={formState.productUrl} target="_blank" className="p-2.5 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                                                        <ExternalLink className="w-4 h-4 text-muted-foreground" strokeWidth={2.5} />
-                                                    </a>
-                                                )}
-                                            </div>
-                                            {renderSuggestion('productUrl')}
-                                        </div>
-                                    </InputGroup>
-                                    <InputGroup label="Image URL">
-                                        <TextInput
-                                            name="imageUrl"
-                                            type="url"
-                                            value={formState.imageUrl || ''}
-                                            onChange={e => setFormState({ ...formState, imageUrl: e.target.value })}
-                                            placeholder="https://..."
-                                        />
-                                        {renderSuggestion('imageUrl')}
-                                    </InputGroup>
-                                </div>
-                                {(formState.imageUrl) && (
-                                    <div className="mt-4 w-32 h-32 bg-muted rounded-lg border border-border flex items-center justify-center overflow-hidden relative group">
-                                        <img src={formState.imageUrl} alt="Preview" className="w-full h-full object-contain" />
-                                    </div>
-                                )}
-                            </section>
                         </div>
 
                         {/* RIGHT COLUMN */}
@@ -912,11 +978,11 @@ export default function ProductEditDialog({
                                 <SectionTitle icon={Package}>Inventory & Supplier</SectionTitle>
                                 <div className="space-y-4">
                                     <InputGroup label="SKU / ASIN">
-                                        <TextInput 
-                                            name="asin" 
-                                            value={formState.asin || formState.sku || ''} 
-                                            onChange={e => setFormState({ ...formState, asin: e.target.value })}
-                                            placeholder="e.g. B005EHPVQW" 
+                                        <TextInput
+                                            name="asin"
+                                            value={formState.asin || formState.sku || ''}
+                                            onChange={e => handleAsinChange(e.target.value)}
+                                            placeholder="e.g. B005EHPVQW"
                                         />
                                         {renderSuggestion('asin')}
                                     </InputGroup>
@@ -926,7 +992,7 @@ export default function ProductEditDialog({
                                             <SelectInput
                                                 name="supplier_id"
                                                 value={formState.supplierId || ""}
-                                                onChange={e => setFormState({ ...formState, supplierId: e.target.value })}
+                                                onChange={e => handleSupplierChange(e.target.value)}
                                             >
                                                 <option value="">Select Supplier...</option>
                                                 {localSuppliers.map(s => (
@@ -1218,10 +1284,26 @@ export default function ProductEditDialog({
                 />
             )}
 
-            <DecodoErrorModal 
+            <DecodoErrorModal
                 isOpen={!!decodoError}
                 onClose={() => setDecodoError(null)}
                 message={decodoError || ""}
+            />
+
+            <CleanUrlModal
+                isOpen={isCleanUrlModalOpen}
+                onClose={() => setIsCleanUrlModalOpen(false)}
+                onAccept={handleAcceptCleanUrl}
+                originalUrl={urlToClean.original}
+                cleanUrl={urlToClean.clean}
+            />
+
+            <FetchFromAmazonModal
+                isOpen={isFetchFromAmazonModalOpen}
+                onClose={() => setIsFetchFromAmazonModalOpen(false)}
+                onConfirm={handleConfirmFetchFromAmazon}
+                detectionMethod={fetchContext.method}
+                detectionValue={fetchContext.value}
             />
 
             <VariationsModal

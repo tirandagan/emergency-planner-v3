@@ -66,7 +66,7 @@ export interface ScrapedProduct {
 
 export const scrapeProductUrl = async (url: string): Promise<ScrapedProduct | null> => {
   try {
-    const isAmazon = url.includes('amazon.com') || url.includes('amzn.to');
+    const isAmazon = url.includes('amazon.com') || url.includes('amzn.to') || url.includes('a.co');
 
     // PAAPI Check
     if (isAmazon && process.env.AMAZON_SCRAPING_MODE === 'paapi') {
