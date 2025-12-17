@@ -240,24 +240,27 @@ class WorkflowEngine:
         workflow = self.load_workflow(workflow_name)
 
         # Execute workflow asynchronously
-        # Get or create event loop (Celery eventlet/gevent pools manage their own loops)
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        # Always create a fresh event loop for Celery workers to avoid
+        # "Future attached to different loop" errors with eventlet/gevent
+        # This is especially important for async Redis clients
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-        result = loop.run_until_complete(
-            self.execute_workflow(
-                workflow=workflow,
-                input_data=input_data,
-                timeout_override=timeout_override,
-                progress_callback=progress_callback
+        try:
+            result = loop.run_until_complete(
+                self.execute_workflow(
+                    workflow=workflow,
+                    input_data=input_data,
+                    timeout_override=timeout_override,
+                    progress_callback=progress_callback
+                )
             )
-        )
+        finally:
+            # Clean up event loop to prevent memory leaks
+            try:
+                loop.close()
+            except Exception:
+                pass
         return result
 
     async def execute_workflow(
