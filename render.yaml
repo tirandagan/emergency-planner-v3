@@ -185,7 +185,7 @@ services:
         value: false
 
       - key: LOG_LEVEL
-        value: info
+        value: INFO
 
       - key: CELERY_TASK_ALWAYS_EAGER
         value: false
@@ -253,7 +253,7 @@ services:
         value: false
 
       - key: LOG_LEVEL
-        value: info
+        value: INFO
 
       - key: CELERY_TASK_ALWAYS_EAGER
         value: false
