@@ -225,10 +225,7 @@ services:
         sync: false
 
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: llm-service-redis
-          property: connectionString
+        sync: false  # Set to your external Redis URL (e.g., Upstash, Redis Labs)
 
       - key: OPENROUTER_API_KEY
         sync: false
@@ -286,10 +283,7 @@ services:
         value: 10000
 
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: llm-service-redis
-          property: connectionString
+        sync: false  # Set to your external Redis URL (e.g., Upstash, Redis Labs)
 
       - key: CELERY_TASK_ALWAYS_EAGER
         value: false
