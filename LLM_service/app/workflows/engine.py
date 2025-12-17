@@ -20,23 +20,24 @@ import logging
 import json
 import time
 import asyncio
-import nest_asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Callable
 from pydantic import ValidationError
 
-# Apply nest_asyncio to allow nested event loops (required for Celery eventlet pool)
-# Only apply if uvloop is not being used (FastAPI/Gunicorn uses uvloop by default)
+# Conditionally import and apply nest_asyncio only when uvloop is not available
+# nest_asyncio is incompatible with uvloop (used by Gunicorn + uvicorn[standard])
+# but required for Celery workers using eventlet pool
 try:
     import uvloop
-    # uvloop is installed - don't apply nest_asyncio as they're incompatible
-    # This is fine because FastAPI doesn't need nested event loops
+    # uvloop is installed - skip nest_asyncio entirely to avoid conflicts
+    # FastAPI/Gunicorn doesn't need nested event loops anyway
 except ImportError:
-    # uvloop not installed - safe to apply nest_asyncio for Celery compatibility
+    # uvloop not installed - safe to use nest_asyncio for Celery compatibility
     try:
+        import nest_asyncio
         nest_asyncio.apply()
-    except (ValueError, RuntimeError):
-        # Already applied or incompatible event loop
+    except (ValueError, RuntimeError, ImportError):
+        # Already applied, incompatible, or not installed
         pass
 
 from app.workflows.schema import (
