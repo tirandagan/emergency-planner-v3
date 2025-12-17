@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { 
     Pencil, Plus, X, Save, Package, Layers, ImageIcon, DollarSign, 
     Tags, ExternalLink, Loader2, Sparkles, Check, AlertCircle, Target,
@@ -119,10 +119,13 @@ export default function ProductEditDialog({
     // Async State
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [isFetchingDetails, setIsFetchingDetails] = useState(false);
-    
+
     // Data State
     const [productSuggestions, setProductSuggestions] = useState<Record<string, any> | null>(null);
     const [searchResults, setSearchResults] = useState<any[]>([]);
+
+    // Refs for debouncing
+    const asinDebounceTimer = useRef<NodeJS.Timeout | null>(null);
     
     // Dropdown State
     const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -261,48 +264,6 @@ export default function ProductEditDialog({
             setProductSuggestions(suggestions);
         } else {
             setDecodoError("No new data found from Amazon to update.");
-        }
-    };
-
-    const handleFetchProductDetails = async () => {
-        setIsFetchingDetails(true);
-        setProductSuggestions(null);
-
-        try {
-            if (formState.productUrl && formState.productUrl.trim() !== '') {
-                 const res = await getProductDetailsFromAmazon(formState.productUrl);
-                 if (res.success && res.data) applyAutoFillData(res.data);
-                 else setDecodoError(res.message || 'Unknown error');
-                 setIsFetchingDetails(false);
-                 return;
-            }
-
-            if (formState.asin && formState.asin.trim() !== '') {
-                 const res = await getProductDetailsFromAmazon(formState.asin);
-                 if (res.success && res.data) applyAutoFillData(res.data);
-                 else setDecodoError(res.message || 'Unknown error');
-                 setIsFetchingDetails(false);
-                 return;
-            }
-
-            const query = formState.name;
-            if (query) {
-                const res = await searchProductsFromAmazon(query);
-                if (res.success && res.data && Array.isArray(res.data) && res.data.length > 0) {
-                    setSearchResults(res.data);
-                    setIsSearchModalOpen(true);
-                } else {
-                    setDecodoError('No products found matching: ' + query);
-                }
-                setIsFetchingDetails(false);
-                return;
-            }
-
-        } catch (error: any) {
-            console.error(error);
-            setDecodoError("Error fetching details: " + error.message);
-        } finally {
-            setIsFetchingDetails(false);
         }
     };
 
@@ -612,10 +573,33 @@ export default function ProductEditDialog({
     const handleAsinChange = (newAsin: string) => {
         setFormState({ ...formState, asin: newAsin });
 
-        // Check if we should offer to fetch: ASIN exists AND supplier is Amazon
+        // Clear any existing timer
+        if (asinDebounceTimer.current) {
+            clearTimeout(asinDebounceTimer.current);
+        }
+
+        // Only trigger modal if ASIN is exactly 10 characters (valid Amazon ASIN length)
         const currentSupplier = localSuppliers.find(s => s.id === formState.supplierId);
-        if (newAsin && currentSupplier?.name === 'Amazon') {
-            setFetchContext({ method: 'asin', value: newAsin });
+        if (newAsin.length === 10 && currentSupplier?.name === 'Amazon') {
+            // Debounce: wait 2.5 seconds before showing modal (in case user is still typing)
+            asinDebounceTimer.current = setTimeout(() => {
+                setFetchContext({ method: 'asin', value: newAsin });
+                setIsFetchFromAmazonModalOpen(true);
+            }, 2500);
+        }
+    };
+
+    const handleAsinBlur = () => {
+        // Clear the debounce timer
+        if (asinDebounceTimer.current) {
+            clearTimeout(asinDebounceTimer.current);
+        }
+
+        // If user exits the field with a valid 10-char ASIN, trigger immediately
+        const currentAsin = formState.asin || '';
+        const currentSupplier = localSuppliers.find(s => s.id === formState.supplierId);
+        if (currentAsin.length === 10 && currentSupplier?.name === 'Amazon') {
+            setFetchContext({ method: 'asin', value: currentAsin });
             setIsFetchFromAmazonModalOpen(true);
         }
     };
@@ -623,10 +607,11 @@ export default function ProductEditDialog({
     const handleSupplierChange = (newSupplierId: string) => {
         setFormState({ ...formState, supplierId: newSupplierId });
 
-        // Check if we should offer to fetch: supplier is Amazon AND ASIN exists
+        // Check if we should offer to fetch: supplier is Amazon AND ASIN is valid (10 chars)
         const newSupplier = localSuppliers.find(s => s.id === newSupplierId);
-        if (newSupplier?.name === 'Amazon' && formState.asin) {
-            setFetchContext({ method: 'asin', value: formState.asin });
+        const currentAsin = formState.asin || '';
+        if (newSupplier?.name === 'Amazon' && currentAsin.length === 10) {
+            setFetchContext({ method: 'asin', value: currentAsin });
             setIsFetchFromAmazonModalOpen(true);
         }
     };
@@ -656,7 +641,36 @@ export default function ProductEditDialog({
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl flex flex-col overflow-hidden relative">
+
+            {/* Loading Overlay - Shows when fetching from Amazon */}
+            {isFetchingDetails && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center rounded-2xl">
+                    <div className="bg-card border border-primary/50 rounded-xl p-8 shadow-2xl flex flex-col items-center gap-6 animate-in fade-in zoom-in-95">
+                        <div className="relative">
+                            {/* Spinning border effect */}
+                            <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+                            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin" />
+                            {/* Icon */}
+                            <div className="relative p-6 bg-primary/10 rounded-full">
+                                <Package className="w-12 h-12 text-primary animate-pulse" strokeWidth={2.5} />
+                            </div>
+                        </div>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-lg font-bold text-foreground">Fetching from Amazon</h3>
+                            <p className="text-sm text-muted-foreground max-w-xs">
+                                Retrieving product details... This may take a few seconds.
+                            </p>
+                        </div>
+                        {/* Animated dots */}
+                        <div className="flex gap-2">
+                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Header */}
             <div className="px-8 py-6 border-b border-border flex justify-between items-center bg-muted">
@@ -982,7 +996,9 @@ export default function ProductEditDialog({
                                             name="asin"
                                             value={formState.asin || formState.sku || ''}
                                             onChange={e => handleAsinChange(e.target.value)}
+                                            onBlur={handleAsinBlur}
                                             placeholder="e.g. B005EHPVQW"
+                                            maxLength={10}
                                         />
                                         {renderSuggestion('asin')}
                                     </InputGroup>
