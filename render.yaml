@@ -278,13 +278,24 @@ services:
     # Auto-deploy on git push
     autoDeploy: true
 
-    # Environment variables
+    # Environment variables (Flower needs minimal config but imports full settings)
     envVars:
       - key: PORT
         value: 10000
 
+      # Redis (required for Flower to monitor Celery)
       - key: REDIS_URL
         sync: false  # Set to your external Redis URL (e.g., Upstash, Redis Labs)
+
+      # Required by config.py (even though Flower doesn't use them)
+      - key: DATABASE_URL
+        sync: false  # Must match other services
+
+      - key: OPENROUTER_API_KEY
+        sync: false  # Must match other services
+
+      - key: NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY
+        sync: false  # Must match other services
 
       - key: CELERY_TASK_ALWAYS_EAGER
         value: false
@@ -336,6 +347,9 @@ services:
 #    - NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY (required)
 #    - NEXT_PUBLIC_WEATHERAPI_API_KEY (optional)
 #    These match the validation aliases in app/config.py
+# 5. Flower service needs DATABASE_URL, OPENROUTER_API_KEY, and
+#    NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY even though it only uses Redis
+#    (required because it imports the full config module)
 #
 # IPv6 Connectivity (Supabase):
 # - If using Supabase and seeing ENETUNREACH errors
