@@ -838,7 +838,7 @@ export default function ProductEditDialog({
                                     <InputGroup label="3. Master Item (Type)" required>
                                         <div className="flex gap-2">
                                             <SelectInput
-                                                name="master_item_id"
+                                                name="masterItemId"
                                                 value={formState.masterItemId || ""}
                                                 onChange={e => setFormState({ ...formState, masterItemId: e.target.value })}
                                                 required
@@ -1015,7 +1015,7 @@ export default function ProductEditDialog({
                                     <InputGroup label="Supplier">
                                         <div className="flex gap-2">
                                             <SelectInput
-                                                name="supplier_id"
+                                                name="supplierId"
                                                 value={formState.supplierId || ""}
                                                 onChange={e => handleSupplierChange(e.target.value)}
                                             >

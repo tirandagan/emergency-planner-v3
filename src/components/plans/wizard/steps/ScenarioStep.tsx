@@ -126,12 +126,19 @@ export function ScenarioStep({ register, watch, setValue, errors }: ScenarioStep
           const Icon = scenario.icon;
 
           return (
-            <button
+            <div
               key={scenario.id}
-              type="button"
               onClick={() => toggleScenario(scenario.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleScenario(scenario.id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               className={`
-                relative flex flex-col gap-3 p-4 rounded-lg border-2 transition-all
+                relative flex flex-col gap-3 p-4 rounded-lg border-2 transition-all cursor-pointer
                 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
                 ${
                   isSelected
@@ -178,7 +185,7 @@ export function ScenarioStep({ register, watch, setValue, errors }: ScenarioStep
                   <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300" />
                 </Button>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
