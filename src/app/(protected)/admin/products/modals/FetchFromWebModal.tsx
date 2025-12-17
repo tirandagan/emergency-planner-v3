@@ -13,7 +13,7 @@ export default function FetchFromWebModal({
   onClose,
   onConfirm,
   url,
-}: FetchFromWebModalProps): JSX.Element | null {
+}: FetchFromWebModalProps) {
   if (!isOpen) return null;
 
   const handleConfirm = (): void => {
