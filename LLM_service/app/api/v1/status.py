@@ -44,7 +44,7 @@ router = APIRouter()
         }
     }
 )
-async def get_workflow_status(
+def get_workflow_status(
     job_id: str = Path(
         ...,
         description="Job ID (UUID format)",

@@ -106,7 +106,7 @@ def load_workflow_definition(workflow_name: str) -> Workflow:
         }
     }
 )
-async def submit_workflow(
+def submit_workflow(
     request: WorkflowSubmitRequest,
     db: Session = Depends(get_db)
 ) -> WorkflowSubmitResponse:
@@ -230,7 +230,7 @@ async def submit_workflow(
         }
     }
 )
-async def validate_workflow(
+def validate_workflow(
     request: WorkflowValidateRequest
 ) -> WorkflowValidateResponse:
     """

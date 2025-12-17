@@ -40,7 +40,7 @@ app.include_router(api_router, prefix="/api")
 
 
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
     """Run on application startup."""
     logger.info(f"🚀 Starting {settings.API_TITLE} v{settings.API_VERSION}")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
@@ -53,7 +53,7 @@ async def startup_event():
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
+def shutdown_event():
     """Run on application shutdown."""
     logger.info("Shutting down application...")
     engine.dispose()
@@ -72,7 +72,7 @@ async def root():
 
 
 @app.get("/health")
-async def health_check(db: Session = Depends(get_db)):
+def health_check(db: Session = Depends(get_db)):
     """
     Health check endpoint.
 
