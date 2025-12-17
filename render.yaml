@@ -307,7 +307,7 @@ services:
 databases:
   # Redis for LLM service (message broker & cache)
   - name: llm-service-redis
-    databaseName: llm-service-redis
+    databaseName: llm_service_redis
     user: redis
     plan: starter  # $7/month
     region: oregon
