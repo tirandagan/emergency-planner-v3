@@ -10,7 +10,7 @@ API Documentation: https://developers.google.com/maps/documentation/places/web-s
 """
 
 from typing import Any, Dict, List, Optional
-import httpx
+import requests
 
 from app.config import settings
 from app.workflows.external_services import (
@@ -21,8 +21,6 @@ from app.workflows.external_services import (
     ExternalServiceQuotaError,
     service_registry
 )
-from app.workflows.cache_manager import cache_manager
-from app.workflows.rate_limiter import rate_limiter, RateLimitExceeded
 
 
 class GooglePlacesService(ExternalService):
@@ -79,7 +77,7 @@ class GooglePlacesService(ExternalService):
     def supported_operations(self) -> List[str]:
         return ["nearby_search", "text_search", "place_details"]
 
-    async def call(
+    def call(
         self,
         operation: str,
         params: Dict[str, Any],
@@ -87,19 +85,22 @@ class GooglePlacesService(ExternalService):
         cache_ttl: Optional[int] = None
     ) -> ExternalServiceResponse:
         """
-        Execute Google Places API request.
+        Execute Google Places API request synchronously.
+
+        Note:
+            Caching and rate limiting are handled by the executor layer.
+            This method focuses solely on making the HTTP request.
 
         Args:
             operation: One of: nearby_search, text_search, place_details
             params: Operation-specific parameters
-            user_id: Optional user ID for rate limiting
-            cache_ttl: Optional cache TTL override (default: 7 days)
+            user_id: Not used (passed through for executor)
+            cache_ttl: Not used (passed through for executor)
 
         Returns:
             ExternalServiceResponse with places data
 
         Raises:
-            RateLimitExceeded: If rate limit exceeded
             ExternalServiceError: On API errors
         """
         # Validate operation
@@ -110,64 +111,18 @@ class GooglePlacesService(ExternalService):
                       f"Supported: {self.supported_operations}"
             )
 
-        # Check cache first
-        if self.enable_cache:
-            cached_response = await cache_manager.get(
-                self.service_name,
-                operation,
-                params
-            )
-            if cached_response is not None:
-                return ExternalServiceResponse(
-                    success=True,
-                    data=cached_response,
-                    cached=True
-                )
-
-        # Check rate limits
-        if self.enable_rate_limiting:
-            try:
-                await rate_limiter.check_rate_limit(
-                    self.service_name,
-                    user_id=user_id
-                )
-            except RateLimitExceeded as e:
-                return ExternalServiceResponse(
-                    success=False,
-                    error=str(e),
-                    metadata={'retry_after': e.retry_after}
-                )
-
-        # Execute API request
+        # Execute API request (synchronous)
         try:
             if operation == "nearby_search":
-                result = await self._nearby_search(params)
+                result = self._nearby_search(params)
             elif operation == "text_search":
-                result = await self._text_search(params)
+                result = self._text_search(params)
             elif operation == "place_details":
-                result = await self._place_details(params)
+                result = self._place_details(params)
             else:
                 return ExternalServiceResponse(
                     success=False,
                     error=f"Operation {operation} not implemented"
-                )
-
-            # Record successful request for rate limiting
-            if self.enable_rate_limiting:
-                await rate_limiter.record_request(
-                    self.service_name,
-                    user_id=user_id
-                )
-
-            # Cache successful response
-            if self.enable_cache:
-                ttl = cache_ttl or getattr(settings, 'CACHE_TTL_DEFAULT', 604800)
-                await cache_manager.set(
-                    self.service_name,
-                    operation,
-                    params,
-                    result,
-                    ttl_seconds=ttl
                 )
 
             return ExternalServiceResponse(
@@ -176,7 +131,7 @@ class GooglePlacesService(ExternalService):
                 cached=False
             )
 
-        except httpx.TimeoutException:
+        except requests.Timeout:
             return ExternalServiceResponse(
                 success=False,
                 error=f"Request timeout after {self.timeout}s"
@@ -192,9 +147,9 @@ class GooglePlacesService(ExternalService):
                 error=f"Unexpected error: {str(e)}"
             )
 
-    async def _nearby_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _nearby_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Find places near a location.
+        Find places near a location synchronously.
 
         Required params:
         - location: "lat,lng" string (e.g., "40.7128,-74.0060")
@@ -230,11 +185,16 @@ class GooglePlacesService(ExternalService):
             if optional_param in params:
                 query_params[optional_param] = params[optional_param]
 
-        # Make API request
-        # HTTP client is created by async context manager (__aenter__)
+        # Make API request (synchronous with requests.Session)
+        # HTTP client is created by context manager (__enter__)
         headers = self._build_headers()
 
-        response = await self._http_client.get(url, params=query_params, headers=headers)
+        response = self._http_client.get(
+            url,
+            params=query_params,
+            headers=headers,
+            timeout=self.timeout
+        )
 
         if response.status_code != 200:
             raise self._handle_http_error(response.status_code, response.text)
@@ -258,9 +218,9 @@ class GooglePlacesService(ExternalService):
 
         return data
 
-    async def _text_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _text_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Search places by text query.
+        Search places by text query synchronously.
 
         Required params:
         - query: Text query (e.g., "hospitals in New York")
@@ -292,11 +252,16 @@ class GooglePlacesService(ExternalService):
             if optional_param in params:
                 query_params[optional_param] = params[optional_param]
 
-        # Make API request
-        # HTTP client is created by async context manager (__aenter__)
+        # Make API request (synchronous with requests.Session)
+        # HTTP client is created by context manager (__enter__)
         headers = self._build_headers()
 
-        response = await self._http_client.get(url, params=query_params, headers=headers)
+        response = self._http_client.get(
+            url,
+            params=query_params,
+            headers=headers,
+            timeout=self.timeout
+        )
 
         if response.status_code != 200:
             raise self._handle_http_error(response.status_code, response.text)
@@ -320,9 +285,9 @@ class GooglePlacesService(ExternalService):
 
         return data
 
-    async def _place_details(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _place_details(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Get detailed information about a specific place.
+        Get detailed information about a specific place synchronously.
 
         Required params:
         - place_id: Google Place ID
@@ -352,11 +317,16 @@ class GooglePlacesService(ExternalService):
             if optional_param in params:
                 query_params[optional_param] = params[optional_param]
 
-        # Make API request
-        # HTTP client is created by async context manager (__aenter__)
+        # Make API request (synchronous with requests.Session)
+        # HTTP client is created by context manager (__enter__)
         headers = self._build_headers()
 
-        response = await self._http_client.get(url, params=query_params, headers=headers)
+        response = self._http_client.get(
+            url,
+            params=query_params,
+            headers=headers,
+            timeout=self.timeout
+        )
 
         if response.status_code != 200:
             raise self._handle_http_error(response.status_code, response.text)

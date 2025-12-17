@@ -13,7 +13,7 @@ Future extensions:
 """
 
 from typing import Any, Dict, List, Optional
-import httpx
+import requests
 
 from app.config import settings
 from app.workflows.external_services import (
@@ -24,8 +24,6 @@ from app.workflows.external_services import (
     ExternalServiceQuotaError,
     service_registry
 )
-from app.workflows.cache_manager import cache_manager
-from app.workflows.rate_limiter import rate_limiter, RateLimitExceeded
 
 
 class WeatherAPIService(ExternalService):
@@ -80,7 +78,7 @@ class WeatherAPIService(ExternalService):
     def supported_operations(self) -> List[str]:
         return ["current"]  # Can extend with "forecast", "history"
 
-    async def call(
+    def call(
         self,
         operation: str,
         params: Dict[str, Any],
@@ -88,19 +86,22 @@ class WeatherAPIService(ExternalService):
         cache_ttl: Optional[int] = None
     ) -> ExternalServiceResponse:
         """
-        Execute WeatherAPI request.
+        Execute WeatherAPI request synchronously.
+
+        Note:
+            Caching and rate limiting are handled by the executor layer.
+            This method focuses solely on making the HTTP request.
 
         Args:
             operation: Currently only "current" supported
             params: Operation-specific parameters
-            user_id: Optional user ID for rate limiting
-            cache_ttl: Optional cache TTL override
+            user_id: Not used (passed through for executor)
+            cache_ttl: Not used (passed through for executor)
 
         Returns:
             ExternalServiceResponse with weather data
 
         Raises:
-            RateLimitExceeded: If rate limit exceeded
             ExternalServiceError: On API errors
         """
         # Validate operation
@@ -111,63 +112,14 @@ class WeatherAPIService(ExternalService):
                       f"Supported: {self.supported_operations}"
             )
 
-        # Check cache first
-        if self.enable_cache:
-            cached_response = await cache_manager.get(
-                self.service_name,
-                operation,
-                params
-            )
-            if cached_response is not None:
-                return ExternalServiceResponse(
-                    success=True,
-                    data=cached_response,
-                    cached=True
-                )
-
-        # Check rate limits
-        if self.enable_rate_limiting:
-            try:
-                await rate_limiter.check_rate_limit(
-                    self.service_name,
-                    user_id=user_id
-                )
-            except RateLimitExceeded as e:
-                return ExternalServiceResponse(
-                    success=False,
-                    error=str(e),
-                    metadata={'retry_after': e.retry_after}
-                )
-
-        # Execute API request
+        # Execute API request (synchronous)
         try:
             if operation == "current":
-                result = await self._current_weather(params)
+                result = self._current_weather(params)
             else:
                 return ExternalServiceResponse(
                     success=False,
                     error=f"Operation {operation} not implemented"
-                )
-
-            # Record successful request for rate limiting
-            if self.enable_rate_limiting:
-                await rate_limiter.record_request(
-                    self.service_name,
-                    user_id=user_id
-                )
-
-            # Cache successful response
-            if self.enable_cache:
-                # Default to shorter TTL for current weather (1 hour = 3600s)
-                # Unless explicitly overridden
-                default_weather_ttl = 3600
-                ttl = cache_ttl or default_weather_ttl
-                await cache_manager.set(
-                    self.service_name,
-                    operation,
-                    params,
-                    result,
-                    ttl_seconds=ttl
                 )
 
             return ExternalServiceResponse(
@@ -176,7 +128,7 @@ class WeatherAPIService(ExternalService):
                 cached=False
             )
 
-        except httpx.TimeoutException:
+        except requests.Timeout:
             return ExternalServiceResponse(
                 success=False,
                 error=f"Request timeout after {self.timeout}s"
@@ -192,9 +144,9 @@ class WeatherAPIService(ExternalService):
                 error=f"Unexpected error: {str(e)}"
             )
 
-    async def _current_weather(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _current_weather(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Get current weather conditions.
+        Get current weather conditions synchronously.
 
         Required params:
         - q: Location query (lat,lng or city name)
@@ -232,11 +184,16 @@ class WeatherAPIService(ExternalService):
         if 'lang' in params:
             query_params['lang'] = params['lang']
 
-        # Make API request
-        # HTTP client is created by async context manager (__aenter__)
+        # Make API request (synchronous with requests.Session)
+        # HTTP client is created by context manager (__enter__)
         headers = self._build_headers()
 
-        response = await self._http_client.get(url, params=query_params, headers=headers)
+        response = self._http_client.get(
+            url,
+            params=query_params,
+            headers=headers,
+            timeout=self.timeout
+        )
 
         if response.status_code != 200:
             # WeatherAPI returns specific error codes

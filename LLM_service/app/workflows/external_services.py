@@ -128,7 +128,7 @@ class ExternalService(ABC):
         pass
 
     @abstractmethod
-    async def call(
+    def call(
         self,
         operation: str,
         params: Dict[str, Any],
@@ -136,81 +136,60 @@ class ExternalService(ABC):
         cache_ttl: Optional[int] = None
     ) -> ExternalServiceResponse:
         """
-        Execute API request with caching and rate limiting.
+        Execute API request synchronously.
 
-        Flow:
-        1. Check cache (if enabled)
-        2. Check rate limits (if enabled)
-        3. Make API request
-        4. Record rate limit usage
-        5. Store in cache (if enabled)
-        6. Return response
+        Note:
+            Caching and rate limiting are now handled by the executor layer.
+            This method focuses solely on making the HTTP request.
 
         Args:
             operation: Operation name (must be in supported_operations)
             params: Operation-specific parameters
-            user_id: Optional user ID for per-user rate limiting
-            cache_ttl: Optional cache TTL override (seconds)
+            user_id: Optional user ID (passed through, not used directly)
+            cache_ttl: Optional cache TTL (passed through, not used directly)
 
         Returns:
             ExternalServiceResponse with data or error
 
         Raises:
             ExternalServiceError: On API errors
-            RateLimitExceeded: On rate limit violations
         """
         pass
 
-    async def __aenter__(self):
+    def __enter__(self):
         """
-        Async context manager entry - creates HTTP client for this context.
+        Context manager entry - creates HTTP client session for this context.
 
         Returns:
-            Self for use in async with statement
+            Self for use in with statement
 
         Example:
-            async with WeatherAPIService() as service:
-                response = await service.call(...)
-        """
-        # Detect if running under eventlet
-        try:
-            import eventlet
-            running_under_eventlet = True
-        except ImportError:
-            running_under_eventlet = False
+            with WeatherAPIService() as service:
+                response = service.call(...)
 
-        if running_under_eventlet:
-            # Under eventlet, disable connection pooling to avoid
-            # "Second simultaneous read on fileno" errors
-            # Eventlet's cooperative concurrency doesn't play well with httpx's pool
-            self._http_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(self.timeout),
-                follow_redirects=True,
-                limits=httpx.Limits(
-                    max_connections=1,
-                    max_keepalive_connections=0
-                )
-            )
-        else:
-            # Standard asyncio: use connection pooling for efficiency
-            self._http_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(self.timeout),
-                follow_redirects=True
-            )
+        Note:
+            Uses requests.Session() which works naturally with eventlet's
+            cooperative concurrency. No special eventlet handling needed.
+        """
+        import requests
+
+        self._http_client = requests.Session()
+        # Connection pooling works naturally with eventlet
+        # No need for special configuration or detection
 
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Async context manager exit - cleans up HTTP client.
+        Context manager exit - cleans up HTTP client session.
 
-        Ensures HTTP client is properly closed even if exceptions occur.
+        Ensures HTTP session is properly closed even if exceptions occur.
 
         Returns:
             False to propagate any exception that occurred
         """
         if hasattr(self, '_http_client') and self._http_client:
-            await self._http_client.aclose()
+            self._http_client.close()  # Synchronous close
             delattr(self, '_http_client')
         return False
 

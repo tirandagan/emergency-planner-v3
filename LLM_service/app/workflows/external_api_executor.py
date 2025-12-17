@@ -174,50 +174,138 @@ async def execute_external_api_step(
         else:
             resolved_params[key] = value
 
+    # Get service class for validation
     try:
-        # Get service class and use as context manager for proper lifecycle
-        try:
-            service_class = service_registry._services.get(service_name)
-            if not service_class:
-                raise ValueError(
-                    f"Service '{service_name}' not found. "
-                    f"Available services: {list(service_registry._services.keys())}"
-                )
-        except ValueError as e:
-            error = str(e)
-            error_context = WorkflowErrorContext(
-                error_type="ConfigurationError",
-                category=ErrorCategory.CONFIG_ERROR,
-                message=error,
-                step_id=step.id,
-                service=service_name,
-                operation=operation,
-                config=step.config,
-                stack_trace=traceback.format_exc() if settings.DEBUG_MODE else None,
-                retryable=False,
-                suggestions=[
-                    f"Verify service '{service_name}' is registered",
-                    "Check available services in service registry",
-                    "Ensure service is properly initialized at startup"
-                ]
+        service_class = service_registry._services.get(service_name)
+        if not service_class:
+            raise ValueError(
+                f"Service '{service_name}' not found. "
+                f"Available services: {list(service_registry._services.keys())}"
             )
-            if error_mode == 'fail':
-                raise ConfigurationError(error, context=error_context)
-            return {
-                'success': False,
-                'error': error,
-                'error_context': error_context.to_dict(include_sensitive=settings.DEBUG_MODE)
-            }
+    except ValueError as e:
+        error = str(e)
+        error_context = WorkflowErrorContext(
+            error_type="ConfigurationError",
+            category=ErrorCategory.CONFIG_ERROR,
+            message=error,
+            step_id=step.id,
+            service=service_name,
+            operation=operation,
+            config=step.config,
+            stack_trace=traceback.format_exc() if settings.DEBUG_MODE else None,
+            retryable=False,
+            suggestions=[
+                f"Verify service '{service_name}' is registered",
+                "Check available services in service registry",
+                "Ensure service is properly initialized at startup"
+            ]
+        )
+        if error_mode == 'fail':
+            raise ConfigurationError(error, context=error_context)
+        return {
+            'success': False,
+            'error': error,
+            'error_context': error_context.to_dict(include_sensitive=settings.DEBUG_MODE)
+        }
 
-        # Use service as async context manager for automatic cleanup
-        async with service_class() as service:
-            # Execute API request
-            response: ExternalServiceResponse = await service.call(
-                operation=operation,
-                params=resolved_params,
-                user_id=user_id,
-                cache_ttl=cache_ttl
+    # Check cache first (async infrastructure)
+    try:
+        from app.workflows.cache_manager import cache_manager
+        cached_response = await cache_manager.get(
+            service_name,
+            operation,
+            resolved_params
+        )
+        if cached_response is not None:
+            return {
+                'success': True,
+                'data': cached_response,
+                'cached': True,
+                'metadata': {}
+            }
+    except Exception as e:
+        logger.warning(f"Cache check failed: {e}")
+        # Continue without cache
+
+    # Check rate limits (async infrastructure)
+    try:
+        from app.workflows.rate_limiter import rate_limiter
+        await rate_limiter.check_rate_limit(
+            service_name,
+            user_id=user_id
+        )
+    except RateLimitExceeded as e:
+        error_msg = f"Rate limit exceeded ({e.limit_type}). Retry after {e.retry_after}s"
+        error_context = WorkflowErrorContext(
+            error_type="RateLimitExceeded",
+            category=ErrorCategory.EXTERNAL_ERROR,
+            message=error_msg,
+            step_id=step.id,
+            service=service_name,
+            operation=operation,
+            inputs=resolved_params,
+            config=step.config,
+            stack_trace=traceback.format_exc() if settings.DEBUG_MODE else None,
+            retryable=True,
+            retry_after=e.retry_after,
+            suggestions=[
+                f"Wait {e.retry_after} seconds before retrying",
+                "Consider implementing request throttling",
+                "Check API tier quota limits"
+            ]
+        )
+        if error_mode == 'fail':
+            raise ExternalAPIError(error_msg, context=error_context)
+        return {
+            'success': False,
+            'error': error_msg,
+            'rate_limited': True,
+            'retry_after': e.retry_after,
+            'error_context': error_context.to_dict(include_sensitive=settings.DEBUG_MODE)
+        }
+
+    # Execute synchronous service call in thread pool
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+
+        # Use synchronous context manager and run in executor
+        with service_class() as service:
+            # Run sync call in executor to avoid blocking event loop
+            # This works naturally with eventlet's green threading
+            response: ExternalServiceResponse = await loop.run_in_executor(
+                None,
+                service.call,
+                operation,
+                resolved_params,
+                user_id,
+                cache_ttl
             )
+
+            # Record successful request for rate limiting (async infrastructure)
+            if response.success:
+                try:
+                    await rate_limiter.record_request(
+                        service_name,
+                        user_id=user_id
+                    )
+                except Exception as e:
+                    logger.warning(f"Rate limit recording failed: {e}")
+                    # Continue without recording
+
+                # Cache successful response (async infrastructure)
+                try:
+                    ttl = cache_ttl or getattr(settings, 'CACHE_TTL_DEFAULT', 604800)
+                    await cache_manager.set(
+                        service_name,
+                        operation,
+                        resolved_params,
+                        response.data,
+                        ttl_seconds=ttl
+                    )
+                except Exception as e:
+                    logger.warning(f"Cache storage failed: {e}")
+                    # Continue without caching
 
             # Return response
             if response.success:
@@ -246,41 +334,6 @@ async def execute_external_api_step(
                         'retry': True,
                         'metadata': response.metadata
                     }
-
-    except RateLimitExceeded as e:
-        error_msg = f"Rate limit exceeded ({e.limit_type}). Retry after {e.retry_after}s"
-
-        # Build error context for rate limit errors
-        error_context = WorkflowErrorContext(
-            error_type="RateLimitExceeded",
-            category=ErrorCategory.EXTERNAL_ERROR,
-            message=error_msg,
-            step_id=step.id,
-            service=service_name,
-            operation=operation,
-            inputs=resolved_params,
-            config=step.config,
-            stack_trace=traceback.format_exc() if settings.DEBUG_MODE else None,
-            retryable=True,
-            retry_after=e.retry_after,
-            suggestions=[
-                f"Wait {e.retry_after} seconds before retrying",
-                "Consider implementing request throttling",
-                "Check API tier quota limits"
-            ]
-        )
-
-        if error_mode == 'fail':
-            raise ExternalAPIError(error_msg, context=error_context)
-
-        return {
-            'success': False,
-            'error': error_msg,
-            'rate_limited': True,
-            'retry_after': e.retry_after,
-            'error_context': error_context.to_dict(include_sensitive=settings.DEBUG_MODE)
-        }
-
     except ExternalServiceError as e:
         # Build error context for external service errors
         error_context = WorkflowErrorContext(
