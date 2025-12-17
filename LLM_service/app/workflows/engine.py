@@ -26,7 +26,12 @@ from typing import Dict, Any, Optional, List, Callable
 from pydantic import ValidationError
 
 # Apply nest_asyncio to allow nested event loops (required for Celery eventlet pool)
-nest_asyncio.apply()
+# Only apply if the current loop can be patched (not uvloop)
+try:
+    nest_asyncio.apply()
+except (ValueError, RuntimeError):
+    # uvloop or other incompatible event loop - nest_asyncio not needed in FastAPI context
+    pass
 
 from app.workflows.schema import (
     Workflow,
