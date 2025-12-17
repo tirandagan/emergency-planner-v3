@@ -239,27 +239,16 @@ class WorkflowEngine:
         # Load workflow
         workflow = self.load_workflow(workflow_name)
 
-        # Execute workflow asynchronously with proper event loop handling
-        # Check if we're already in a running event loop (Celery with eventlet/gevent)
+        # Execute workflow with properly managed event loop
+        # Use fresh event loop for each execution to avoid conflicts
+        loop = None
         try:
-            running_loop = asyncio.get_running_loop()
-            # We're in a running loop - run async code in a separate thread
-            # with its own event loop to avoid "loop already running" errors
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    self.execute_workflow(
-                        workflow=workflow,
-                        input_data=input_data,
-                        timeout_override=timeout_override,
-                        progress_callback=progress_callback
-                    )
-                )
-                result = future.result()
-        except RuntimeError:
-            # No running loop - we can safely use asyncio.run()
-            result = asyncio.run(
+            # Create new event loop
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            # Execute workflow
+            result = loop.run_until_complete(
                 self.execute_workflow(
                     workflow=workflow,
                     input_data=input_data,
@@ -268,7 +257,19 @@ class WorkflowEngine:
                 )
             )
 
-        return result
+            return result
+
+        finally:
+            # Proper event loop cleanup
+            if loop:
+                try:
+                    # Shutdown async generators (important for async Redis cleanup)
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+
+                    # Close the loop
+                    loop.close()
+                except Exception as e:
+                    logger.warning(f"Error during event loop cleanup: {e}")
 
     async def execute_workflow(
         self,
