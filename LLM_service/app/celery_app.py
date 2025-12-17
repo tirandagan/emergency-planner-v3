@@ -1,7 +1,8 @@
 """Celery application configuration."""
-# IMPORTANT: eventlet monkey patching must be first for worker with --pool=eventlet
-import eventlet
-eventlet.monkey_patch()
+# NOTE: eventlet.monkey_patch() should ONLY be called in Celery worker processes,
+# NOT in the FastAPI application. Monkey patching in FastAPI causes threading
+# conflicts with Gunicorn + Uvicorn workers and SQLAlchemy connection pooling.
+# The Celery worker process will handle its own monkey patching if using --pool=eventlet
 
 from celery import Celery
 from app.config import settings
