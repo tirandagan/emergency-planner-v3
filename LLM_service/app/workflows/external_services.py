@@ -172,10 +172,32 @@ class ExternalService(ABC):
             async with WeatherAPIService() as service:
                 response = await service.call(...)
         """
-        self._http_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.timeout),
-            follow_redirects=True
-        )
+        # Detect if running under eventlet
+        try:
+            import eventlet
+            running_under_eventlet = True
+        except ImportError:
+            running_under_eventlet = False
+
+        if running_under_eventlet:
+            # Under eventlet, disable connection pooling to avoid
+            # "Second simultaneous read on fileno" errors
+            # Eventlet's cooperative concurrency doesn't play well with httpx's pool
+            self._http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(self.timeout),
+                follow_redirects=True,
+                limits=httpx.Limits(
+                    max_connections=1,
+                    max_keepalive_connections=0
+                )
+            )
+        else:
+            # Standard asyncio: use connection pooling for efficiency
+            self._http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(self.timeout),
+                follow_redirects=True
+            )
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
