@@ -1,4 +1,8 @@
 """Celery application configuration."""
+# IMPORTANT: eventlet monkey patching must be first for worker with --pool=eventlet
+import eventlet
+eventlet.monkey_patch()
+
 from celery import Celery
 from app.config import settings
 import logging
