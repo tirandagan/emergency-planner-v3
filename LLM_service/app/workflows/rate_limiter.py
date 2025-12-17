@@ -75,11 +75,10 @@ class RateLimiter:
             redis_kwargs = {"decode_responses": False}
 
             if settings.REDIS_URL.startswith("rediss://"):
-                # Create SSL context for secure Redis connections (Render, etc.)
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-                redis_kwargs["ssl"] = ssl_context
+                # For redis.asyncio, SSL parameters must be passed directly
+                # Not as an ssl_context object
+                redis_kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
+                redis_kwargs["ssl_check_hostname"] = False
 
             self.redis_client = redis.from_url(
                 settings.REDIS_URL,
