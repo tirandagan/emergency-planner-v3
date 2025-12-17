@@ -7,11 +7,12 @@ import {
 import VariationsModal, { VariationConfig } from "./VariationsModal";
 import VariationsTableModal from "./VariationsTableModal";
 import { createProduct, updateProduct, deleteProduct, summarizeProductDescription } from "../actions";
-import { getProductDetailsFromAmazon, searchProductsFromAmazon } from "../actions";
+import { getProductDetailsFromAmazon, getProductDetailsFromWeb, searchProductsFromAmazon } from "../actions";
 import ProductSearchModal from "../modals/ProductSearchModal";
 import DuplicateProductWarningModal from "../modals/DuplicateProductWarningModal";
 import CleanUrlModal from "../modals/CleanUrlModal";
 import FetchFromAmazonModal from "../modals/FetchFromAmazonModal";
+import FetchFromWebModal from "../modals/FetchFromWebModal";
 import SupplierModal from "./SupplierModal";
 import MasterItemModal from "./MasterItemModal";
 import DecodoErrorModal from "../modals/DecodoErrorModal";
@@ -106,9 +107,12 @@ export default function ProductEditDialog({
     const [isVariationsTableModalOpen, setIsVariationsTableModalOpen] = useState(false);
     const [isCleanUrlModalOpen, setIsCleanUrlModalOpen] = useState(false);
     const [isFetchFromAmazonModalOpen, setIsFetchFromAmazonModalOpen] = useState(false);
+    const [isFetchFromWebModalOpen, setIsFetchFromWebModalOpen] = useState(false);
     const [urlToClean, setUrlToClean] = useState({ original: '', clean: '' });
     const [fetchContext, setFetchContext] = useState<{ method: 'url' | 'asin'; value: string }>({ method: 'url', value: '' });
+    const [webScrapeUrl, setWebScrapeUrl] = useState<string>('');
     const [decodoError, setDecodoError] = useState<string | null>(null);
+    const [webScrapeError, setWebScrapeError] = useState<string | null>(null);
     
     // Inheritance Warning State
     const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
@@ -548,6 +552,15 @@ export default function ProductEditDialog({
         return questionMarkIndex !== -1 ? url.substring(0, questionMarkIndex) : url;
     };
 
+    const isValidProductUrl = (url: string): boolean => {
+        try {
+            const parsed = new URL(url);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch {
+            return false;
+        }
+    };
+
     const handleProductUrlChange = (newUrl: string) => {
         // Check if this is an Amazon URL with query parameters
         if (isAmazonUrl(newUrl) && hasQueryParams(newUrl)) {
@@ -568,6 +581,10 @@ export default function ProductEditDialog({
         if (newUrl && isAmazonUrl(newUrl)) {
             setFetchContext({ method: 'url', value: newUrl });
             setIsFetchFromAmazonModalOpen(true);
+        } else if (newUrl && isValidProductUrl(newUrl)) {
+            // Non-Amazon URL - trigger web scraper
+            setWebScrapeUrl(newUrl);
+            setIsFetchFromWebModalOpen(true);
         }
     };
 
@@ -577,6 +594,16 @@ export default function ProductEditDialog({
         // After accepting clean URL, offer to fetch from Amazon
         setFetchContext({ method: 'url', value: cleanUrl });
         setIsFetchFromAmazonModalOpen(true);
+    };
+
+    const handleProductUrlBlur = (): void => {
+        const url = formState.productUrl;
+        if (!url || isAmazonUrl(url)) return;
+
+        if (isValidProductUrl(url) && !productSuggestions) {
+            setWebScrapeUrl(url);
+            setIsFetchFromWebModalOpen(true);
+        }
     };
 
     const handleAsinChange = (newAsin: string) => {
@@ -643,6 +670,72 @@ export default function ProductEditDialog({
             setDecodoError("Error fetching details: " + error.message);
         } finally {
             setIsFetchingDetails(false);
+        }
+    };
+
+    const handleConfirmFetchFromWeb = async (): Promise<void> => {
+        setIsFetchingDetails(true);
+        setProductSuggestions(null);
+        setWebScrapeError(null);
+
+        try {
+            const res = await getProductDetailsFromWeb(webScrapeUrl);
+
+            if (res.success && res.data) {
+                applyWebScrapeData(res.data, res.errors);
+            } else {
+                setWebScrapeError(res.message || 'Unknown error');
+            }
+        } catch (error: any) {
+            console.error(error);
+            setWebScrapeError('Error fetching details: ' + error.message);
+        } finally {
+            setIsFetchingDetails(false);
+        }
+    };
+
+    const applyWebScrapeData = (scrapedData: any, errors?: string[]): void => {
+        if (!scrapedData) return;
+
+        const suggestions: Record<string, any> = {};
+        const currentMeta = formState.metadata || {};
+
+        const addSuggestion = (stateKey: string, newValue: any, currentVal: any): void => {
+            if (newValue !== undefined && newValue !== null && newValue !== '') {
+                const strNew = String(newValue).trim();
+                const strCurrent = String(currentVal || '').trim();
+
+                if (strNew !== strCurrent) {
+                    suggestions[stateKey] = { current: currentVal, new: newValue };
+                }
+            }
+        };
+
+        addSuggestion('name', scrapedData.name, formState.name);
+        addSuggestion('imageUrl', scrapedData.image_url, formState.imageUrl);
+        addSuggestion('price', scrapedData.price, formState.price);
+        addSuggestion('description', scrapedData.description, formState.description);
+        addSuggestion('sku', scrapedData.sku, formState.sku);
+
+        addSuggestion('metadata_brand', scrapedData.brand, currentMeta.brand);
+        addSuggestion('metadata_color', scrapedData.color, currentMeta.color);
+        addSuggestion('metadata_size', scrapedData.size, currentMeta.size);
+        addSuggestion('metadata_dimensions', scrapedData.dimensions, currentMeta.dimensions);
+        addSuggestion('metadata_weight', scrapedData.weight, currentMeta.weight);
+        addSuggestion('metadata_quantity', scrapedData.quantity, currentMeta.quantity);
+        addSuggestion('metadata_model_number', scrapedData.model_number, currentMeta.model_number);
+        addSuggestion('metadata_upc', scrapedData.upc, currentMeta.upc);
+
+        if (Object.keys(suggestions).length > 0) {
+            setProductSuggestions(suggestions);
+
+            if (errors && errors.length > 0) {
+                setWebScrapeError(`Partial data retrieved. Issues: ${errors.join(', ')}`);
+            }
+        } else if (errors && errors.length > 0) {
+            setWebScrapeError(`Scraping failed: ${errors.join(', ')}`);
+        } else {
+            setWebScrapeError('No new data found from the website.');
         }
     };
 
@@ -753,6 +846,7 @@ export default function ProductEditDialog({
                                                     type="url"
                                                     value={formState.productUrl || ''}
                                                     onChange={e => handleProductUrlChange(e.target.value)}
+                                                    onBlur={handleProductUrlBlur}
                                                     placeholder="https://amazon.com/..."
                                                     required
                                                 />
@@ -1010,6 +1104,7 @@ export default function ProductEditDialog({
                                             maxLength={10}
                                         />
                                         {renderSuggestion('asin')}
+                                        {renderSuggestion('sku')}
                                     </InputGroup>
                                     
                                     <InputGroup label="Supplier">
@@ -1199,6 +1294,7 @@ export default function ProductEditDialog({
                                 'name': 'Product Name',
                                 'imageUrl': 'Image URL',
                                 'asin': 'ASIN',
+                                'sku': 'SKU',
                                 'price': 'Price',
                                 'productUrl': 'Product URL',
                                 'description': 'Description',
@@ -1315,6 +1411,12 @@ export default function ProductEditDialog({
                 message={decodoError || ""}
             />
 
+            <DecodoErrorModal
+                isOpen={!!webScrapeError}
+                onClose={() => setWebScrapeError(null)}
+                message={webScrapeError || ""}
+            />
+
             <CleanUrlModal
                 isOpen={isCleanUrlModalOpen}
                 onClose={() => setIsCleanUrlModalOpen(false)}
@@ -1329,6 +1431,13 @@ export default function ProductEditDialog({
                 onConfirm={handleConfirmFetchFromAmazon}
                 detectionMethod={fetchContext.method}
                 detectionValue={fetchContext.value}
+            />
+
+            <FetchFromWebModal
+                isOpen={isFetchFromWebModalOpen}
+                onClose={() => setIsFetchFromWebModalOpen(false)}
+                onConfirm={handleConfirmFetchFromWeb}
+                url={webScrapeUrl}
             />
 
             <VariationsModal

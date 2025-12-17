@@ -484,7 +484,7 @@ export const getProductDetailsFromAmazon = async (query: string) => {
     await checkAdmin();
     try {
         const result = await getDecodoProductDetails(query);
-        
+
         if (!result) {
              return { success: false, message: "No results found on Amazon via Decodo." };
         }
@@ -523,6 +523,34 @@ export const getProductDetailsFromAmazon = async (query: string) => {
     } catch (e: any) {
         console.error("Decodo Error:", e);
         return { success: false, message: e.message };
+    }
+};
+
+export const getProductDetailsFromWeb = async (url: string) => {
+    await checkAdmin();
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/firecrawl/extract`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+        });
+
+        const result = await response.json();
+
+        return {
+            success: result.success,
+            data: result.data || null,
+            errors: result.errors || [],
+            message: result.message,
+        };
+    } catch (error: any) {
+        console.error('Firecrawl Error:', error);
+        return {
+            success: false,
+            data: null,
+            errors: [error.message],
+            message: 'Failed to scrape product data',
+        };
     }
 };
 

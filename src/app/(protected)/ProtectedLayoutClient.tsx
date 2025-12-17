@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import { Sidebar, SidebarCollapseProvider, useSidebarCollapse } from '@/components/protected/Sidebar'
-import { cn } from '@/lib/utils'
 import type { SubscriptionTier } from '@/lib/types/subscription'
 
 interface ProtectedLayoutClientProps {
@@ -41,6 +42,31 @@ export function ProtectedLayoutClient({
 }: ProtectedLayoutClientProps): React.JSX.Element {
   // Always start with false to match server-side rendering
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  // Cache invalidation for admin routes to ensure toggle button visibility
+  const pathname = usePathname()
+  const { user, refreshProfile } = useAuth()
+
+  // Track last pathname to prevent duplicate refreshes (using ref to avoid re-renders)
+  const lastRefreshedPathRef = useRef<string | null>(null)
+
+  // Force profile refresh when navigating to admin or dashboard routes
+  // This ensures the admin toggle button always appears for admin users
+  useEffect(() => {
+    // Early return if no user (not authenticated)
+    if (!user) return
+
+    // Detect admin routes and dashboard
+    const isAdminRoute = pathname?.startsWith('/admin')
+    const isDashboard = pathname === '/dashboard' || pathname === '/'
+
+    // Only refresh if we haven't already refreshed for this pathname
+    if ((isAdminRoute || isDashboard) && pathname !== lastRefreshedPathRef.current) {
+      console.debug('[ProtectedLayoutClient] Admin/dashboard route detected, refreshing profile')
+      lastRefreshedPathRef.current = pathname
+      refreshProfile()
+    }
+  }, [pathname, user, refreshProfile])
 
   // Load collapsed state from localStorage after hydration
   useEffect(() => {
