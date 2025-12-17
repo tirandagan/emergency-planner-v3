@@ -20,9 +20,13 @@ import logging
 import json
 import time
 import asyncio
+import nest_asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Callable
 from pydantic import ValidationError
+
+# Apply nest_asyncio to allow nested event loops (required for Celery eventlet pool)
+nest_asyncio.apply()
 
 from app.workflows.schema import (
     Workflow,
