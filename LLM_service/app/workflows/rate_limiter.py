@@ -71,13 +71,13 @@ class RateLimiter:
     async def _get_redis(self) -> redis.Redis:
         """Get or create Redis client with SSL support."""
         if self.redis_client is None:
-            # Configure SSL if using rediss:// URL
+            # Configure Redis connection
             redis_kwargs = {"decode_responses": False}
 
             if settings.REDIS_URL.startswith("rediss://"):
-                # For redis.asyncio, SSL parameters must be passed directly
-                # Not as an ssl_context object
-                redis_kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
+                # For redis.asyncio, SSL parameters use None instead of ssl.CERT_NONE
+                # This is different from the synchronous client API
+                redis_kwargs["ssl_cert_reqs"] = None
                 redis_kwargs["ssl_check_hostname"] = False
 
             self.redis_client = redis.from_url(
