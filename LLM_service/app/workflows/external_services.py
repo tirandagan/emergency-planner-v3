@@ -103,13 +103,17 @@ class ExternalService(ABC):
             timeout: Request timeout in seconds
             enable_cache: Enable response caching
             enable_rate_limiting: Enable rate limiting
+
+        Note:
+            This class uses async context manager pattern for HTTP client lifecycle.
+            Use `async with service_instance:` to ensure proper resource cleanup.
         """
         self.api_key = api_key
         self.base_url = base_url
         self.timeout = timeout
         self.enable_cache = enable_cache
         self.enable_rate_limiting = enable_rate_limiting
-        self._http_client: Optional[httpx.AsyncClient] = None
+        # HTTP client is created in __aenter__ and cleaned up in __aexit__
 
     @property
     @abstractmethod
@@ -157,20 +161,36 @@ class ExternalService(ABC):
         """
         pass
 
-    async def _get_http_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client."""
-        if self._http_client is None:
-            self._http_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(self.timeout),
-                follow_redirects=True
-            )
-        return self._http_client
+    async def __aenter__(self):
+        """
+        Async context manager entry - creates HTTP client for this context.
 
-    async def close(self) -> None:
-        """Close HTTP client connection."""
-        if self._http_client:
+        Returns:
+            Self for use in async with statement
+
+        Example:
+            async with WeatherAPIService() as service:
+                response = await service.call(...)
+        """
+        self._http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(self.timeout),
+            follow_redirects=True
+        )
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """
+        Async context manager exit - cleans up HTTP client.
+
+        Ensures HTTP client is properly closed even if exceptions occur.
+
+        Returns:
+            False to propagate any exception that occurred
+        """
+        if hasattr(self, '_http_client') and self._http_client:
             await self._http_client.aclose()
-            self._http_client = None
+            delattr(self, '_http_client')
+        return False
 
     def _build_headers(self, additional_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """

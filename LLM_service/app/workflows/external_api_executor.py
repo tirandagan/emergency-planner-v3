@@ -175,9 +175,14 @@ async def execute_external_api_step(
             resolved_params[key] = value
 
     try:
-        # Get service instance
+        # Get service class and use as context manager for proper lifecycle
         try:
-            service = service_registry.get_service(service_name)
+            service_class = service_registry._services.get(service_name)
+            if not service_class:
+                raise ValueError(
+                    f"Service '{service_name}' not found. "
+                    f"Available services: {list(service_registry._services.keys())}"
+                )
         except ValueError as e:
             error = str(e)
             error_context = WorkflowErrorContext(
@@ -204,44 +209,43 @@ async def execute_external_api_step(
                 'error_context': error_context.to_dict(include_sensitive=settings.DEBUG_MODE)
             }
 
-        # Execute API request
-        response: ExternalServiceResponse = await service.call(
-            operation=operation,
-            params=resolved_params,
-            user_id=user_id,
-            cache_ttl=cache_ttl
-        )
+        # Use service as async context manager for automatic cleanup
+        async with service_class() as service:
+            # Execute API request
+            response: ExternalServiceResponse = await service.call(
+                operation=operation,
+                params=resolved_params,
+                user_id=user_id,
+                cache_ttl=cache_ttl
+            )
 
-        # Close service connection
-        await service.close()
-
-        # Return response
-        if response.success:
-            return {
-                'success': True,
-                'data': response.data,
-                'cached': response.cached,
-                'metadata': response.metadata
-            }
-        else:
-            # Handle error based on error_mode
-            if error_mode == 'fail':
-                raise ExternalServiceError(response.error)
-            elif error_mode == 'continue':
+            # Return response
+            if response.success:
                 return {
-                    'success': False,
-                    'error': response.error,
+                    'success': True,
+                    'data': response.data,
+                    'cached': response.cached,
                     'metadata': response.metadata
                 }
-            elif error_mode == 'retry':
-                # Retry mode not fully implemented yet
-                # For now, return error with retry placeholder
-                return {
-                    'success': False,
-                    'error': response.error,
-                    'retry': True,
-                    'metadata': response.metadata
-                }
+            else:
+                # Handle error based on error_mode
+                if error_mode == 'fail':
+                    raise ExternalServiceError(response.error)
+                elif error_mode == 'continue':
+                    return {
+                        'success': False,
+                        'error': response.error,
+                        'metadata': response.metadata
+                    }
+                elif error_mode == 'retry':
+                    # Retry mode not fully implemented yet
+                    # For now, return error with retry placeholder
+                    return {
+                        'success': False,
+                        'error': response.error,
+                        'retry': True,
+                        'metadata': response.metadata
+                    }
 
     except RateLimitExceeded as e:
         error_msg = f"Rate limit exceeded ({e.limit_type}). Retry after {e.retry_after}s"

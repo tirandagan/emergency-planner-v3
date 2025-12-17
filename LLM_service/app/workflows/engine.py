@@ -24,6 +24,15 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Callable
 from pydantic import ValidationError
 
+# Detect if running under eventlet for event loop management
+try:
+    import eventlet
+    RUNNING_UNDER_EVENTLET = True
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.debug("Detected eventlet runtime environment")
+except ImportError:
+    RUNNING_UNDER_EVENTLET = False
+
 # Conditionally import and apply nest_asyncio only when uvloop is not available
 # nest_asyncio is incompatible with uvloop (used by Gunicorn + uvicorn[standard])
 # but required for Celery workers using eventlet pool
@@ -276,14 +285,21 @@ class WorkflowEngine:
             return result
 
         finally:
-            # Proper event loop cleanup
+            # Proper event loop cleanup with eventlet awareness
             if loop:
                 try:
-                    # Shutdown async generators (important for async Redis cleanup)
-                    loop.run_until_complete(loop.shutdown_asyncgens())
-
-                    # Close the loop
-                    loop.close()
+                    if not RUNNING_UNDER_EVENTLET:
+                        # Standard asyncio cleanup when not using eventlet
+                        # Shutdown async generators (important for async Redis cleanup)
+                        loop.run_until_complete(loop.shutdown_asyncgens())
+                        loop.close()
+                        logger.debug("Event loop cleaned up (standard asyncio mode)")
+                    else:
+                        # Under eventlet, avoid run_until_complete which conflicts with eventlet's loop
+                        # Just close the loop - eventlet handles its own event loop lifecycle
+                        if not loop.is_closed():
+                            loop.close()
+                        logger.debug("Event loop closed (eventlet mode)")
                 except Exception as e:
                     logger.warning(f"Error during event loop cleanup: {e}")
 

@@ -231,10 +231,10 @@ class GooglePlacesService(ExternalService):
                 query_params[optional_param] = params[optional_param]
 
         # Make API request
-        client = await self._get_http_client()
+        # HTTP client is created by async context manager (__aenter__)
         headers = self._build_headers()
 
-        response = await client.get(url, params=query_params, headers=headers)
+        response = await self._http_client.get(url, params=query_params, headers=headers)
 
         if response.status_code != 200:
             raise self._handle_http_error(response.status_code, response.text)
@@ -293,10 +293,10 @@ class GooglePlacesService(ExternalService):
                 query_params[optional_param] = params[optional_param]
 
         # Make API request
-        client = await self._get_http_client()
+        # HTTP client is created by async context manager (__aenter__)
         headers = self._build_headers()
 
-        response = await client.get(url, params=query_params, headers=headers)
+        response = await self._http_client.get(url, params=query_params, headers=headers)
 
         if response.status_code != 200:
             raise self._handle_http_error(response.status_code, response.text)
@@ -353,10 +353,10 @@ class GooglePlacesService(ExternalService):
                 query_params[optional_param] = params[optional_param]
 
         # Make API request
-        client = await self._get_http_client()
+        # HTTP client is created by async context manager (__aenter__)
         headers = self._build_headers()
 
-        response = await client.get(url, params=query_params, headers=headers)
+        response = await self._http_client.get(url, params=query_params, headers=headers)
 
         if response.status_code != 200:
             raise self._handle_http_error(response.status_code, response.text)
