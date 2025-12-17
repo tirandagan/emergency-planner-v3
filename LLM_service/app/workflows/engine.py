@@ -264,15 +264,21 @@ class WorkflowEngine:
         # Load workflow
         workflow = self.load_workflow(workflow_name)
 
-        # Execute workflow with properly managed event loop
-        # Use fresh event loop for each execution to avoid conflicts
-        loop = None
-        try:
-            # Create new event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        # Execute workflow with eventlet-aware event loop management
+        if RUNNING_UNDER_EVENTLET:
+            # Under eventlet, use the existing event loop instead of creating a new one
+            # Eventlet manages a global event loop and creating new ones causes conflicts
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                # No event loop in current thread - create one (shouldn't happen in Celery worker)
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
 
-            # Execute workflow
+            logger.debug("Using existing event loop (eventlet mode)")
+
+            # Run the workflow directly on the existing loop
+            # nest_asyncio allows this even if loop is already running
             result = loop.run_until_complete(
                 self.execute_workflow(
                     workflow=workflow,
@@ -282,26 +288,39 @@ class WorkflowEngine:
                 )
             )
 
+            # Don't close the loop under eventlet - it's managed globally
+            logger.debug("Workflow executed using eventlet event loop")
             return result
+        else:
+            # Standard asyncio: create fresh event loop for each execution
+            loop = None
+            try:
+                # Create new event loop
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
 
-        finally:
-            # Proper event loop cleanup with eventlet awareness
-            if loop:
-                try:
-                    if not RUNNING_UNDER_EVENTLET:
-                        # Standard asyncio cleanup when not using eventlet
+                # Execute workflow
+                result = loop.run_until_complete(
+                    self.execute_workflow(
+                        workflow=workflow,
+                        input_data=input_data,
+                        timeout_override=timeout_override,
+                        progress_callback=progress_callback
+                    )
+                )
+
+                return result
+
+            finally:
+                # Standard asyncio cleanup
+                if loop:
+                    try:
                         # Shutdown async generators (important for async Redis cleanup)
                         loop.run_until_complete(loop.shutdown_asyncgens())
                         loop.close()
                         logger.debug("Event loop cleaned up (standard asyncio mode)")
-                    else:
-                        # Under eventlet, avoid run_until_complete which conflicts with eventlet's loop
-                        # Just close the loop - eventlet handles its own event loop lifecycle
-                        if not loop.is_closed():
-                            loop.close()
-                        logger.debug("Event loop closed (eventlet mode)")
-                except Exception as e:
-                    logger.warning(f"Error during event loop cleanup: {e}")
+                    except Exception as e:
+                        logger.warning(f"Error during event loop cleanup: {e}")
 
     async def execute_workflow(
         self,
