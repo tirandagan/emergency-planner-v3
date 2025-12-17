@@ -196,8 +196,8 @@ services:
       - key: CACHE_DEFAULT_TTL
         value: 3600
 
-    # Startup command
-    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+    # Startup command - use gunicorn with uvicorn workers for better async/sync handling
+    dockerCommand: gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
 
   # ============================================================================
   # LLM MICROSERVICE - CELERY BACKGROUND WORKER
