@@ -96,7 +96,6 @@ export async function updateSystemSetting(
 
     await logSystemError(error, {
       category: 'database_error',
-      userId: user?.id,
       component: 'AdminActions',
       route: '/app/actions/admin',
       userAction: 'Updating system setting (admin operation)',

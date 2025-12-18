@@ -22,6 +22,7 @@ interface Category {
     parentId: string | null;
     description: string | null;
     icon: string | null;
+    createdAt?: Date;
 }
 
 interface MasterItem {
