@@ -1,10 +1,10 @@
 "use server";
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { GoogleGenAI } from '@google/genai';
 import { generateEmbedding } from '@/lib/embeddings';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+import { generateObject } from 'ai';
+import { getModel } from '@/lib/openrouter';
+import { z } from 'zod';
 
 export interface Category {
   id: string;
@@ -230,34 +230,30 @@ export const autoCategorizeBatch = async () => {
 
         const prompt = `
         You are an inventory manager. Categorize these survival items.
-        
+
         Existing Categories: ${existingCatsStr}
-        
+
         Items to Categorize:
         ${items.map(i => `- ${i.name}: ${i.description?.substring(0, 50)} (ID: ${i.id})`).join('\n')}
-        
+
         Task:
-        Assign a category to each item. 
+        Assign a category to each item.
         - If an existing category fits well, use its Name.
         - If NO existing category fits, propose a NEW category name (Format: "Parent:Child" or just "Name").
-        
-        Return JSON:
-        {
-            "mappings": [
-                { "item_id": "...", "category_name": "...", "is_new": boolean, "parent_name": "..." }
-            ]
-        }
         `;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: { parts: [{ text: prompt }] },
-            config: { responseMimeType: "application/json" }
+        const { object: result } = await generateObject({
+            model: getModel('GEMINI_FLASH'),
+            prompt,
+            schema: z.object({
+                mappings: z.array(z.object({
+                    item_id: z.string(),
+                    category_name: z.string(),
+                    is_new: z.boolean(),
+                    parent_name: z.string().optional()
+                }))
+            })
         });
-
-        const r = response as { text: string | (() => string) };
-        const text = typeof r.text === 'function' ? r.text() : r.text;
-        const result = JSON.parse(text || '{}');
         
         if (!result.mappings) return { success: false, message: "Invalid LLM response" };
 

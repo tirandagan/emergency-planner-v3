@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from 'next/cache';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { getDecodoProductDetails, searchDecodoProducts } from '@/lib/decodo';
 import { db } from '@/db';
@@ -10,6 +9,7 @@ import { categories } from '@/db/schema/categories';
 import { suppliers } from '@/db/schema/suppliers';
 import { eq, desc, ilike, or, and, inArray, sql } from 'drizzle-orm';
 import { checkAdmin } from '@/lib/adminAuth';
+import { getModel } from '@/lib/openrouter';
 
 export async function getProducts() {
   const data = await db
@@ -496,19 +496,15 @@ export async function bulkUpdateProducts(ids: string[], data: { supplierId?: str
     revalidatePath('/admin/bundles');
 }
 
-export async function summarizeProductDescription(description: string) {
+export async function summarizeProductDescription(description: string): Promise<string> {
     await checkAdmin();
 
     if (!description || description.trim().length === 0) {
         throw new Error("Description is empty");
     }
 
-    const google = createGoogleGenerativeAI({
-        apiKey: process.env.GEMINI_API_KEY,
-    });
-
     const { text } = await generateText({
-        model: google('models/gemini-2.5-flash'),
+        model: getModel('GEMINI_FLASH'),
         prompt: `Please summarize the following product description. Keep only the factual information that describes the product features and specifications. Remove any marketing fluff, promotional language (e.g., "We are proud to...", "Best in class", "Revolutionary"), and subjective claims. The output should be concise and informative. Do not use markdown formatting.\n\nDescription:\n${description}`,
     });
 

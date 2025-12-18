@@ -43,6 +43,10 @@ export const MODELS = {
   HAIKU: 'anthropic/claude-3-haiku',
   GPT4: 'openai/gpt-4-turbo',
   GPT35: 'openai/gpt-3.5-turbo',
+
+  // Google models via OpenRouter
+  GEMINI_FLASH: 'google/gemini-flash-1.5',
+  GEMINI_PRO: 'google/gemini-pro-1.5',
 } as const;
 
 /**
