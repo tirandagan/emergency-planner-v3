@@ -150,7 +150,6 @@ export async function cleanupOldDeletedPlans(
 
     await logSystemError(error, {
       category: 'database_error',
-      userId: user?.id,
       component: 'AdminActions',
       route: '/app/actions/admin',
       userAction: 'Cleaning up old deleted plans (admin operation)',
@@ -235,7 +234,6 @@ export async function getSystemStatistics(): Promise<{
 
     await logSystemError(error, {
       category: 'database_error',
-      userId: user?.id,
       component: 'AdminActions',
       route: '/app/actions/admin',
       userAction: 'Retrieving system statistics (admin operation)',
