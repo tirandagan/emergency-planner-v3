@@ -17,6 +17,12 @@ if 'celery' in sys.argv[0] or 'worker' in sys.argv:
             import nest_asyncio
             nest_asyncio.apply()
             print("✅ nest_asyncio applied for asyncio compatibility")
+
+            # Disable eventlet's multiple readers check since nest_asyncio handles it
+            # nest_asyncio intentionally uses multiple readers for nested event loops
+            # and eventlet's safety check treats this as an error
+            eventlet.debug.hub_prevent_multiple_readers(False)
+            print("✅ Disabled eventlet multiple readers check (handled by nest_asyncio)")
         except Exception as e:
             print(f"⚠️  Failed to apply nest_asyncio: {e}")
             print("   Asyncio operations may conflict with eventlet")
