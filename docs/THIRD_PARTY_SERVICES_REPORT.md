@@ -600,7 +600,7 @@ if (item) {
 
 #### Environment Variables
 ```bash
-GEMINI_API_KEY=AIzaSyBT7Xk9iJDiTUVM9IxC3EoHJMdlp2pIMl8
+GEMINI_API_KEY=<...>
 ```
 
 #### Service Description
