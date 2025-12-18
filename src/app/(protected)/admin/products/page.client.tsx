@@ -1667,15 +1667,15 @@ export default function ProductsClient({
                                                             <td className="px-6 py-3">
                                                                 <div className="flex gap-3 items-start">
                                                                     {/* Broken link indicator */}
-                                                                    <div className="w-4 shrink-0 pt-1">
-                                                                        {hasOverriddenTags && (
+                                                                    {hasOverriddenTags && (
+                                                                        <div className="w-4 shrink-0 pt-1">
                                                                             <span title="Tags overridden from master item">
                                                                                 <Unlink className="w-3.5 h-3.5 text-warning/70" strokeWidth={2.5} />
                                                                             </span>
-                                                                        )}
-                                                                    </div>
+                                                                        </div>
+                                                                    )}
                                                                     {product.imageUrl && (
-                                                                        <img src={product.imageUrl} alt="" className="w-10 h-10 rounded bg-muted object-cover border border-border" />
+                                                                        <img src={product.imageUrl} alt="" className="w-24 h-24 rounded bg-muted object-cover border border-border" />
                                                                     )}
                                                                     <div className="min-w-0 flex-1">
                                                                         <div className="font-medium text-foreground">{product.name}</div>
