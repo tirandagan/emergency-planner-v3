@@ -100,7 +100,7 @@ export async function createProduct(formData: FormData) {
   await checkAdmin();
 
   const name = formData.get('name') as string;
-  const masterItemId = formData.get('masterItemId') as string;
+  const masterItemIdRaw = formData.get('masterItemId') as string;
   const supplierIdRaw = formData.get('supplierId') as string;
   const supplierId = supplierIdRaw && supplierIdRaw.trim() !== '' ? supplierIdRaw : null;
   const price = parseFloat(formData.get('price') as string);
@@ -110,6 +110,25 @@ export async function createProduct(formData: FormData) {
   const description = formData.get('description') as string;
   const asinRaw = formData.get('asin') as string;
   const asin = asinRaw && asinRaw.trim() !== '' ? asinRaw.trim() : null;
+
+  // Validation (return early with error instead of throwing)
+  if (!name || name.trim() === '') {
+    return { success: false, message: 'Product name is required' };
+  }
+
+  if (!masterItemIdRaw || masterItemIdRaw.trim() === '') {
+    return { success: false, message: 'Master Item (Type) is required. Please select a category, subcategory, and master item.' };
+  }
+
+  const masterItemId = masterItemIdRaw.trim();
+
+  if (!productUrl || productUrl.trim() === '') {
+    return { success: false, message: 'Product URL is required' };
+  }
+
+  if (isNaN(price) || price <= 0) {
+    return { success: false, message: 'Valid price is required' };
+  }
   
   // Check for duplicate ASIN
   if (asin) {
@@ -185,25 +204,43 @@ export async function createProduct(formData: FormData) {
     }
   }
 
-  await db.insert(specificProducts).values({
-    name,
-    masterItemId,
-    supplierId,
-    price: price.toString(),
-    type,
-    productUrl,
-    imageUrl,
-    description,
-    asin,
-    metadata,
-    status: 'verified',
-    timeframes: timeframes === null ? null : (timeframes as string[]),
-    demographics: demographics === null ? null : (demographics as string[]),
-    locations: locations === null ? null : (locations as string[]),
-    scenarios: scenarios === null ? null : (scenarios as string[]),
-    variations,
-  });
-  
+  try {
+    await db.insert(specificProducts).values({
+      name,
+      masterItemId,
+      supplierId,
+      price: price.toString(),
+      type,
+      productUrl,
+      imageUrl,
+      description,
+      asin,
+      metadata,
+      status: 'verified',
+      timeframes: timeframes === null ? null : (timeframes as string[]),
+      demographics: demographics === null ? null : (demographics as string[]),
+      locations: locations === null ? null : (locations as string[]),
+      scenarios: scenarios === null ? null : (scenarios as string[]),
+      variations,
+    });
+  } catch (error: any) {
+    console.error('Database error creating product:', error);
+
+    // Provide user-friendly error messages
+    if (error.message?.includes('foreign key')) {
+      throw new Error('Invalid Master Item or Supplier selected. Please refresh the page and try again.');
+    }
+    if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+      throw new Error('A product with this ASIN already exists in the database.');
+    }
+    if (error.message?.includes('null value') || error.message?.includes('violates not-null')) {
+      throw new Error('Missing required field. Please ensure all required fields are filled out.');
+    }
+
+    // Generic database error
+    throw new Error(`Database error: ${error.message || 'Failed to create product'}`);
+  }
+
   revalidatePath('/admin/products');
   revalidatePath('/admin/bundles');
   return { success: true };
@@ -211,10 +248,10 @@ export async function createProduct(formData: FormData) {
 
 export async function updateProduct(formData: FormData) {
     await checkAdmin();
-  
+
     const id = formData.get('id') as string;
     const name = formData.get('name') as string;
-    const masterItemId = formData.get('masterItemId') as string;
+    const masterItemIdRaw = formData.get('masterItemId') as string;
     const supplierIdRaw = formData.get('supplierId') as string;
     const supplierId = supplierIdRaw && supplierIdRaw.trim() !== '' ? supplierIdRaw : null;
     const price = parseFloat(formData.get('price') as string);
@@ -224,6 +261,25 @@ export async function updateProduct(formData: FormData) {
     const description = formData.get('description') as string;
     const asinRaw = formData.get('asin') as string;
     const asin = asinRaw && asinRaw.trim() !== '' ? asinRaw.trim() : null;
+
+    // Validation (return early with error instead of throwing)
+    if (!name || name.trim() === '') {
+      return { success: false, message: 'Product name is required' };
+    }
+
+    if (!masterItemIdRaw || masterItemIdRaw.trim() === '') {
+      return { success: false, message: 'Master Item (Type) is required. Please select a category, subcategory, and master item.' };
+    }
+
+    const masterItemId = masterItemIdRaw.trim();
+
+    if (!productUrl || productUrl.trim() === '') {
+      return { success: false, message: 'Product URL is required' };
+    }
+
+    if (isNaN(price) || price <= 0) {
+      return { success: false, message: 'Valid price is required' };
+    }
     
     // Check for duplicate ASIN
     if (asin) {
@@ -281,27 +337,45 @@ export async function updateProduct(formData: FormData) {
     const variationsRaw = formData.get('variations') as string;
     const variations = variationsRaw ? JSON.parse(variationsRaw) : null;
   
-    await db.update(specificProducts)
-      .set({
-        name,
-        masterItemId,
-        supplierId,
-        price: price.toString(),
-        type,
-        productUrl,
-        imageUrl,
-        description,
-        asin,
-        metadata,
-        status: 'verified',
-        timeframes: timeframes === null ? null : (timeframes as string[]),
-        demographics: demographics === null ? null : (demographics as string[]),
-        locations: locations === null ? null : (locations as string[]),
-        scenarios: scenarios === null ? null : (scenarios as string[]),
-        variations,
-      })
-      .where(eq(specificProducts.id, id));
-    
+    try {
+      await db.update(specificProducts)
+        .set({
+          name,
+          masterItemId,
+          supplierId,
+          price: price.toString(),
+          type,
+          productUrl,
+          imageUrl,
+          description,
+          asin,
+          metadata,
+          status: 'verified',
+          timeframes: timeframes === null ? null : (timeframes as string[]),
+          demographics: demographics === null ? null : (demographics as string[]),
+          locations: locations === null ? null : (locations as string[]),
+          scenarios: scenarios === null ? null : (scenarios as string[]),
+          variations,
+        })
+        .where(eq(specificProducts.id, id));
+    } catch (error: any) {
+      console.error('Database error updating product:', error);
+
+      // Provide user-friendly error messages
+      if (error.message?.includes('foreign key')) {
+        throw new Error('Invalid Master Item or Supplier selected. Please refresh the page and try again.');
+      }
+      if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+        throw new Error('A product with this ASIN already exists in the database.');
+      }
+      if (error.message?.includes('null value') || error.message?.includes('violates not-null')) {
+        throw new Error('Missing required field. Please ensure all required fields are filled out.');
+      }
+
+      // Generic database error
+      throw new Error(`Database error: ${error.message || 'Failed to update product'}`);
+    }
+
     revalidatePath('/admin/products');
     return { success: true };
   }

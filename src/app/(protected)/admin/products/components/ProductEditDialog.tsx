@@ -16,6 +16,7 @@ import FetchFromWebModal from "../modals/FetchFromWebModal";
 import SupplierModal from "./SupplierModal";
 import MasterItemModal from "./MasterItemModal";
 import DecodoErrorModal from "../modals/DecodoErrorModal";
+import ProductErrorModal from "../modals/ProductErrorModal";
 import { SectionTitle, InputGroup, TextInput, SelectInput, TextArea } from "./ProductFormElements";
 import TagSelector from "./TagSelector";
 import { TIMEFRAMES, DEMOGRAPHICS, LOCATIONS, SCENARIOS } from "../constants";
@@ -113,6 +114,7 @@ export default function ProductEditDialog({
     const [webScrapeUrl, setWebScrapeUrl] = useState<string>('');
     const [decodoError, setDecodoError] = useState<string | null>(null);
     const [webScrapeError, setWebScrapeError] = useState<string | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
     
     // Inheritance Warning State
     const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
@@ -468,18 +470,27 @@ export default function ProductEditDialog({
             } else {
                 res = await createProduct(formData);
             }
-            
-            if (res && !res.success && res.conflict) {
-                setPendingFormData(formData);
-                setConflictData(res.conflict);
-                return;
+
+            // Handle validation or conflict errors returned from server
+            if (res && !res.success) {
+                if (res.conflict) {
+                    setPendingFormData(formData);
+                    setConflictData(res.conflict);
+                    return;
+                }
+
+                // Validation error
+                if (res.message) {
+                    setSaveError(res.message);
+                    return;
+                }
             }
-            
+
             if (onSave) onSave();
             onClose();
         } catch (error: any) {
             console.error("Error saving product:", error);
-            setDecodoError(error.message || "An error occurred while saving the product.");
+            setSaveError(error.message || "An error occurred while saving the product.");
         }
     };
 
@@ -492,7 +503,7 @@ export default function ProductEditDialog({
         try {
             const res = await updateProduct(pendingFormData);
              if (res && !res.success) {
-                 setDecodoError(res.message || "Merge failed");
+                 setSaveError(res.message || "Merge failed");
                  return;
              }
 
@@ -507,7 +518,7 @@ export default function ProductEditDialog({
             setPendingFormData(null);
             
         } catch (e: any) {
-             setDecodoError(e.message);
+             setSaveError(e.message);
         }
     };
 
@@ -518,7 +529,7 @@ export default function ProductEditDialog({
                  if (onSave) onSave();
                  onClose();
              } catch (e: any) {
-                 setDecodoError(e.message);
+                 setSaveError(e.message);
              }
          } else {
              // Discard draft
@@ -1494,6 +1505,12 @@ export default function ProductEditDialog({
                 isOpen={!!webScrapeError}
                 onClose={() => setWebScrapeError(null)}
                 message={webScrapeError || ""}
+            />
+
+            <ProductErrorModal
+                isOpen={!!saveError}
+                onClose={() => setSaveError(null)}
+                message={saveError || ""}
             />
 
             <CleanUrlModal
