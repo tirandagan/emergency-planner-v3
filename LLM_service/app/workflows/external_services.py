@@ -168,14 +168,25 @@ class ExternalService(ABC):
                 response = service.call(...)
 
         Note:
-            Uses requests.Session() which works naturally with eventlet's
-            cooperative concurrency. No special eventlet handling needed.
+            Connection pooling is disabled to avoid eventlet socket conflicts.
+            Each request creates a fresh connection instead of reusing pooled ones.
         """
         import requests
+        from requests.adapters import HTTPAdapter
 
         self._http_client = requests.Session()
-        # Connection pooling works naturally with eventlet
-        # No need for special configuration or detection
+
+        # Disable connection pooling to avoid eventlet socket conflicts
+        # This prevents "Second simultaneous read on fileno" errors when
+        # multiple green threads try to access the same pooled connection
+        adapter = HTTPAdapter(
+            pool_connections=1,  # Only 1 connection pool
+            pool_maxsize=1,       # Only 1 connection in the pool
+            max_retries=0,        # No automatic retries (handle in service layer)
+            pool_block=False      # Don't block when pool is full
+        )
+        self._http_client.mount('http://', adapter)
+        self._http_client.mount('https://', adapter)
 
         return self
 
