@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, Fragment, useRef } from "react";
-import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield } from "lucide-react";
+import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield, Baby, UserCheck, User } from "lucide-react";
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags } from "./actions";
 import { getCategoryImpact, updateCategory, deleteCategory } from "@/app/actions/categories";
@@ -63,9 +63,27 @@ interface Product {
     variations?: any;
 }
 
+// Gender symbol components (Venus ♀ and Mars ♂)
+const VenusIcon = ({ className, color = "currentColor", title }: { className?: string; color?: string; title?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={title}>
+        <circle cx="12" cy="8" r="3"/>
+        <path d="M12 11v10"/>
+        <path d="M8 15h8"/>
+    </svg>
+);
+
+const MarsIcon = ({ className, color = "currentColor", title }: { className?: string; color?: string; title?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={title}>
+        <circle cx="12" cy="8" r="3"/>
+        <path d="M12 11v10"/>
+        <path d="M16 15l-4-4"/>
+        <path d="M12 11l4 4"/>
+    </svg>
+);
+
 // --- Helper Components ---
 // Condense timeframe labels for display
-export const formatTagValue = (value: string, field?: string): string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' } => {
+export const formatTagValue = (value: string, field?: string): string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' | 'baby' | 'userCheck' | 'venus' | 'mars' } => {
     const lower = value.toLowerCase();
     
     // Scenarios - use icons everywhere
@@ -80,25 +98,53 @@ export const formatTagValue = (value: string, field?: string): string | { icon: 
     if (lower === '>1 year') return '>1Y';
     if (lower === '1 month') return '1MO';
     if (lower === '1 week') return '1W';
-    // Demographics - only abbreviate Man/Woman, use icons for Individual/Family
-    if (lower === 'man') return 'M';
-    if (lower === 'woman') return 'F';
+    // Demographics - use icons for all
+    if (lower === 'man') return { icon: 'mars' };
+    if (lower === 'woman') return { icon: 'venus' };
+    if (lower === 'adult') return { icon: 'userCheck' };
+    if (lower === 'child') return { icon: 'baby' };
     if (lower === 'individual') return { icon: 'user' };
     if (lower === 'family') return { icon: 'users' };
-    // Adult and Child stay as-is
     return value;
 };
 
-export const TagValueDisplay = ({ value, field }: { value: string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' }, field?: string }) => {
+// Helper function to get display name for icon values
+const getIconDisplayName = (icon: string, originalValue?: string): string => {
+    if (originalValue) return originalValue;
+    
+    const iconMap: Record<string, string> = {
+        'mars': 'Male',
+        'venus': 'Female',
+        'userCheck': 'Adult',
+        'baby': 'Child',
+        'user': 'Individual',
+        'users': 'Family',
+        'zap': 'EMP',
+        'radiation': 'CBRN',
+        'alertTriangle': 'Domestic Terrorism',
+        'cloud': 'Storms',
+    };
+    
+    return iconMap[icon] || icon;
+};
+
+export const TagValueDisplay = ({ value, field, title }: { value: string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' | 'baby' | 'userCheck' | 'venus' | 'mars' }, field?: string, title?: string }) => {
     if (typeof value === 'object' && value.icon) {
-        if (value.icon === 'user') return <PersonStanding className="w-3.5 h-3.5" />;
-        if (value.icon === 'users') return <Users className="w-3.5 h-3.5" />;
-        if (value.icon === 'zap') return <Zap className="w-3.5 h-3.5" />;
-        if (value.icon === 'radiation') return <Radiation className="w-3.5 h-3.5" />;
-        if (value.icon === 'alertTriangle') return <AlertTriangle className="w-3.5 h-3.5" />;
-        if (value.icon === 'cloud') return <Cloud className="w-3.5 h-3.5" />;
+        const displayTitle = title || getIconDisplayName(value.icon);
+        const commonProps = { className: "w-3.5 h-3.5", title: displayTitle };
+        
+        if (value.icon === 'user') return <User {...commonProps} />;
+        if (value.icon === 'users') return <Users {...commonProps} />;
+        if (value.icon === 'zap') return <Zap {...commonProps} />;
+        if (value.icon === 'radiation') return <Radiation {...commonProps} />;
+        if (value.icon === 'alertTriangle') return <AlertTriangle {...commonProps} />;
+        if (value.icon === 'cloud') return <Cloud {...commonProps} />;
+        if (value.icon === 'baby') return <Baby {...commonProps} />;
+        if (value.icon === 'userCheck') return <UserCheck {...commonProps} />;
+        if (value.icon === 'venus') return <VenusIcon className="w-3.5 h-3.5" color="#ec4899" title={displayTitle} />;
+        if (value.icon === 'mars') return <MarsIcon className="w-3.5 h-3.5" color="#3b82f6" title={displayTitle} />;
     }
-    return <>{value}</>;
+    return <span title={title || (typeof value === 'string' ? value : '')}>{value}</span>;
 };
 
 const TagBadge = ({ 
@@ -123,10 +169,48 @@ const TagBadge = ({
         }
     }, [isExpanded, alwaysExpanded]);
     
+    const isDemographics = label.toLowerCase() === 'people' || label.toLowerCase() === 'demographics';
+    const isScenarios = label.toLowerCase() === 'scenarios';
+    
+    // For demographics, show all options in order with inactive ones greyed out
+    if (isDemographics) {
+        const activeItems = items || [];
+        const allOptions = DEMOGRAPHICS;
+        const formattedOptions = allOptions.map(option => formatTagValue(option, 'demographics'));
+        
+        return (
+            <div className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${className} pl-0 py-0`}>
+                <div className="px-2 bg-white/10 border-r border-white/10 flex items-center justify-center">
+                    <Icon className="w-3.5 h-3.5 opacity-70 shrink-0" />
+                </div>
+                <div className="px-2.5 py-1 flex items-center flex-wrap gap-0">
+                    {allOptions.map((option, i) => {
+                        const isActive = activeItems.includes(option);
+                        const formattedValue = formattedOptions[i];
+                        const isGenderIcon = typeof formattedValue === 'object' && (formattedValue.icon === 'venus' || formattedValue.icon === 'mars');
+                        
+                        return (
+                            <span key={option} className="flex items-center">
+                                {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
+                                <span className={`text-[11px] font-medium tracking-wide uppercase transition-all rounded px-1.5 py-0.5 ${
+                                    isActive 
+                                        ? '' 
+                                        : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+                                }`} title={option}>
+                                    <TagValueDisplay value={formattedValue} field="demographics" title={option} />
+                                </span>
+                            </span>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+    
+    // For other tags, use the original behavior
     const hasItems = items && items.length > 0;
     const canCollapse = hasItems && items.length > 2 && !alwaysExpanded;
     const isCondensed = canCollapse && !isExpanded;
-    const isScenarios = label.toLowerCase() === 'scenarios';
     const formattedItems = hasItems ? items.map(item => {
         // Don't format "ALL Scenarios" - show as text
         if (item === 'ALL Scenarios') return item;
@@ -156,7 +240,11 @@ const TagBadge = ({
                             {formattedItems.map((item, i) => (
                                 <span key={i} className="flex items-center">
                                     {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
-                                    <TagValueDisplay value={item} field={isScenarios ? 'scenarios' : undefined} />
+                                    {typeof item === 'string' ? (
+                                        <span title={item}>{item}</span>
+                                    ) : (
+                                        <TagValueDisplay value={item} field={isScenarios ? 'scenarios' : undefined} title={items[i]} />
+                                    )}
                                 </span>
                             ))}
                         </span>
@@ -295,8 +383,9 @@ const QuickTagger = ({
                                         className={`text-[11px] font-medium tracking-wide uppercase transition-colors hover:opacity-80 ${
                                             isActive ? '' : 'opacity-50'
                                         }`}
+                                        title={item}
                                     >
-                                        <TagValueDisplay value={formattedValue} field={field} />
+                                        <TagValueDisplay value={formattedValue} field={field} title={item} />
                                     </button>
                                 </span>
                             );
@@ -1113,7 +1202,7 @@ export default function ProductsClient({
       };
 
       processedProducts.forEach(p => {
-          const masterItem = masterItems.find(m => m.id === p.masterItemId);
+          const masterItem = allMasterItems.find(m => m.id === p.masterItemId);
           let catId = 'uncategorized';
           let subCatId = null;
 
@@ -1140,7 +1229,7 @@ export default function ProductsClient({
       });
 
       return groups;
-  }, [processedProducts, masterItems, categories]);
+  }, [processedProducts, allMasterItems, categories]);
 
   const visibleProductIds = useMemo(() => {
       const ids: string[] = [];
@@ -1599,7 +1688,7 @@ export default function ProductsClient({
                                                     className={`px-6 py-3 cursor-pointer transition-colors ${
                                                         isMasterActive
                                                             ? 'bg-success/10'
-                                                            : 'bg-muted/80 hover:bg-muted'
+                                                            : 'bg-muted/40 hover:bg-muted/60'
                                                     }`}
                                                     onClick={() => handleMasterItemSelect(masterGroup.masterItem!.id)}
                                                     onContextMenu={(e) => handleMasterItemContextMenu(e, masterGroup.masterItem!)}
@@ -1685,6 +1774,93 @@ export default function ProductsClient({
                                                             product.locations !== null || 
                                                             product.scenarios !== null;
                                                         
+                                                        // Calculate tag differences for display
+                                                        const getTagDifferences = () => {
+                                                            const masterItem = masterGroup.masterItem;
+                                                            if (!masterItem || !hasOverriddenTags) return [];
+                                                            
+                                                            const differences: Array<{
+                                                                field: 'scenarios' | 'demographics' | 'timeframes' | 'locations';
+                                                                icon: any;
+                                                                className: string;
+                                                                label: string;
+                                                                differentTags: string[];
+                                                            }> = [];
+                                                            
+                                                            const checkField = (
+                                                                field: 'scenarios' | 'demographics' | 'timeframes' | 'locations',
+                                                                productTags: string[] | null,
+                                                                masterTags: string[] | null,
+                                                                icon: any,
+                                                                className: string,
+                                                                label: string
+                                                            ) => {
+                                                                if (productTags === null) return; // Inheriting, no difference
+                                                                
+                                                                const productSet = new Set(productTags || []);
+                                                                const masterSet = new Set(masterTags || []);
+                                                                
+                                                                // For demographics, compare all options to show state differences
+                                                                if (field === 'demographics') {
+                                                                    const allOptions = DEMOGRAPHICS;
+                                                                    const differentTags: string[] = [];
+                                                                    
+                                                                    allOptions.forEach(option => {
+                                                                        const inProduct = productSet.has(option);
+                                                                        const inMaster = masterSet.has(option);
+                                                                        if (inProduct !== inMaster) {
+                                                                            differentTags.push(option);
+                                                                        }
+                                                                    });
+                                                                    
+                                                                    if (differentTags.length > 0) {
+                                                                        differences.push({
+                                                                            field,
+                                                                            icon,
+                                                                            className,
+                                                                            label,
+                                                                            differentTags
+                                                                        });
+                                                                    }
+                                                                } else {
+                                                                    // For other fields, find tags that are different
+                                                                    const differentTags: string[] = [];
+                                                                    
+                                                                    // Tags added in product
+                                                                    productSet.forEach(tag => {
+                                                                        if (!masterSet.has(tag)) {
+                                                                            differentTags.push(tag);
+                                                                        }
+                                                                    });
+                                                                    
+                                                                    // Tags removed in product (present in master but not in product)
+                                                                    masterSet.forEach(tag => {
+                                                                        if (!productSet.has(tag)) {
+                                                                            differentTags.push(tag);
+                                                                        }
+                                                                    });
+                                                                    
+                                                                    if (differentTags.length > 0) {
+                                                                        differences.push({
+                                                                            field,
+                                                                            icon,
+                                                                            className,
+                                                                            label,
+                                                                            differentTags
+                                                                        });
+                                                                    }
+                                                                }
+                                                            };
+                                                            
+                                                            checkField('scenarios', product.scenarios, masterItem.scenarios, Shield, 'text-destructive bg-destructive/10 border-destructive/20', 'Scenarios');
+                                                            checkField('demographics', product.demographics, masterItem.demographics, Users, 'text-success bg-success/10 border-success/20', 'People');
+                                                            checkField('timeframes', product.timeframes, masterItem.timeframes, Clock, 'text-primary bg-primary/10 border-primary/20', 'Times');
+                                                            checkField('locations', product.locations, masterItem.locations, MapPin, 'text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50', 'Locs');
+                                                            
+                                                            return differences;
+                                                        };
+                                                        
+                                                        const tagDifferences = getTagDifferences();
                                                         const isTagging = taggingProductId === product.id;
 
                                                         return (
@@ -1719,6 +1895,59 @@ export default function ProductsClient({
                                                                             {product.sku || product.asin || 'No ID'}
                                                                             {/* Master Item info removed as it is now in the header */}
                                                                         </div>
+                                                                        {/* Product-specific tag differences */}
+                                                                        {tagDifferences.length > 0 && (
+                                                                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                                                                {tagDifferences.map((diff) => {
+                                                                                    const masterSet = new Set(masterGroup.masterItem?.[diff.field] || []);
+                                                                                    const productSet = new Set(product[diff.field] || []);
+                                                                                    
+                                                                                    // For demographics, show only differing options with their product state
+                                                                                    if (diff.field === 'demographics') {
+                                                                                        const formattedOptions = diff.differentTags.map(option => formatTagValue(option, 'demographics'));
+                                                                                        
+                                                                                        return (
+                                                                                            <div key={diff.field} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${diff.className}`}>
+                                                                                                <diff.icon className="w-3 h-3 opacity-70 shrink-0" />
+                                                                                                <div className="flex items-center gap-0">
+                                                                                                    {diff.differentTags.map((option, idx) => {
+                                                                                                        const inProduct = productSet.has(option);
+                                                                                                        const formattedValue = formattedOptions[idx];
+                                                                                                        return (
+                                                                                                            <span key={option} className="flex items-center">
+                                                                                                                {idx > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
+                                                                                                                <span className={`rounded px-1 py-0.5 ${inProduct ? '' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'}`}>
+                                                                                                                    <TagValueDisplay value={formattedValue} field={diff.field} title={option} />
+                                                                                                                </span>
+                                                                                                            </span>
+                                                                                                        );
+                                                                                                    })}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+                                                                                    
+                                                                                    // For other fields, show only the different tags
+                                                                                    return (
+                                                                                        <div key={diff.field} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${diff.className}`}>
+                                                                                            <diff.icon className="w-3 h-3 opacity-70 shrink-0" />
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                {diff.differentTags.map((tag, idx) => {
+                                                                                                    const isEnabled = productSet.has(tag);
+                                                                                                    const formattedTag = formatTagValue(tag, diff.field);
+                                                                                                    return (
+                                                                                                        <span key={tag} className="flex items-center">
+                                                                                                            {idx > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
+                                                                                                            <TagValueDisplay value={formattedTag} field={diff.field} title={tag} />
+                                                                                                        </span>
+                                                                                                    );
+                                                                                                })}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
                                                                         {/* Compact metadata tags */}
                                                                         {product.metadata && Object.keys(product.metadata).length > 0 && (
                                                                             <div className="flex flex-wrap gap-1 mt-1.5">

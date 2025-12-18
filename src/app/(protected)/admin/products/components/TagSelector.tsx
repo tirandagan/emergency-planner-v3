@@ -139,9 +139,9 @@ export default function TagSelector({
                                             ? 'bg-white/20 hover:bg-white/30' 
                                             : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-400'
                                     } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                    title={isNull && isActive ? "Inherited from Master Item (Click to override)" : isActive ? "Click to deselect" : "Click to select"}
+                                    title={option + (isNull && isActive ? " (Inherited from Master Item - Click to override)" : isActive ? " (Click to deselect)" : " (Click to select)")}
                                 >
-                                    <TagValueDisplay value={formattedValue} field={fieldType} />
+                                    <TagValueDisplay value={formattedValue} field={fieldType} title={option} />
                                 </button>
                             </span>
                         );
