@@ -45,7 +45,7 @@ export const MODELS = {
   GPT35: 'openai/gpt-3.5-turbo',
 
   // Google models via OpenRouter
-  GEMINI_FLASH: 'google/gemini-flash-1.5',
+  GEMINI_FLASH: 'google/gemini-2.0-flash-exp:free',
   GEMINI_PRO: 'google/gemini-pro-1.5',
 } as const;
 
