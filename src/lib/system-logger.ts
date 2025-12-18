@@ -464,16 +464,19 @@ export async function logPaymentError(
     currency?: string;
     component?: string;
     route?: string;
+    userAction?: string;
+    metadata?: Record<string, unknown>;
   } = {}
 ): Promise<string | null> {
   return logSystemError(error, {
     category: 'payment_error',
+    ...context,
     metadata: {
       stripeCustomerId: context.stripeCustomerId,
       amount: context.amount,
       currency: context.currency,
+      ...context.metadata,
     },
-    ...context,
   });
 }
 
