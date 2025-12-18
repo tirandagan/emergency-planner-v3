@@ -10,6 +10,17 @@ if 'celery' in sys.argv[0] or 'worker' in sys.argv:
         eventlet.monkey_patch()
         print("✅ eventlet.monkey_patch() applied successfully")
 
+        # CRITICAL: Apply nest_asyncio IMMEDIATELY after monkey_patch
+        # This allows asyncio event loops (used by Redis cache/rate limiter) to work
+        # with eventlet's green threads without socket conflicts
+        try:
+            import nest_asyncio
+            nest_asyncio.apply()
+            print("✅ nest_asyncio applied for asyncio compatibility")
+        except Exception as e:
+            print(f"⚠️  Failed to apply nest_asyncio: {e}")
+            print("   Asyncio operations may conflict with eventlet")
+
         # CRITICAL: Patch psycopg2 for PostgreSQL connections under eventlet
         # This prevents "Second simultaneous read on fileno" errors when multiple
         # green threads access database connections from the connection pool
