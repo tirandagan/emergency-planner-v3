@@ -148,24 +148,28 @@ export default function MasterItemModal({
                                 options={TIMEFRAMES}
                                 selected={timeframes}
                                 onChange={(val) => setTimeframes(val || [])}
+                                field="timeframes"
                             />
                             <TagSelector 
                                 label="Location"
                                 options={LOCATIONS}
                                 selected={locations}
                                 onChange={(val) => setLocations(val || [])}
+                                field="locations"
                             />
                             <TagSelector 
                                 label="Demographics"
                                 options={DEMOGRAPHICS}
                                 selected={demographics}
                                 onChange={(val) => setDemographics(val || [])}
+                                field="demographics"
                             />
                              <TagSelector 
                                 label="Scenario"
                                 options={SCENARIOS}
                                 selected={scenarios}
                                 onChange={(val) => setScenarios(val || [])}
+                                field="scenarios"
                             />
                          </div>
                     </div>

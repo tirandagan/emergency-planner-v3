@@ -1114,20 +1114,13 @@ export default function ProductEditDialog({
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <TagSelector
-                                            label="Timeframe"
-                                            options={TIMEFRAMES}
-                                            selected={formState.timeframes}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, timeframes: vals }))}
+                                            label="Scenario"
+                                            options={SCENARIOS}
+                                            selected={formState.scenarios}
+                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, scenarios: vals }))}
                                             notSetLabel="Not Set (Inherits from Master Item)"
-                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.timeframes}
-                                        />
-                                        <TagSelector
-                                            label="Location"
-                                            options={LOCATIONS}
-                                            selected={formState.locations}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, locations: vals }))}
-                                            notSetLabel="Not Set (Inherits from Master Item)"
-                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.locations}
+                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.scenarios}
+                                            field="scenarios"
                                         />
                                         <TagSelector
                                             label="Demographics"
@@ -1136,14 +1129,25 @@ export default function ProductEditDialog({
                                             onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, demographics: vals }))}
                                             notSetLabel="Not Set (Inherits from Master Item)"
                                             inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.demographics}
+                                            field="demographics"
                                         />
-                                         <TagSelector
-                                            label="Scenario"
-                                            options={SCENARIOS}
-                                            selected={formState.scenarios}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, scenarios: vals }))}
+                                        <TagSelector
+                                            label="Timeframe"
+                                            options={TIMEFRAMES}
+                                            selected={formState.timeframes}
+                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, timeframes: vals }))}
                                             notSetLabel="Not Set (Inherits from Master Item)"
-                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.scenarios}
+                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.timeframes}
+                                            field="timeframes"
+                                        />
+                                        <TagSelector
+                                            label="Location"
+                                            options={LOCATIONS}
+                                            selected={formState.locations}
+                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, locations: vals }))}
+                                            notSetLabel="Not Set (Inherits from Master Item)"
+                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.locations}
+                                            field="locations"
                                         />
                                     </div>
                                 </div>

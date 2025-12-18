@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, Fragment, useRef } from "react";
-import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil } from "lucide-react";
+import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield } from "lucide-react";
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags } from "./actions";
 import { getCategoryImpact, updateCategory, deleteCategory } from "@/app/actions/categories";
@@ -65,12 +65,20 @@ interface Product {
 
 // --- Helper Components ---
 // Condense timeframe labels for display
-const formatTagValue = (value: string): string | { icon: 'user' | 'users' } => {
+export const formatTagValue = (value: string, field?: string): string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' } => {
     const lower = value.toLowerCase();
+    
+    // Scenarios - use icons everywhere
+    if (lower === 'emp') return { icon: 'zap' };
+    if (lower === 'cbrn') return { icon: 'radiation' };
+    if (lower === 'domestic terrorism') return { icon: 'alertTriangle' };
+    if (lower === 'civil unrest') return { icon: 'users' };
+    if (lower === 'storms') return { icon: 'cloud' };
+    
     // Timeframes
     if (lower === '1 year') return '1Y';
     if (lower === '>1 year') return '>1Y';
-    if (lower === '1 month') return '1Mo';
+    if (lower === '1 month') return '1MO';
     if (lower === '1 week') return '1W';
     // Demographics - only abbreviate Man/Woman, use icons for Individual/Family
     if (lower === 'man') return 'M';
@@ -81,10 +89,14 @@ const formatTagValue = (value: string): string | { icon: 'user' | 'users' } => {
     return value;
 };
 
-const TagValueDisplay = ({ value }: { value: string | { icon: 'user' | 'users' } }) => {
+export const TagValueDisplay = ({ value, field }: { value: string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' }, field?: string }) => {
     if (typeof value === 'object' && value.icon) {
         if (value.icon === 'user') return <PersonStanding className="w-3.5 h-3.5" />;
         if (value.icon === 'users') return <Users className="w-3.5 h-3.5" />;
+        if (value.icon === 'zap') return <Zap className="w-3.5 h-3.5" />;
+        if (value.icon === 'radiation') return <Radiation className="w-3.5 h-3.5" />;
+        if (value.icon === 'alertTriangle') return <AlertTriangle className="w-3.5 h-3.5" />;
+        if (value.icon === 'cloud') return <Cloud className="w-3.5 h-3.5" />;
     }
     return <>{value}</>;
 };
@@ -114,7 +126,12 @@ const TagBadge = ({
     const hasItems = items && items.length > 0;
     const canCollapse = hasItems && items.length > 2 && !alwaysExpanded;
     const isCondensed = canCollapse && !isExpanded;
-    const formattedItems = hasItems ? items.map(formatTagValue) : [];
+    const isScenarios = label.toLowerCase() === 'scenarios';
+    const formattedItems = hasItems ? items.map(item => {
+        // Don't format "ALL Scenarios" - show as text
+        if (item === 'ALL Scenarios') return item;
+        return formatTagValue(item, isScenarios ? 'scenarios' : undefined);
+    }) : [];
     
     return (
         <button
@@ -139,7 +156,7 @@ const TagBadge = ({
                             {formattedItems.map((item, i) => (
                                 <span key={i} className="flex items-center">
                                     {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
-                                    <TagValueDisplay value={item} />
+                                    <TagValueDisplay value={item} field={isScenarios ? 'scenarios' : undefined} />
                                 </span>
                             ))}
                         </span>
@@ -225,6 +242,16 @@ const QuickTagger = ({
         const isInherited = currentValues === null;
         const effectiveValues = isInherited ? (masterItem?.[field] || []) : (currentValues || []);
 
+        // Get color classes matching TagBadge style
+        let badgeClassName = 'text-primary bg-primary/10 border-primary/20';
+        if (field === 'scenarios') badgeClassName = 'text-destructive bg-destructive/10 border-destructive/20';
+        if (field === 'demographics') badgeClassName = 'text-success bg-success/10 border-success/20';
+        if (field === 'timeframes') badgeClassName = 'text-primary bg-primary/10 border-primary/20';
+        if (field === 'locations') badgeClassName = 'text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50';
+
+        const formattedItems = items.map(item => formatTagValue(item, field));
+        const hasActiveItems = effectiveValues && effectiveValues.length > 0;
+
         return (
             <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs mb-2 pr-4">
@@ -248,33 +275,33 @@ const QuickTagger = ({
                         </span>
                     )}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                    {items.map(item => {
-                        const isActive = effectiveValues!.includes(item);
-                        // Specific colors per category for active state - Trust Blue mappings
-                        let activeClass = 'bg-primary/10 text-primary border-primary/20';
-                        if (field === 'scenarios') activeClass = 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20';
-                        if (field === 'demographics') activeClass = 'bg-success/10 text-success border-success/20 hover:bg-success/20';
-                        if (field === 'timeframes') activeClass = 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20';
-                        if (field === 'locations') activeClass = 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20';
-
-                        return (
-                            <button
-                                key={item}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggle(field, item);
-                                }}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all border ${
-                                    isActive
-                                        ? activeClass
-                                        : 'bg-muted text-muted-foreground border-border hover:border-primary/20 hover:text-foreground'
-                                }`}
-                            >
-                                <TagValueDisplay value={formatTagValue(item)} />
-                            </button>
-                        );
-                    })}
+                <div className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 pl-0 py-0 ${hasActiveItems ? badgeClassName : 'bg-muted text-muted-foreground border-border'}`}>
+                    <div className="px-2 bg-white/10 border-r border-white/10 flex items-center justify-center">
+                        <Icon className="w-3.5 h-3.5 opacity-70 shrink-0" strokeWidth={2.5} />
+                    </div>
+                    <div className="px-2.5 py-1 flex items-center flex-wrap gap-0">
+                        {items.map((item, i) => {
+                            const isActive = effectiveValues!.includes(item);
+                            const formattedValue = formattedItems[i];
+                            
+                            return (
+                                <span key={item} className="flex items-center">
+                                    {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggle(field, item);
+                                        }}
+                                        className={`text-[11px] font-medium tracking-wide uppercase transition-colors hover:opacity-80 ${
+                                            isActive ? '' : 'opacity-50'
+                                        }`}
+                                    >
+                                        <TagValueDisplay value={formattedValue} field={field} />
+                                    </button>
+                                </span>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         );
@@ -318,7 +345,7 @@ const QuickTagger = ({
             `}</style>
              <div className="flex flex-wrap gap-12 justify-center">
                 <div className="min-w-[180px]">
-                    <TagSection title="Scenarios" items={SCENARIOS} field="scenarios" icon={Zap} />
+                    <TagSection title="Scenarios" items={SCENARIOS} field="scenarios" icon={Shield} />
                 </div>
                 <div className="min-w-[140px]">
                     <TagSection title="People" items={DEMOGRAPHICS} field="demographics" icon={Users} />
@@ -1590,10 +1617,16 @@ export default function ProductsClient({
                                                                 )}
                                                             </div>
                                                             
+                                                            {masterGroup.masterItem.description && (
+                                                                <p className="text-xs text-muted-foreground mb-2 max-w-4xl line-clamp-2">
+                                                                    {masterGroup.masterItem.description}
+                                                                </p>
+                                                            )}
+                                                            
                                                             {/* Visual Tags Display */}
                                                             <div className="flex flex-wrap gap-2 items-center">
                                                                 <TagBadge
-                                                                    icon={Zap}
+                                                                    icon={Shield}
                                                                     items={
                                                                         masterGroup.masterItem.scenarios?.length === SCENARIOS.length
                                                                             ? ['ALL Scenarios']
@@ -1620,16 +1653,10 @@ export default function ProductsClient({
                                                                 <TagBadge
                                                                     icon={MapPin}
                                                                     items={masterGroup.masterItem.locations}
-                                                                    className="text-warning bg-warning/10 border-warning/20"
+                                                                    className="text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50"
                                                                     label="Locs"
                                                                 />
                                                             </div>
-
-                                                            {masterGroup.masterItem.description && (
-                                                                <p className="text-xs text-muted-foreground mt-2 max-w-4xl line-clamp-2">
-                                                                    {masterGroup.masterItem.description}
-                                                                </p>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
