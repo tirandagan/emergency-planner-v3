@@ -17,6 +17,7 @@ from app.database import get_db
 from app.schemas.status import WorkflowStatusResponse, JobStatusEnum
 from app.schemas.common import ErrorResponse
 from app.models.workflow_job import WorkflowJob
+from app.dependencies.auth import verify_api_secret
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +28,17 @@ router = APIRouter()
     "/status/{job_id}",
     response_model=WorkflowStatusResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(verify_api_secret)],
     summary="Get workflow job status",
-    description="Query the execution status and results of a workflow job by ID.",
+    description="Query the execution status and results of a workflow job by ID. Requires X-API-Secret header.",
     responses={
         200: {
             "description": "Job status retrieved successfully",
             "model": WorkflowStatusResponse
+        },
+        401: {
+            "description": "Invalid or missing API secret",
+            "model": ErrorResponse
         },
         404: {
             "description": "Job not found",

@@ -508,7 +508,7 @@ export async function summarizeProductDescription(description: string) {
     });
 
     const { text } = await generateText({
-        model: google('models/gemini-2.5-flash') as unknown as Parameters<typeof generateText>[0]['model'],
+        model: google('models/gemini-2.5-flash'),
         prompt: `Please summarize the following product description. Keep only the factual information that describes the product features and specifications. Remove any marketing fluff, promotional language (e.g., "We are proud to...", "Best in class", "Revolutionary"), and subjective claims. The output should be concise and informative. Do not use markdown formatting.\n\nDescription:\n${description}`,
     });
 

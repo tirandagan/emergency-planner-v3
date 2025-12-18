@@ -1,0 +1,688 @@
+{
+    "results": {
+        "ads": [
+            {
+                "pos": 1,
+                "asin": "B0DS2FV4FR",
+                "type": "organic_also_viewed",
+                "price": 25.49,
+                "title": "Video Widget Card",
+                "images": [
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/A1QWiQ146oL._CR5,0,1911,1080_SR414,234_.jpg",
+                    "https://m.media-amazon.com/images/I/A1QWiQ146oL._CR5,0,1911,1080_SR414,234_.jpg",
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/51t6dsVNgWL._AC_SR89,103_.jpg"
+                ],
+                "rating": 0,
+                "location": "carousel",
+                "price_upper": 25.49,
+                "reviews_count": 0,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 2,
+                "asin": "B0CT7RQZTZ",
+                "type": "organic_also_viewed",
+                "price": 15.99,
+                "title": "Video Widget Card",
+                "images": [
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/71j82-xWMOL._CR5,0,1911,1080_SR414,234_.jpg",
+                    "https://m.media-amazon.com/images/I/71j82-xWMOL._CR5,0,1911,1080_SR414,234_.jpg",
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/51ZojOy5mGL._AC_SR89,103_.jpg"
+                ],
+                "rating": 0,
+                "location": "carousel",
+                "price_upper": 15.99,
+                "reviews_count": 0,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 3,
+                "asin": "B0DDKXVL8Y",
+                "type": "organic_also_viewed",
+                "price": 13.99,
+                "title": "Video Widget Card",
+                "images": [
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/91HTJxzcrvL._CR0,0,970,548_SR414,234_.png",
+                    "https://m.media-amazon.com/images/I/91HTJxzcrvL._CR0,0,970,548_SR414,234_.png",
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/51DPGHLPwyL._AC_SR89,103_.jpg"
+                ],
+                "rating": 0,
+                "location": "carousel",
+                "price_upper": 13.99,
+                "reviews_count": 0,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 4,
+                "asin": "B0D5H19GJC",
+                "type": "organic_also_viewed",
+                "price": 17.99,
+                "title": "Video Widget Card",
+                "images": [
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/81hh7v844bL._CR5,0,1911,1080_SR414,234_.jpg",
+                    "https://m.media-amazon.com/images/I/81hh7v844bL._CR5,0,1911,1080_SR414,234_.jpg",
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/51+TogHKx1L._AC_SR89,103_.jpg"
+                ],
+                "rating": 0,
+                "location": "carousel",
+                "price_upper": 17.99,
+                "reviews_count": 0,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 5,
+                "asin": "B0D8DDSMXV",
+                "type": "organic_also_viewed",
+                "price": 14.99,
+                "title": "Video Widget Card",
+                "images": [
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/61enCPw84RL._CR2,0,637,360_SR414,234_.jpg",
+                    "https://m.media-amazon.com/images/I/61enCPw84RL._CR2,0,637,360_SR414,234_.jpg",
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/51iUKBwuBGL._AC_SR89,103_.jpg"
+                ],
+                "rating": 0,
+                "location": "carousel",
+                "price_upper": 14.99,
+                "reviews_count": 0,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 6,
+                "asin": "B0BX8LQ5YD",
+                "type": "organic_also_viewed",
+                "price": 30.99,
+                "title": "Video Widget Card",
+                "images": [
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/81NyKcIkiDL._CR0,0,1601,905_SR414,234_.jpg",
+                    "https://m.media-amazon.com/images/I/81NyKcIkiDL._CR0,0,1601,905_SR414,234_.jpg",
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/41FPkbMvRSL._AC_SR89,103_.jpg"
+                ],
+                "rating": 0,
+                "location": "carousel",
+                "price_upper": 30.99,
+                "reviews_count": 0,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 7,
+                "asin": "B09VL22SJK",
+                "type": "organic_also_viewed",
+                "price": 7.93,
+                "title": "Video Widget Card",
+                "images": [
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/C1B5GRZMwUL._CR0,0,4624,2614_SR414,234_.jpg",
+                    "https://m.media-amazon.com/images/I/C1B5GRZMwUL._CR0,0,4624,2614_SR414,234_.jpg",
+                    "https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif",
+                    "https://m.media-amazon.com/images/I/51F8KD2YXlL._AC_SR89,103_.jpg"
+                ],
+                "rating": 0,
+                "location": "carousel",
+                "price_upper": 7.93,
+                "reviews_count": 0,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 8,
+                "asin": "B08N1B1G2R",
+                "type": "organic_also_viewed",
+                "price": 28.95,
+                "title": "Commode Liners - 100 Strong Portable Commode Toilet Bags - Easy to Use Bedside Commode Liners - Bedside Toilet Potty Liners That Support Dignity of Seniors - No Buckets to Wash - NO Absorbent Pad",
+                "images": [
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                    "https://m.media-amazon.com/images/I/51A2IRhRYHL._AC_SR100,100_QL65_.jpg"
+                ],
+                "rating": 4.7,
+                "location": "carousel",
+                "price_upper": 32.95,
+                "reviews_count": 47,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 9,
+                "asin": "B0FCXDYN2H",
+                "type": "organic_also_viewed",
+                "price": 18.99,
+                "title": "60 Packs Commode Liners With 60 Absorbent Pads, Leak-Proof Disposable Toilet Bags for Adults, Fits All Bedside Toilet Chairs Bucket, Portable Potty Liners for Home Medical Use, No Mess Cleanup",
+                "images": [
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                    "https://m.media-amazon.com/images/I/41fMYUAlUDL._AC_SR100,100_QL65_.jpg"
+                ],
+                "rating": 4.4,
+                "location": "carousel",
+                "price_upper": 18.99,
+                "reviews_count": 44,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 10,
+                "asin": "B0DF8RVB2B",
+                "type": "organic_also_viewed",
+                "price": 18,
+                "title": "PACT Pack Out Kit - Camping Poop Kit Includes Wet Wipes, Smell Proof Disposal Bags, Hand Wipes, Poop Powder for Odor and Human Waste Bags for Camping and Backpacking",
+                "images": [
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                    "https://m.media-amazon.com/images/I/41ZQ9hoQ1gL._AC_SR100,100_QL65_.jpg"
+                ],
+                "rating": 4.8,
+                "location": "carousel",
+                "price_upper": 18,
+                "reviews_count": 48,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 11,
+                "asin": "B0FMRZGMWG",
+                "type": "organic_also_viewed",
+                "price": 29.99,
+                "title": "HOMLAND Commode Liners with Absorbent Pads, 100 Disposable Commode Bags and 100 Commode Pads, Leak-Proof Portable Toilet Bags Universal Fit for Potty Chair Bucket, Bedpan & Camping Toilet",
+                "images": [
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                    "https://m.media-amazon.com/images/I/41ial4cLxkL._AC_SR100,100_QL65_.jpg"
+                ],
+                "rating": 4.8,
+                "location": "carousel",
+                "price_upper": 39.99,
+                "reviews_count": 48,
+                "is_prime_eligible": false
+            },
+            {
+                "pos": 12,
+                "asin": "B0FKZ3KTYW",
+                "type": "organic_also_viewed",
+                "price": 32.99,
+                "title": "Lunoleum Commode Liners with Absorbent Pads, 120 Portable Potty Bags and 120 Pads, Potty Bags for Portable Toilet Bedside Commode Liners for Portable Toilet, Adult Commode Chair and Bedpan",
+                "images": [
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100%' width='100%' preserveAspectRatio='none' /%3E",
+                    "https://m.media-amazon.com/images/I/510UyhPHKVL._AC_SR100,100_QL65_.jpg"
+                ],
+                "rating": 4.8,
+                "location": "carousel",
+                "price_upper": 36.99,
+                "reviews_count": 48,
+                "is_prime_eligible": false
+            }
+        ],
+        "url": "https://www.amazon.com/dp/B0DZXFDCPQ?th=1&psc=1&language=en_US",
+        "asin": "B0DZXFDCPQ",
+        "page": 1,
+        "brand": "Poesie",
+        "price": 39.99,
+        "stock": "Only 18 left in stock - order soon.",
+        "title": "Poesie Poo Absorbent Gel Powder for Portable Toilet Camping Hiking Outdoor Portable Potty Resolution",
+        "buybox": [
+            {
+                "price": 39.99,
+                "returns": "Returnable until Jan 31, 2026",
+                "condition": " Prime Member Price  ",
+                "seller_id": "A3R531MQ1RVLOY",
+                "seller_url": "https://www.amazon.com/gp/help/seller/at-a-glance.html/ref=dp_merchant_link?ie=UTF8&seller=A3R531MQ1RVLOY&asin=B0DZXFDCPQ&ref_=dp_merchant_link&isAmazonFulfilled=1",
+                "seller_name": "DROLE Life",
+                "return_policy": "For the 2025 holiday season, eligible items purchased between November 1 and December 31, 2025 can be returned until January 31, 2026.",
+                "ships_from_name": "DROLE Life"
+            },
+            {
+                "price": 59.99,
+                "stock": "Only 18 left in stock - order soon.",
+                "returns": "FREE refund/replacement until Jan 31, 2026",
+                "condition": " Regular Price ",
+                "seller_id": "A3R531MQ1RVLOY",
+                "seller_url": "https://www.amazon.com/gp/help/seller/at-a-glance.html/ref=dp_merchant_link?ie=UTF8&seller=A3R531MQ1RVLOY&asin=B0DZXFDCPQ&ref_=dp_merchant_link&isAmazonFulfilled=1",
+                "seller_name": "DROLE Life",
+                "return_policy": "For the 2025 holiday season, eligible items purchased between November 1 and December 31, 2025 can be returned until January 31, 2026.",
+                "ships_from_name": "DROLE Life",
+                "delivery_details": [
+                    {
+                        "date": {
+                            "by": "Tuesday, December 23"
+                        },
+                        "type": "FREE delivery"
+                    },
+                    {
+                        "date": {
+                            "by": "Tuesday, December 23"
+                        },
+                        "type": "FREE delivery"
+                    },
+                    {
+                        "date": {
+                            "by": "Prime members"
+                        },
+                        "type": "Or"
+                    }
+                ]
+            }
+        ],
+        "coupon": "",
+        "images": [
+            "https://m.media-amazon.com/images/I/816sNBna3GL._AC_SL1500_.jpg",
+            "https://m.media-amazon.com/images/I/81JOj55ayfL._AC_SL1500_.jpg",
+            "https://m.media-amazon.com/images/I/81AXOz+b8HL._AC_SL1500_.jpg",
+            "https://m.media-amazon.com/images/I/71rIppNWiUL._AC_SL1500_.jpg",
+            "https://m.media-amazon.com/images/I/71ExwKvEhYL._AC_SL1500_.jpg",
+            "https://m.media-amazon.com/images/I/81J3EkRZCDL._AC_SL1500_.jpg"
+        ],
+        "rating": 4.5,
+        "reviews": [
+            {
+                "id": "R3ODLWPTW7PFB7",
+                "title": "5.0 out of 5 stars Very absorbent and odor fighting powers",
+                "author": "LuvUSA",
+                "rating": 5,
+                "content": "I used these while camping and I've got to say they worked very well, not only did it cut down the odors but they absorb very well too. These are going to be great every time we go camping",
+                "timestamp": "Reviewed in the United States September 15, 2025",
+                "profile_id": "AETUDBEG4V2Y5T7J2RTOE33KGSWQ",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "helpful_count": 3,
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R1M78EEDJZR2ZS",
+                "title": "5.0 out of 5 stars Very effective",
+                "author": "James 634685",
+                "rating": 5,
+                "content": "Works great. Makes a camping toilet viable inside a shelter. Keeps smell way down",
+                "timestamp": "Reviewed in the United States March 12, 2025",
+                "profile_id": "AH4TFSWUNHNX4CSSLFFLIZ4XYK3A",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "helpful_count": 3,
+                "product_attributes": "Size: 50 Packets, Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R3FHWQBANOUWOP",
+                "title": "5.0 out of 5 stars Great Product for Campers!",
+                "author": "DARLENE L WELLMAN",
+                "rating": 5,
+                "content": "Great for camping in a tent and having to use it when peeing in bag covered bucket.",
+                "timestamp": "Reviewed in the United States November 22, 2025",
+                "profile_id": "AFMOILXMONN4THWTXEBPXZZIYBJA",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R26ZYHPNF78ZCZ",
+                "title": "4.0 out of 5 stars Fast acting",
+                "author": "Masterj",
+                "rating": 4,
+                "content": "Exactly what I expected, works fabulous. Highly recommend if using a portable toilet",
+                "timestamp": "Reviewed in the United States November 23, 2025",
+                "profile_id": "AH5UNL5TGRNPGJENY5654H6PWMLQ",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R3FEPR0YA1Y9RJ",
+                "title": "5.0 out of 5 stars Urine-tastic",
+                "author": "Chris Stonehocker",
+                "rating": 5,
+                "content": "Bought the gel packets for an outdoor portable toilet. They came in single use packets, held in a flat plastic container with clasp closures on all sides, which made it very convenient to pack with the toilet. I used 1-1 ratio and the material absorbed almost instantly turning into gel. The lemon fresh scent consumed any odors overnight. The gel packets were used for liquid material and no solid waste, so I cannot comment on that validity.Cons: hard to open-there was no notch for easy tearing. I had to use a pocket knife every time.Pro: These are great for any liquid matter. Will keep in my emergency preparedness bag and portable outdoor toilet.",
+                "timestamp": "Reviewed in the United States July 30, 2024",
+                "profile_id": "AFVIZUFGITOI2NZO7VTFLXUA3SLQ",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "helpful_count": 15,
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R2BZDHDG2LXAU9",
+                "title": "3.0 out of 5 stars Hard to open",
+                "author": "Aai",
+                "rating": 3,
+                "content": "Some of the packets are so hard to open because they don’t have that little cut on the side. And the urine still smells after the urine turn into gel.",
+                "timestamp": "Reviewed in the United States August 19, 2025",
+                "profile_id": "AHLQSZ5PWLCMT3ETJV75KLYJVJOQ",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "helpful_count": 2,
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "RGIQ192VP3BMU",
+                "title": "5.0 out of 5 stars A Must-Have for Moms on the Go!",
+                "author": "Ashla Elam",
+                "rating": 5,
+                "content": "I’m a mom of four (ages 13, 11, 9, and 4), and between travel soccer, rec soccer, chorus, and track, we’re always on the road. These Absorbent packs are a game-changer! When one kid has to go and the others are asleep in the car, I don’t have to wake anyone up or find a restroom. The powder turns liquid into gel instantly, controls odor, and is super easy to clean up. I keep them in my trunk at all times. Total lifesaver for busy families!",
+                "timestamp": "Reviewed in the United States April 15, 2025",
+                "profile_id": "AFJJCFPOJCHWGHORJBKH6YUEJFVQ",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "helpful_count": 9,
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R2VN1300835WZI",
+                "title": "5.0 out of 5 stars Calidad y buena capacidad",
+                "author": "Jose G.",
+                "rating": 5,
+                "content": "Los recomiendo 100% ya que las bolsas tienen buena calidad y capacidad, son fáciles de acoplar y utilizar, loa geles son súper eficaces y rápidos en actuar lo que facilita mucho el desecho de líquidos, sin dudas es una muy buena opción para camping o actividades al aire libre",
+                "timestamp": "Reviewed in the United States October 29, 2025",
+                "profile_id": "AF5CBNFK6TTBKC665PU645W7AF7Q",
+                "is_verified": true,
+                "review_from": "Top reviews from the United States",
+                "helpful_count": 1,
+                "product_attributes": "Size: 40 Gels and 40 Bags, Style: Gels With Bags Set"
+            },
+            {
+                "id": "R3JLLP7L2CEPLW",
+                "title": "متجر سيئ",
+                "author": "ماوصلني المنتج كملت سنه",
+                "rating": 1,
+                "content": "لاتطلبون منه",
+                "timestamp": "Reviewed in Saudi Arabia July 22, 2024",
+                "is_verified": true,
+                "review_from": "Top reviews from other countries",
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R3SY12TO6K6BDX",
+                "title": "Works Perfectly and Makes Clean-Up Easy",
+                "author": "Cameron",
+                "rating": 5,
+                "content": "This portable potty fill powder works exactly as promised. It quickly absorbs liquids, eliminates odors, and makes clean-up simple and hygienic. Very convenient for travel, camping, or emergencies. The packets are easy to use, and one goes a long way. A reliable product that gives peace of mind when on the go.",
+                "timestamp": "Reviewed in Canada September 25, 2025",
+                "is_verified": true,
+                "review_from": "Top reviews from other countries",
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R30EENMRL7OPCR",
+                "title": "Highly recommend",
+                "author": "Aws",
+                "rating": 5,
+                "content": "Great product",
+                "timestamp": "Reviewed in Canada August 1, 2025",
+                "is_verified": true,
+                "review_from": "Top reviews from other countries",
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R3LNEAS24QSGGS",
+                "title": "Good for odor control",
+                "author": "Michael Antiola",
+                "rating": 4,
+                "content": "I noticed a difference with odour control but not much with making urine turn into jelly. Will probably have to out more than one sachet to do that",
+                "timestamp": "Reviewed in Canada July 12, 2025",
+                "is_verified": true,
+                "review_from": "Top reviews from other countries",
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            },
+            {
+                "id": "R1LLRZQ65MS7KU",
+                "title": "10/10",
+                "author": "CHEVROLET 2500HD",
+                "rating": 5,
+                "content": "10/10",
+                "timestamp": "Reviewed in Canada July 14, 2025",
+                "is_verified": true,
+                "review_from": "Top reviews from other countries",
+                "product_attributes": "Size: 0.35 Ounce (Pack of 25), Style: Camping Toilet Gel Only"
+            }
+        ],
+        "category": [
+            {
+                "ladder": [
+                    {
+                        "url": "/sports-outdoors/b/ref=dp_bc_1?ie=UTF8&node=3375251",
+                        "name": "Sports & Outdoors"
+                    },
+                    {
+                        "url": "/outdoor-recreation/b/ref=dp_bc_2?ie=UTF8&node=706814011",
+                        "name": "Outdoor Recreation"
+                    },
+                    {
+                        "url": "/camping-hiking/b/ref=dp_bc_3?ie=UTF8&node=3400371",
+                        "name": "Camping & Hiking"
+                    },
+                    {
+                        "url": "/camping-personal-care-products/b/ref=dp_bc_4?ie=UTF8&node=3401541",
+                        "name": "Personal Care"
+                    },
+                    {
+                        "url": "/camping-hygiene-and-sanitation-products/b/ref=dp_bc_5?ie=UTF8&node=3401571",
+                        "name": "Hygiene & Sanitation"
+                    }
+                ]
+            }
+        ],
+        "currency": "USD",
+        "delivery": [
+            {
+                "date": {
+                    "by": "Tuesday, December 23"
+                },
+                "type": "FREE delivery"
+            },
+            {
+                "date": {
+                    "by": "Prime members"
+                },
+                "type": "Or"
+            }
+        ],
+        "page_type": "Product",
+        "price_sns": 0,
+        "store_url": "/stores/Poesie/page/AF9FBA42-7510-4F93-9D96-D7AD5E9069BE?lp_asin=B0DZXFDCPQ&ref_=ast_bln&store_ref=bl_ast_dp_brandLogo_sto",
+        "variation": [
+            {
+                "asin": "B0C77TMY53",
+                "selected": false,
+                "dimensions": {
+                    "Size": "2.2 lb",
+                    "Style": "Camping Toilet Gel Only"
+                }
+            },
+            {
+                "asin": "B0F12D9N46",
+                "selected": false,
+                "dimensions": {
+                    "Size": "20 Gels and 20 Bags",
+                    "Style": "Gels With Bags Set"
+                }
+            },
+            {
+                "asin": "B09LHCX7NF",
+                "selected": false,
+                "dimensions": {
+                    "Size": "0.35 Ounce (Pack of 25)",
+                    "Style": "Camping Toilet Gel Only"
+                }
+            },
+            {
+                "asin": "B0DZXDDD61",
+                "selected": false,
+                "dimensions": {
+                    "Size": "40 Gels and 40 Bags",
+                    "Style": "Gels With Bags Set"
+                }
+            },
+            {
+                "asin": "B0DZXFDCPQ",
+                "selected": true,
+                "dimensions": {
+                    "Size": "60 Gels and 60 Bags",
+                    "Style": "Gels With Bags Set"
+                }
+            },
+            {
+                "asin": "B0B453NMXR",
+                "selected": false,
+                "dimensions": {
+                    "Size": "50 Packets",
+                    "Style": "Camping Toilet Gel Only"
+                }
+            }
+        ],
+        "has_videos": true,
+        "sales_rank": [
+            {
+                "rank": 12712,
+                "ladder": [
+                    {
+                        "url": "/gp/bestsellers/sporting-goods/ref=pd_zg_ts_sporting-goods",
+                        "name": "Sports & Outdoors"
+                    }
+                ]
+            },
+            {
+                "rank": 25,
+                "ladder": [
+                    {
+                        "url": "/gp/bestsellers/sporting-goods/3401571/ref=pd_zg_hrsr_sporting-goods",
+                        "name": "Camping Hygiene & Sanitation Products"
+                    }
+                ]
+            }
+        ],
+        "asin_in_url": "B0DZXFDCPQ",
+        "description": "Porta Portty Solution for Outdoor Camping enthusiastics and hiking lovers.",
+        "parent_asin": "B0DZWPG1YT",
+        "price_upper": 39.99,
+        "pricing_str": "",
+        "pricing_url": "https://www.amazon.com/gp/offer-listing/B0DZXFDCPQ?startIndex=0",
+        "manufacturer": "Poesie",
+        "max_quantity": 5,
+        "price_buybox": 39.99,
+        "product_name": "Poesie Poo Absorbent Gel Powder for Portable Toilet Camping Hiking Outdoor Portable Potty Resolution",
+        "amazon_choice": true,
+        "bullet_points": "Camp Toilet Gel Poo Urine Gel Set - Include 60 durable portable toilet bags and 60 poo urine powder packs. Our portable toilet gel converts 650ml urine into solid mass within 60 seconds. Use for travel toilet, emergency toilet, camping portable toilet, lugable loo toilet, composting toilet, turbo toilet, bucket toilet, etc. Small package for your go bag, little space, lots of convenience.\nUpgraded compostable camping toilet set - Extra large 8 gallon camp toilet bags make from PSM material,which can help you keep a green life. extra thick design can be leak proof. Lemon scent polymer are degradable and works well for solidifying liquid waste, makes it odorless. The poo urine gel with potty bags set are compostable, the poo abosorbent can be soil composting within 7 days and pee bags will be within 45-180 days. A great gifts for outdoor enthusiasts, camping lovers or RV travelers.\nEasy to Use - Simple 3-step process: First, line the toilet with the reinforced bag. Secondly, add powder (before/after use). Finally, dispose properly. Upgraded closure design liquid waste bags, featuring exclusive drawstring closure design, our toilet bags provide instant seal capability compared to standard flat-top alternatives.\nUniversal Fit Design Composting Toilet Bags - 23.6\"x25.6\" (60x65cm) dimensions compatible with most of 8-gallon portable toilet units and below. Heavy-duty leakproof liquid waste bags for camping trips, RV dump stations, emergency bucket toilets, boat bathrooms, or home care situations. No leaks, no mess, no worries!",
+        "price_initial": 0,
+        "pricing_count": 1,
+        "reviews_count": 1595,
+        "sns_discounts": [],
+        "developer_info": [],
+        "package_weight": "‎1.77 Kilograms",
+        "price_shipping": 0,
+        "product_details": {
+            "asin": "B0DZXFDCPQ",
+            "size": "‎60 Gels and 60 Bags",
+            "color": "‎60 Gels and 60 Bags",
+            "style": "‎Gels With Bags Set",
+            "material": "‎Degradable PSM bags and absorbent gel",
+            "brand_name": "‎Poesie",
+            "model_name": "‎Absorben Gel Powder and drawstring bags",
+            "item_weight": "‎592 Grams",
+            "part_number": "‎POOWBAGS076A6",
+            "manufacturer": "‎Poesie",
+            "package_weight": "‎1.77 Kilograms",
+            "suggested_users": "‎unisex-adult",
+            "customer_reviews": "4.5 4.5 out of 5 stars (1,595) 4.5 out of 5 stars",
+            "best_sellers_rank": "#12,712 in Sports & Outdoors (See Top 100 in Sports & Outdoors) #25 in Camping Hygiene & Sanitation Products",
+            "included_components": "‎60 packets poo urine absorbent gel powder and 60 portable toilet bags",
+            "date_first_available": "March 10, 2025",
+            "warranty_description": "‎These is a portable toilet bags and gel set, please keep away from chirldren and pets.",
+            "item_package_dimensions_l_x_w_x_h": "‎9.25 x 7.44 x 4.88 inches"
+        },
+        "featured_merchant": {
+            "link": "/gp/help/seller/at-a-glance.html/ref=dp_merchant_link?ie=UTF8&seller=A3R531MQ1RVLOY&asin=B0DZXFDCPQ&ref_=dp_merchant_link&isAmazonFulfilled=1",
+            "name": "DROLE Life",
+            "seller_id": "A3R531MQ1RVLOY",
+            "shipped_from": "Amazon",
+            "is_amazon_fulfilled": true
+        },
+        "is_prime_eligible": true,
+        "parse_status_code": 12000,
+        "review_ai_summary": "Customers find the gel product effective at neutralizing odors and quickly absorbing waste, making it a must-have for camping trips. However, the gel quality receives mixed feedback, with some saying it turns to gel while others report it barely gels up at all. Additionally, the product is difficult to open, requiring scissors to access.",
+        "technical_details": [
+            {
+                "name": "Item Package Dimensions L x W x H",
+                "value": "9.25 x 7.44 x 4.88 inches"
+            },
+            {
+                "name": "Package Weight",
+                "value": "1.77 Kilograms"
+            },
+            {
+                "name": "Item Weight",
+                "value": "592 Grams"
+            },
+            {
+                "name": "Brand Name",
+                "value": "Poesie"
+            },
+            {
+                "name": "Warranty Description",
+                "value": "These is a portable toilet bags and gel set, please keep away from chirldren and pets."
+            },
+            {
+                "name": "Model Name",
+                "value": "Absorben Gel Powder and drawstring bags"
+            },
+            {
+                "name": "Color",
+                "value": "60 Gels and 60 Bags"
+            },
+            {
+                "name": "Material",
+                "value": "Degradable PSM bags and absorbent gel"
+            },
+            {
+                "name": "Suggested Users",
+                "value": "unisex-adult"
+            },
+            {
+                "name": "Manufacturer",
+                "value": "Poesie"
+            },
+            {
+                "name": "Part Number",
+                "value": "POOWBAGS076A6"
+            },
+            {
+                "name": "Style",
+                "value": "Gels With Bags Set"
+            },
+            {
+                "name": "Included Components",
+                "value": "60 packets poo urine absorbent gel powder and 60 portable toilet bags"
+            },
+            {
+                "name": "Size",
+                "value": "60 Gels and 60 Bags"
+            }
+        ],
+        "discount_percentage": 33,
+        "price_strikethrough": 59.99,
+        "answered_questions_count": 0,
+        "rating_stars_distribution": [
+            {
+                "rating": 5,
+                "percentage": 73
+            },
+            {
+                "rating": 4,
+                "percentage": 13
+            },
+            {
+                "rating": 3,
+                "percentage": 9
+            },
+            {
+                "rating": 2,
+                "percentage": 2
+            },
+            {
+                "rating": 1,
+                "percentage": 3
+            }
+        ]
+    },
+    "errors": [],
+    "status_code": 12000,
+    "task_id": "7407490232867637249"
+}

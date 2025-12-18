@@ -26,6 +26,7 @@ from app.schemas.common import ErrorResponse
 from app.models.workflow_job import WorkflowJob, JobStatus
 from app.workflows.schema import Workflow
 from app.tasks.workflows import execute_workflow
+from app.dependencies.auth import verify_api_secret
 from pydantic import ValidationError as PydanticValidationError
 
 logger = logging.getLogger(__name__)
@@ -89,12 +90,17 @@ def load_workflow_definition(workflow_name: str) -> Workflow:
     "/workflow",
     response_model=WorkflowSubmitResponse,
     status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(verify_api_secret)],
     summary="Submit workflow for execution",
-    description="Submit a workflow job for asynchronous execution via Celery. Returns job ID for status tracking.",
+    description="Submit a workflow job for asynchronous execution via Celery. Requires X-API-Secret header. Returns job ID for status tracking.",
     responses={
         202: {
             "description": "Job accepted and queued for execution",
             "model": WorkflowSubmitResponse
+        },
+        401: {
+            "description": "Invalid or missing API secret",
+            "model": ErrorResponse
         },
         400: {
             "description": "Invalid request (validation error, workflow not found)",
@@ -217,12 +223,17 @@ def submit_workflow(
     "/workflow/validate",
     response_model=WorkflowValidateResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(verify_api_secret)],
     summary="Validate workflow configuration",
-    description="Validate workflow and input data without executing (dry-run mode). Returns estimated tokens, cost, and duration.",
+    description="Validate workflow and input data without executing (dry-run mode). Requires X-API-Secret header. Returns estimated tokens, cost, and duration.",
     responses={
         200: {
             "description": "Workflow validated successfully",
             "model": WorkflowValidateResponse
+        },
+        401: {
+            "description": "Invalid or missing API secret",
+            "model": ErrorResponse
         },
         400: {
             "description": "Validation failed (workflow not found, invalid input)",

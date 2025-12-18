@@ -16,102 +16,65 @@
 
 ## 2. Strategic Analysis & Solution Options
 
-### Problem Context
-Currently, the LLM service only provides a single-job status endpoint (`GET /status/{job_id}`), which requires knowing the exact job ID. Users need a way to:
-- View all their jobs at once
-- Filter jobs by execution status
-- Monitor running/processing jobs
-- Review completed and failed jobs
-- Build dashboard UIs that show job lists
+### ✅ APPROVED APPROACH: GET Endpoint with Header Authentication
 
-### Solution Options Analysis
+**User Decision:** Use GET endpoint with `X-API-Secret` header authentication for all API endpoints.
 
-#### Option 1: Simple Query Endpoint with URL Parameters
-**Approach:** Create `GET /api/v1/jobs?status=running&user_id={uuid}` with optional query parameters for filtering.
+### Authentication Architecture
 
-**Pros:**
-- ✅ RESTful and follows standard HTTP patterns
-- ✅ Simple to implement - leverages existing SQLAlchemy query patterns
-- ✅ Easy to test with curl/browser
-- ✅ Cacheable at HTTP layer
-- ✅ Familiar to frontend developers
+**Security Model:**
+- **Global API Secret:** Single shared secret from `LLM_WEBHOOK_SECRET` environment variable
+- **Authentication Method:** HTTP Header (`X-API-Secret: your-secret`)
+- **Scope:** ALL API endpoints require authentication (new `/jobs` + existing `/status`, `/workflow`)
+- **Implementation:** FastAPI dependency injection for reusable auth validation
 
-**Cons:**
-- ❌ Limited filtering expressiveness for complex queries
-- ❌ URL length limits for very complex filters (not a concern here)
-- ❌ Less flexible than POST with JSON body
+**Why Header Authentication:**
+1. ✅ **Works with all HTTP methods** - GET, POST, PUT, DELETE
+2. ✅ **RESTful design preserved** - GET requests for read operations
+3. ✅ **Cacheable** - HTTP caching works with header-based auth
+4. ✅ **Single mechanism** - Same auth for all endpoints
+5. ✅ **Easy to apply** - FastAPI dependencies make it simple to add to existing endpoints
+6. ✅ **OpenAPI documentation** - Automatically documented in `/docs` endpoint
 
-**Implementation Complexity:** Low - Direct SQLAlchemy filtering on indexed columns
-**Risk Level:** Low - Read-only operation, no mutations
+### Endpoint Design
 
-#### Option 2: POST Endpoint with JSON Filter Structure
-**Approach:** Create `POST /api/v1/jobs/query` accepting JSON filter structure like `{"status": ["running", "processing"], "user_id": "uuid"}`.
+**New Endpoint:**
+```http
+GET /api/v1/jobs?status=running&limit=50&offset=0
+X-API-Secret: your-secret-from-env
+```
 
-**Pros:**
-- ✅ Highly flexible filter structure
-- ✅ Supports complex queries (date ranges, multiple filters, etc.)
-- ✅ No URL length limitations
-- ✅ Type-safe with Pydantic schemas
+**Authentication Dependency:**
+```python
+# app/dependencies/auth.py
+async def verify_api_secret(
+    x_api_secret: str = Header(..., alias="X-API-Secret")
+):
+    if x_api_secret != settings.LLM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid API secret")
+```
 
-**Cons:**
-- ❌ Not cacheable at HTTP layer (POST requests)
-- ❌ Less RESTful - using POST for read operation
-- ❌ Slightly more complex to test (requires JSON body)
-- ❌ Frontend needs to send POST instead of simple GET
+**Applied to all endpoints:**
+```python
+@router.get("/jobs", dependencies=[Depends(verify_api_secret)])
+@router.get("/status/{job_id}", dependencies=[Depends(verify_api_secret)])
+@router.post("/workflow", dependencies=[Depends(verify_api_secret)])
+```
 
-**Implementation Complexity:** Medium - Requires Pydantic filter schema and dynamic query building
-**Risk Level:** Low - Still read-only despite POST method
+### Filter Parameters
 
-#### Option 3: Hybrid - GET with Optional JSON Query Parameter
-**Approach:** `GET /api/v1/jobs?filter={"status":["running"]}` - GET endpoint that accepts optional JSON filter in query param.
+**Status Mapping:**
+- `?status=running` → Jobs in `QUEUED` or `PROCESSING` state
+- `?status=completed` → Jobs in `COMPLETED` state
+- `?status=failed` → Jobs in `FAILED` state
+- `?status=all` or no filter → All jobs
 
-**Pros:**
-- ✅ RESTful (GET method)
-- ✅ Flexible filtering via JSON structure
-- ✅ Cacheable at HTTP layer
-- ✅ Backward compatible (works without filter param)
+**Pagination:**
+- `?limit=50` (default, max 200)
+- `?offset=0` (default)
 
-**Cons:**
-- ❌ Complex JSON in URL parameters (requires encoding)
-- ❌ Harder to test manually
-- ❌ URL encoding issues with special characters
-
-**Implementation Complexity:** Medium - JSON parsing from query params, validation
-**Risk Level:** Low - Read-only operation
-
-### Recommendation & Rationale
-
-**🎯 RECOMMENDED SOLUTION:** Option 1 - Simple Query Endpoint with URL Parameters
-
-**Why this is the best choice:**
-1. **Simplicity and usability** - For the current use case (filtering by status), simple query parameters are sufficient. The user mentioned "optional filter json structure" but the examples given (running, completed, failed, all) are simple single-field filters.
-2. **RESTful best practices** - GET requests for read operations follow HTTP semantics and are cacheable.
-3. **Ease of implementation** - We can reuse existing database query patterns and SQLAlchemy filtering without complex JSON parsing.
-4. **Frontend developer experience** - Simple `fetch('/api/v1/jobs?status=running')` calls are easier than managing POST bodies.
-5. **Future extensibility** - If complex filtering is needed later, we can add Option 2 as a separate endpoint without breaking this one.
-
-**Key Decision Factors:**
-- **Performance Impact:** Indexed queries on `status` and `user_id` columns - fast performance
-- **User Experience:** Simple GET requests match user's mental model for "list of jobs"
-- **Maintainability:** Straightforward code, easy to test and debug
-- **Scalability:** Indexed queries handle large job tables efficiently
-- **Security:** User-scoped queries prevent unauthorized access to other users' jobs
-
-**Alternative Consideration:**
-If the user later needs complex filtering (e.g., date ranges, multiple status values, workflow name filtering), we can add Option 2 (`POST /jobs/query`) as an advanced endpoint while keeping the simple GET endpoint for common use cases.
-
-### Decision Request
-
-**👤 USER DECISION REQUIRED:**
-Based on this analysis, do you want to proceed with the recommended solution (Option 1 - Simple Query Parameters), or would you prefer a different approach?
-
-**Questions for you to consider:**
-- Do you anticipate needing complex multi-field filtering in the near future?
-- Would you prefer JSON filter structure even for simple queries?
-- Are there other filter criteria beyond status that you'll need soon?
-
-**Next Steps:**
-Once you approve the strategic direction, I'll update the implementation plan and present you with next step options.
+**Optional User Scoping:**
+- `?user_id={uuid}` - Filter by specific user
 
 ---
 
@@ -315,8 +278,16 @@ class JobsListResponse(BaseModel):
 
 ### API Routes
 
-**New API Endpoint:**
+**🔐 Authentication Dependency (New):**
+- [x] **`app/dependencies/auth.py`** - Shared authentication dependency
+  - Function: `verify_api_secret(x_api_secret: str = Header(...))`
+  - Validates `X-API-Secret` header against `settings.LLM_WEBHOOK_SECRET`
+  - Returns: `HTTPException 401` if invalid
+  - Used by: ALL API endpoints via `dependencies=[Depends(verify_api_secret)]`
+
+**📝 New API Endpoint:**
 - [x] **`GET /api/v1/jobs`** - List jobs with optional filtering
+  - **Authentication:** Required via `X-API-Secret` header
   - Query parameters:
     - `status` (optional): `running|completed|failed|all` - Filter by job status
     - `user_id` (optional): UUID string - Filter by user
@@ -325,14 +296,24 @@ class JobsListResponse(BaseModel):
   - Response: `JobsListResponse` (list of `JobSummary` objects)
   - Status codes:
     - 200 OK - Jobs retrieved successfully
+    - 401 Unauthorized - Missing or invalid API secret
     - 400 Bad Request - Invalid status value or pagination parameters
     - 500 Internal Server Error - Database error
+
+**🔒 Update Existing Endpoints (Security Fix):**
+- [x] **`GET /api/v1/status/{job_id}`** - Add authentication dependency
+- [x] **`POST /api/v1/workflow`** - Add authentication dependency
+- [x] **`POST /api/v1/workflow/validate`** - Add authentication dependency
 
 **Status Mapping:**
 - `running` → Filter for jobs with status `QUEUED` OR `PROCESSING`
 - `completed` → Filter for jobs with status `COMPLETED`
 - `failed` → Filter for jobs with status `FAILED`
 - `all` → No status filter (return all)
+
+**OpenAPI Documentation:**
+- All endpoints will automatically show `X-API-Secret` header requirement in `/docs`
+- FastAPI's security schemas will document the authentication model
 
 ---
 
@@ -348,7 +329,40 @@ class JobsListResponse(BaseModel):
 
 #### 📂 **New Files to Create**
 
-**File 1: `app/schemas/jobs.py`** (New Pydantic schemas)
+**File 1: `app/dependencies/auth.py`** (Authentication dependency)
+```python
+# New file - no "before" state
+"""FastAPI authentication dependency for API secret validation."""
+from fastapi import Header, HTTPException, status
+from app.config import settings
+
+async def verify_api_secret(
+    x_api_secret: str = Header(..., alias="X-API-Secret")
+) -> bool:
+    """
+    Verify API secret from X-API-Secret header.
+
+    Args:
+        x_api_secret: Secret from X-API-Secret header
+
+    Returns:
+        True if valid
+
+    Raises:
+        HTTPException: 401 if invalid or missing secret
+    """
+    if x_api_secret != settings.LLM_WEBHOOK_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": "InvalidAPISecret",
+                "message": "Invalid or missing API secret"
+            }
+        )
+    return True
+```
+
+**File 2: `app/schemas/jobs.py`** (New Pydantic schemas)
 ```python
 # New file - no "before" state
 from typing import List, Optional
@@ -438,7 +452,70 @@ def list_jobs(
 
 #### 📂 **Files to Modify**
 
-**File: `app/api/v1/__init__.py`** (Register new router)
+**File 1: `app/api/v1/status.py`** (Add authentication)
+
+**Before:**
+```python
+@router.get(
+    "/status/{job_id}",
+    response_model=WorkflowStatusResponse,
+    status_code=status.HTTP_200_OK,
+    # ... other params
+)
+def get_workflow_status(
+    job_id: str = Path(...),
+    db: Session = Depends(get_db)
+) -> WorkflowStatusResponse:
+```
+
+**After:**
+```python
+from app.dependencies.auth import verify_api_secret  # Added import
+
+@router.get(
+    "/status/{job_id}",
+    response_model=WorkflowStatusResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(verify_api_secret)],  # Added auth
+    # ... other params
+)
+def get_workflow_status(
+    job_id: str = Path(...),
+    db: Session = Depends(get_db)
+) -> WorkflowStatusResponse:
+```
+
+**File 2: `app/api/v1/workflow.py`** (Add authentication to both endpoints)
+
+**Before:**
+```python
+@router.post("/workflow", response_model=WorkflowSubmitResponse)
+def submit_workflow(request: WorkflowSubmitRequest, db: Session = Depends(get_db)):
+
+@router.post("/workflow/validate", response_model=WorkflowValidateResponse)
+def validate_workflow(request: WorkflowValidateRequest):
+```
+
+**After:**
+```python
+from app.dependencies.auth import verify_api_secret  # Added import
+
+@router.post(
+    "/workflow",
+    response_model=WorkflowSubmitResponse,
+    dependencies=[Depends(verify_api_secret)]  # Added auth
+)
+def submit_workflow(request: WorkflowSubmitRequest, db: Session = Depends(get_db)):
+
+@router.post(
+    "/workflow/validate",
+    response_model=WorkflowValidateResponse,
+    dependencies=[Depends(verify_api_secret)]  # Added auth
+)
+def validate_workflow(request: WorkflowValidateRequest):
+```
+
+**File 3: `app/api/v1/__init__.py`** (Register new router)
 
 **Before:**
 ```python
@@ -462,45 +539,73 @@ api_router.include_router(jobs.router, tags=["jobs"])  # Added jobs router
 ```
 
 #### 🎯 **Key Changes Summary**
+- [x] **🔐 New Authentication System** - FastAPI dependency validates `X-API-Secret` header
+- [x] **🔒 Security Fix** - ALL endpoints now require authentication (was previously open)
 - [x] **New Pydantic schemas** - `JobSummary` and `JobsListResponse` for lightweight job data
 - [x] **New API endpoint** - `GET /api/v1/jobs` with filtering and pagination
-- [x] **Router registration** - Add `jobs.router` to `app/api/v1/__init__.py`
-- [x] **Files Modified:** 1 file (`app/api/v1/__init__.py`)
-- [x] **Files Created:** 2 files (`app/schemas/jobs.py`, `app/api/v1/jobs.py`)
-- [x] **Impact:** New read-only endpoint, no changes to existing functionality
+- [x] **OpenAPI Documentation** - `/docs` will show authentication requirement automatically
+- [x] **Files Modified:** 3 files (`app/api/v1/status.py`, `app/api/v1/workflow.py`, `app/api/v1/__init__.py`)
+- [x] **Files Created:** 4 files (`app/dependencies/auth.py`, `app/dependencies/__init__.py`, `app/schemas/jobs.py`, `app/api/v1/jobs.py`)
+- [x] **Impact:** New endpoint + critical security fix for existing endpoints
 
 ---
 
 ## 11. Implementation Plan
 
-### Phase 1: Create Pydantic Schemas
+### Phase 1: Create Authentication Dependency
+**Goal:** Implement shared authentication mechanism for all API endpoints
+
+- [x] **Task 1.1:** Create `app/dependencies/` directory (if not exists) ✓ 2025-12-18
+  - Files: `app/dependencies/` (new directory) ✓
+  - Details: Created directory for FastAPI dependencies ✓
+
+- [x] **Task 1.2:** Create authentication dependency ✓ 2025-12-18
+  - Files: `app/dependencies/auth.py` (new file) ✓
+  - Details: Implemented `verify_api_secret()` async function with X-API-Secret header validation ✓
+
+- [x] **Task 1.3:** Create `__init__.py` for dependencies ✓ 2025-12-18
+  - Files: `app/dependencies/__init__.py` (new file) ✓
+  - Details: Exported `verify_api_secret` for easy imports ✓
+
+### Phase 2: Apply Authentication to Existing Endpoints
+**Goal:** Secure existing endpoints with authentication requirement
+
+- [x] **Task 2.1:** Update `/api/v1/status.py` ✓ 2025-12-18
+  - Files: `app/api/v1/status.py` (modified: +1 import, +1 dependency, +1 response code) ✓
+  - Details: Added `dependencies=[Depends(verify_api_secret)]` to `@router.get("/status/{job_id}")` and 401 response ✓
+
+- [x] **Task 2.2:** Update `/api/v1/workflow.py` ✓ 2025-12-18
+  - Files: `app/api/v1/workflow.py` (modified: +1 import, +2 dependencies, +2 response codes) ✓
+  - Details: Added `dependencies=[Depends(verify_api_secret)]` to both `/workflow` and `/workflow/validate` endpoints with 401 responses ✓
+
+### Phase 3: Create Pydantic Schemas
 **Goal:** Define request/response data structures for jobs list endpoint
 
-- [ ] **Task 1.1:** Create `app/schemas/jobs.py` file
-  - Files: `app/schemas/jobs.py` (new file)
-  - Details: Define `JobSummary` and `JobsListResponse` Pydantic models
+- [x] **Task 3.1:** Create `app/schemas/jobs.py` file ✓ 2025-12-18
+  - Files: `app/schemas/jobs.py` (new file, 235 lines) ✓
+  - Details: Defined `JobSummary` (lightweight job data) and `JobsListResponse` (paginated list) Pydantic models with comprehensive examples ✓
 
-### Phase 2: Implement API Endpoint
+### Phase 4: Implement Jobs List Endpoint
 **Goal:** Create the jobs list endpoint with filtering and pagination
 
-- [ ] **Task 2.1:** Create `app/api/v1/jobs.py` file
-  - Files: `app/api/v1/jobs.py` (new file)
-  - Details: Implement `GET /jobs` endpoint with status, user_id, limit, offset parameters
+- [x] **Task 4.1:** Create `app/api/v1/jobs.py` file ✓ 2025-12-18
+  - Files: `app/api/v1/jobs.py` (new file, 243 lines) ✓
+  - Details: Implemented `GET /jobs` endpoint with authentication, status filtering (running/completed/failed/all), user filtering, pagination (limit/offset), comprehensive error handling and logging ✓
 
-- [ ] **Task 2.2:** Register router in API v1
-  - Files: `app/api/v1/__init__.py`
-  - Details: Import `jobs` router and add to `api_router.include_router()`
+- [x] **Task 4.2:** Register router in API v1 ✓ 2025-12-18
+  - Files: `app/api/v1/__init__.py` (modified: +1 import, +1 router registration, +1 doc line) ✓
+  - Details: Imported `jobs` router and added to `router.include_router()` with 'jobs' tag ✓
 
-### Phase 3: Basic Code Validation (AI-Only)
+### Phase 5: Basic Code Validation (AI-Only)
 **Goal:** Run safe static analysis only - NEVER run dev server, build, or application commands
 
-- [ ] **Task 3.1:** Code Quality Verification
-  - Files: `app/schemas/jobs.py`, `app/api/v1/jobs.py`, `app/api/v1/__init__.py`
-  - Details: Run linting (flake8, pylint) ONLY - verify Python syntax and style
+- [x] **Task 5.1:** Code Quality Verification ✓ 2025-12-18
+  - Files: All modified files ✓
+  - Details: Manual syntax review completed (linting tools not available without venv) - no syntax errors found ✓
 
-- [ ] **Task 3.2:** Static Logic Review
-  - Files: `app/api/v1/jobs.py`
-  - Details: Read code to verify query logic, filter handling, pagination edge cases
+- [x] **Task 5.2:** Static Logic Review ✓ 2025-12-18
+  - Files: `app/api/v1/jobs.py`, `app/dependencies/auth.py`, all modified endpoints ✓
+  - Details: Verified auth logic, query filtering (including OR logic for 'running'), pagination, error handling, UUID validation, edge cases ✓
 
 🛑 **CRITICAL WORKFLOW CHECKPOINT**
 After completing Phase 3, you MUST:
@@ -551,6 +656,9 @@ After completing Phase 3, you MUST:
 ```
 LLM_service/
 ├── app/
+│   ├── dependencies/
+│   │   ├── __init__.py                # Export auth dependencies
+│   │   └── auth.py                    # Authentication dependency
 │   ├── api/
 │   │   └── v1/
 │   │       └── jobs.py                # New jobs list endpoint
@@ -560,6 +668,8 @@ LLM_service/
 
 ### Files to Modify
 - [ ] **`app/api/v1/__init__.py`** - Register new jobs router
+- [ ] **`app/api/v1/status.py`** - Add authentication dependency
+- [ ] **`app/api/v1/workflow.py`** - Add authentication dependency to both endpoints
 
 ### Dependencies to Add
 **No new dependencies required** - Using existing FastAPI, SQLAlchemy, Pydantic stack.

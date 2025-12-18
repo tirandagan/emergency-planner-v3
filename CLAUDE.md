@@ -376,6 +376,7 @@ export async function generatePlan(formData: WizardFormData, userId: string) {
 
 - **PostgreSQL Functions**: Changes to function parameters require manual migration (see `.cursor/rules/postgresql-function-parameter-changes.mdc`)
 - **Amazon PAAPI**: Webpack config includes parser override for `paapi5-nodejs-sdk` compatibility
+- **Decodo API (Amazon Product Data)**: The `autoselect_variant: true` parameter is required in Decodo API calls to return correct pricing for Amazon products with multiple variants (size, count, color). Without this parameter, Decodo returns the base variant price instead of the specific variant's price. See `src/lib/decodo.ts` line 292.
 - **React Compiler**: Enabled (`reactCompiler: true`) - may cause issues with certain patterns
 - **Image Optimization**: Only Supabase storage domain whitelisted in Next.js config
 - **IPv6 Connectivity (Render/Railway)**: Some hosting platforms don't support IPv6 outbound connections. If you see `ENETUNREACH` errors connecting to Supabase, use the IPv4 resolution script:

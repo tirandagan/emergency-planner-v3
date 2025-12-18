@@ -288,7 +288,8 @@ export async function getDecodoProductDetails(urlOrAsin: string, country = 'US')
         country,
         domain: 'com',
         device_type: 'desktop_chrome',
-        parse: true
+        parse: true,
+        autoselect_variant: true  // Return correct price for selected variant (not base variant)
     });
 
     if (!task.id) throw new Error('No task ID returned from Decodo');
