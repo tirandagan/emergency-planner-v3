@@ -504,7 +504,7 @@ export async function summarizeProductDescription(description: string): Promise<
     }
 
     const { text } = await generateText({
-        model: getModel('GEMINI_FLASH'),
+        model: getModel('HAIKU'),
         prompt: `Please summarize the following product description. Keep only the factual information that describes the product features and specifications. Remove any marketing fluff, promotional language (e.g., "We are proud to...", "Best in class", "Revolutionary"), and subjective claims. The output should be concise and informative. Do not use markdown formatting.\n\nDescription:\n${description}`,
     });
 

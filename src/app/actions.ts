@@ -1,13 +1,13 @@
 "use server";
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { generateObject } from 'ai';
+import { getModel } from '@/lib/openrouter';
+import { z } from 'zod';
 import { GeneratedKit, ScenarioType, MobilityType, Person, SupplyItem, DBProduct, ItemType, KitItem } from '@/types';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { generateEmbedding } from '@/lib/embeddings';
 import { resolveMasterItem } from '@/lib/masterItemService';
 import { scrapeProductUrl, ScrapedProduct } from '@/lib/scraper';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // New Product Tree Matching Logic
 export const matchProducts = async (supplies: SupplyItem[], scenarioContext: string): Promise<SupplyItem[]> => {
@@ -95,7 +95,6 @@ export const generateSurvivalPlan = async (
     personnel?: Person[]
 ): Promise<GeneratedKit> => {
     const scenarioList = scenarios.join(', ');
-    const model = "gemini-2.5-flash";
 
     const prompt = `
     You are a world-class survivalist. Create a survival plan.
@@ -111,7 +110,7 @@ export const generateSurvivalPlan = async (
     - Special Considerations: ${specialNeeds.join(', ') || 'None'}
 
     TASKS:
-    1. GENERATE SUPPLIES (CRITICAL): 
+    1. GENERATE SUPPLIES (CRITICAL):
        Generate a JSON array called "supplies". Analyze the 'Special Considerations' list carefully (females, infants, elderly, medical).
        For each item, you must provide:
        - "item_name": Display name (e.g., "Water Filter").
@@ -139,163 +138,113 @@ export const generateSurvivalPlan = async (
     }
   `;
 
-    const responseSchema = {
-        type: Type.OBJECT,
-        properties: {
-            supplies: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        item_name: { type: Type.STRING },
-                        search_query: { type: Type.STRING },
-                        unit_type: { 
-                            type: Type.STRING, 
-                            enum: ["count", "gallons", "calories", "liters", "pairs", "sets"] 
-                        },
-                        quantity_needed: { type: Type.NUMBER },
-                        urgency: { 
-                            type: Type.STRING,
-                            enum: ["High", "Medium", "Low"]
-                        }
-                    },
-                    required: ["item_name", "search_query", "unit_type", "quantity_needed", "urgency"]
-                }
-            },
-            simulation_log: { type: Type.ARRAY, items: { type: Type.STRING } },
-            skills: { type: Type.ARRAY, items: { type: Type.STRING } },
-            youtube_queries: { type: Type.ARRAY, items: { type: Type.STRING } },
-            routes: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        id: { type: Type.STRING },
-                        name: { type: Type.STRING },
-                        description: { type: Type.STRING },
-                        type: { type: Type.STRING },
-                        dangerLevel: {
-                            type: Type.STRING,
-                            enum: ["High", "Medium", "Low"]
-                        },
-                        riskAssessment: { type: Type.STRING },
-                        waypoints: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    lat: { type: Type.NUMBER },
-                                    lng: { type: Type.NUMBER },
-                                    name: { type: Type.STRING }
-                                },
-                                required: ["lat", "lng", "name"]
-                            }
-                        }
-                    },
-                    required: ["id", "name", "description", "type", "dangerLevel", "riskAssessment", "waypoints"]
-                }
-            }
-        },
-        required: ["supplies", "simulation_log", "skills", "youtube_queries", "routes"]
-    };
+    // Define Zod schema for survival plan response
+    const survivalPlanSchema = z.object({
+        supplies: z.array(z.object({
+            item_name: z.string(),
+            search_query: z.string(),
+            unit_type: z.enum(["count", "gallons", "calories", "liters", "pairs", "sets"]),
+            quantity_needed: z.number(),
+            urgency: z.enum(["High", "Medium", "Low"])
+        })),
+        simulation_log: z.array(z.string()),
+        skills: z.array(z.string()),
+        youtube_queries: z.array(z.string()),
+        routes: z.array(z.object({
+            id: z.string(),
+            name: z.string(),
+            description: z.string(),
+            type: z.enum(["vehicle", "foot"]),
+            dangerLevel: z.enum(["High", "Medium", "Low"]),
+            riskAssessment: z.string(),
+            waypoints: z.array(z.object({
+                lat: z.number(),
+                lng: z.number(),
+                name: z.string()
+            }))
+        }))
+    });
 
-    console.log("Calling Gemini API for survival plan...");
+    console.log("Calling OpenRouter (Claude Sonnet 3.5) for survival plan...");
     const startTime = Date.now();
 
-    const response = await ai.models.generateContent({
-        model: model,
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: responseSchema
-        }
+    const { object: parsedRaw } = await generateObject({
+        model: getModel('SONNET'),
+        prompt,
+        schema: survivalPlanSchema
     });
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`Gemini API call completed in ${elapsed}s`);
+    console.log(`OpenRouter API call completed in ${elapsed}s`);
 
-    if (response.text) {
-        const r = response as any;
-        const text = typeof r.text === 'function' ? r.text() : r.text;
-        const parsedRaw = JSON.parse(text);
+    // 1. Match Products (Using new Product Tree Logic)
+    const supplies = parsedRaw.supplies || [];
+    const matchedSupplies = await matchProducts(supplies, scenarioList);
 
-        // 1. Match Products (Using new Product Tree Logic)
-        const supplies = parsedRaw.supplies || [];
-        const matchedSupplies = await matchProducts(supplies, scenarioList);
+    // 2. Map to KitItem for UI compatibility
+    const items: KitItem[] = matchedSupplies.map((supply: SupplyItem, index: number) => {
+        const isMatched = !!supply.matched_product;
+        const product = supply.matched_product;
 
-        // 2. Map to KitItem for UI compatibility
-        const items: KitItem[] = matchedSupplies.map((supply: SupplyItem, index: number) => {
-            const isMatched = !!supply.matched_product;
-            const product = supply.matched_product;
-            
-            return {
-                id: `item-${index}`,
-                name: isMatched ? product!.name : supply.item_name,
-                category: isMatched && product?.name ? "Equipment" : "General",
-                description: isMatched ? product!.description : supply.search_query,
-                priority: supply.urgency,
-                estimatedCost: isMatched ? (supply.estimated_cost || 0) : 0,
-                type: isMatched ? product!.type as ItemType : ItemType.DIRECT_SALE,
-                link: isMatched ? product!.affiliate_link : `https://www.google.com/search?q=${encodeURIComponent(supply.item_name + ' buy')}`,
-                owned: false,
-                applicableScenarios: scenarios,
-                supplyIndex: index
-            };
-        });
-
-        // 3. Construct Result
-        const result: GeneratedKit = {
-            scenarios: scenarios,
-            summary: `Survival plan for ${duration} days in ${location}.`,
-            readinessScore: 0,
-            simulationLog: parsedRaw.simulation_log,
-            requiredSkills: parsedRaw.skills,
-            rationPlan: `See supplies list for food/water requirements.`,
-            youtubeQueries: parsedRaw.youtube_queries,
-            evacuationRoutes: parsedRaw.routes,
-            items: items,
-            supplies: matchedSupplies,
-            personnel: personnel,
-            preparationTime: prepTime
+        return {
+            id: `item-${index}`,
+            name: isMatched ? product!.name : supply.item_name,
+            category: isMatched && product?.name ? "Equipment" : "General",
+            description: isMatched ? product!.description : supply.search_query,
+            priority: supply.urgency,
+            estimatedCost: isMatched ? (supply.estimated_cost || 0) : 0,
+            type: isMatched ? product!.type as ItemType : ItemType.DIRECT_SALE,
+            link: isMatched ? product!.affiliate_link : `https://www.google.com/search?q=${encodeURIComponent(supply.item_name + ' buy')}`,
+            owned: false,
+            applicableScenarios: scenarios,
+            supplyIndex: index
         };
+    });
 
-        console.log(`Response processed: ${items.length} items, ${result.evacuationRoutes?.length || 0} routes`);
-        return result;
-    }
-    throw new Error("No response text from AI");
+    // 3. Construct Result
+    const result: GeneratedKit = {
+        scenarios: scenarios,
+        summary: `Survival plan for ${duration} days in ${location}.`,
+        readinessScore: 0,
+        simulationLog: parsedRaw.simulation_log,
+        requiredSkills: parsedRaw.skills,
+        rationPlan: `See supplies list for food/water requirements.`,
+        youtubeQueries: parsedRaw.youtube_queries,
+        evacuationRoutes: parsedRaw.routes,
+        items: items,
+        supplies: matchedSupplies,
+        personnel: personnel,
+        preparationTime: prepTime
+    };
+
+    console.log(`Response processed: ${items.length} items, ${result.evacuationRoutes?.length || 0} routes`);
+    return result;
 };
 
 
 export const assessInventory = async (items: string[], scenario: string): Promise<{ score: number, advice: string }> => {
-    const model = "gemini-2.5-flash";
     const prompt = `
     Analyze this inventory list: ${items.join(', ')}.
     Scenario: ${scenario}.
     Give a readiness score (0-100) and a one sentence advice on what is critically missing.
   `;
 
+    // Define Zod schema for inventory assessment response
+    const inventoryAssessmentSchema = z.object({
+        score: z.number(),
+        advice: z.string()
+    });
+
     try {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        score: { type: Type.NUMBER },
-                        advice: { type: Type.STRING }
-                    }
-                }
-            }
+        const { object } = await generateObject({
+            model: getModel('HAIKU'),
+            prompt,
+            schema: inventoryAssessmentSchema
         });
-        if (response.text) {
-            const r = response as any;
-            const text = typeof r.text === 'function' ? r.text() : r.text;
-            return JSON.parse(text);
-        }
-        return { score: 0, advice: "Analysis failed." };
+
+        return object;
     } catch (e) {
+        console.error("[assessInventory] Error:", e);
         return { score: 0, advice: "Could not connect to analysis grid." };
     }
 }
@@ -513,44 +462,6 @@ export const deleteScenario = async (id: string, userId: string) => {
     return deleteMissionReport(id, userId);
 };
 
-export const validateLocation = async (location: string): Promise<{ valid: boolean; message?: string }> => {
-    const model = "gemini-2.5-flash";
-    const prompt = `
-    Is the location "${location}" specific enough to plan a street-level evacuation route?
-    Examples of TOO BROAD: "Texas", "USA", "The Mountains", "California".
-    Examples of SPECIFIC ENOUGH: "Austin, TX", "123 Main St, Dallas", "Travis County, TX", "Downtown Seattle".
-    
-    Return JSON: { "valid": boolean, "message": string }
-    If valid is false, message should politely ask for a more specific location (e.g. city, county, or address).
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        valid: { type: Type.BOOLEAN },
-                        message: { type: Type.STRING }
-                    }
-                }
-            }
-        });
-        if (response.text) {
-            const r = response as any;
-            const text = typeof r.text === 'function' ? r.text() : r.text;
-            return JSON.parse(text);
-        }
-        return { valid: true };
-    } catch (e) {
-        console.error("Location validation failed", e);
-        return { valid: true };
-    }
-};
-
 // New function to enrich the plan with resources
 export const enrichSurvivalPlanWithResources = async (plan: GeneratedKit): Promise<GeneratedKit> => {
     console.log("[enrichSurvivalPlanWithResources] Starting resource enrichment for", plan.requiredSkills.length, "skills");
@@ -628,67 +539,57 @@ export const fetchSkillResources = async (
     const filterVideosWithLLM = async (videos: any[], skill: string, scenarios: string[]): Promise<{ selectedVideos: any[], reasoning?: string }> => {
         if (videos.length === 0) return { selectedVideos: [] };
 
-        const model = "gemini-2.5-flash";
-        const videoListText = videos.map((v, i) => 
+        const videoListText = videos.map((v, i) =>
             `ID: ${v.id}\nTitle: ${v.title}\nChannel: ${v.channel}\nDescription: ${v.description}\n---`
         ).join('\n');
 
         const prompt = `
         You are an expert survival instructor curating the best educational content.
-        
+
         Task: Select the top 3 most valuable YouTube videos from the list below for learning the skill: "${skill}".
         Context: The user is preparing for these disaster scenarios: ${scenarios.join(', ')}.
-        
+
         CRITERIA:
         1. MUST be an instructional "How-to" or tutorial video.
         2. STRICTLY EXCLUDE: News reports, "caught on camera" footage, reaction videos, vlogs without substance, or generic "top 10" lists unless highly educational.
         3. FOCUS: Practical, actionable skills (e.g., "How to fix a flat tire" vs "Coin acceptor repair").
         4. RELEVANCE: Must be directly related to "${skill}" in a survival context.
         5. Video should have the word "Disaster" in the title
-        
+
         Videos to Evaluate:
         ${videoListText}
-        
+
         Return a JSON object with:
         - "selectedIds": Array of video IDs for the top 3 videos.
         - "reasoning": Brief explanation of why these were chosen.
         `;
 
+        // Define Zod schema for video filtering response
+        const videoFilterSchema = z.object({
+            selectedIds: z.array(z.string()),
+            reasoning: z.string()
+        });
+
         try {
-            const response = await ai.models.generateContent({
-                model: model,
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            selectedIds: { type: Type.ARRAY, items: { type: Type.STRING } },
-                            reasoning: { type: Type.STRING }
-                        }
-                    }
-                }
+            const { object: result } = await generateObject({
+                model: getModel('HAIKU'),
+                prompt,
+                schema: videoFilterSchema
             });
 
-            if (response.text) {
-                const r = response as any;
-                const text = typeof r.text === 'function' ? r.text() : r.text;
-                const result = JSON.parse(text);
-                
-                // Filter the original list based on returned IDs, preserving order of AI selection if possible
-                const selectedVideos = result.selectedIds
-                    .map((id: string) => videos.find((v: any) => v.id === id))
-                    .filter((v: any) => v !== undefined);
-                
-                if (selectedVideos.length > 0) {
-                    console.log(`[LLM Filter] Selected ${selectedVideos.length} videos. Reasoning: ${result.reasoning}`);
-                    return { selectedVideos, reasoning: result.reasoning };
-                }
+            // Filter the original list based on returned IDs, preserving order of AI selection if possible
+            const selectedVideos = result.selectedIds
+                .map((id: string) => videos.find((v: any) => v.id === id))
+                .filter((v: any) => v !== undefined);
+
+            if (selectedVideos.length > 0) {
+                console.log(`[LLM Filter] Selected ${selectedVideos.length} videos. Reasoning: ${result.reasoning}`);
+                return { selectedVideos, reasoning: result.reasoning };
             }
         } catch (e) {
             console.error("[LLM Filter] Failed to filter videos:", e);
         }
-        
+
         // Fallback: return original list (or empty to trigger manual fallback logic)
         return { selectedVideos: [] };
     };
@@ -697,58 +598,48 @@ export const fetchSkillResources = async (
     const filterTextResourcesWithLLM = async (resources: any[], skill: string, scenarios: string[], type: 'ARTICLE' | 'PDF'): Promise<any[]> => {
         if (resources.length === 0) return [];
 
-        const model = "gemini-2.5-flash";
-        const resourceListText = resources.map((r, i) => 
+        const resourceListText = resources.map((r, i) =>
             `ID: ${i}\nTitle: ${r.title}\nSource: ${r.source}\nSnippet: ${r.snippet}\n---`
         ).join('\n');
 
         const prompt = `
         You are an expert survival instructor curating the best reading materials.
-        
+
         Task: Select the top 3 most valuable ${type === 'PDF' ? 'PDF manuals/documents' : 'articles'} from the list below for learning the skill: "${skill}".
         Context: The user is preparing for these disaster scenarios: ${scenarios.join(', ')}.
-        
+
         CRITERIA:
         1. MUST be an instructional guide, manual, or educational resource.
         2. STRICTLY EXCLUDE: Employee handbooks, government bureaucratic forms, meeting minutes, procurement documents, corporate policies, or irrelevant news.
         3. FOCUS: Practical, actionable knowledge (e.g. "Field Manual for Urban Evasion" vs "Department of Labor Employee Policy").
         4. RELEVANCE: Must be directly related to "${skill}" in a survival context.
-        
+
         Resources to Evaluate:
         ${resourceListText}
-        
+
         Return a JSON object with:
         - "selectedIndices": Array of integer IDs (from the list above) for the top 3 resources.
         `;
 
+        // Define Zod schema for text resource filtering response
+        const textResourceFilterSchema = z.object({
+            selectedIndices: z.array(z.number())
+        });
+
         try {
-            const response = await ai.models.generateContent({
-                model: model,
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            selectedIndices: { type: Type.ARRAY, items: { type: Type.NUMBER } }
-                        }
-                    }
-                }
+            const { object: result } = await generateObject({
+                model: getModel('HAIKU'),
+                prompt,
+                schema: textResourceFilterSchema
             });
 
-            if (response.text) {
-                const r = response as any;
-                const text = typeof r.text === 'function' ? r.text() : r.text;
-                const result = JSON.parse(text);
-                
-                return result.selectedIndices
-                    .map((index: number) => resources[index])
-                    .filter((r: any) => r !== undefined);
-            }
+            return result.selectedIndices
+                .map((index: number) => resources[index])
+                .filter((r: any) => r !== undefined);
         } catch (e) {
             console.error(`[LLM Filter ${type}] Failed to filter resources:`, e);
         }
-        
+
         // Fallback: return first 3
         return resources.slice(0, 3);
     };

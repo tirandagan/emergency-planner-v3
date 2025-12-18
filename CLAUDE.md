@@ -218,8 +218,8 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 DATABASE_URL=postgresql://...
 
 # AI Services
-OPENROUTER_API_KEY=sk-or-v1-...        # Claude via OpenRouter
-GEMINI_API_KEY=AIza...                  # Google Gemini (optional)
+OPENROUTER_API_KEY=sk-or-v1-...        # Required: OpenRouter API for AI generation and embeddings
+GEMINI_API_KEY=AIza...                  # Optional: Legacy survival plan generation only
 
 # Google Cloud APIs (Maps, Geocoding, Routes)
 NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY=AIza...

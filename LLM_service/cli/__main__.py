@@ -28,7 +28,7 @@ from rich import print as rprint
 
 from cli.validator import validate_workflow
 from cli.dry_run import dry_run_workflow
-from cli.editor import edit_workflow
+from cli.editor_tui.app import run_editor
 from cli.diagram import generate_diagram
 
 
@@ -170,7 +170,7 @@ def cmd_dry_run(args: argparse.Namespace) -> int:
 def cmd_edit(args: argparse.Namespace) -> int:
     """Execute edit command"""
     try:
-        edit_workflow(args.workflow)
+        run_editor(args.workflow)
         return 0
     except KeyboardInterrupt:
         console.print("\n[yellow]Editor cancelled by user[/yellow]")
