@@ -67,7 +67,7 @@ export async function geocodeWaypoint(
     geocodeCache.set(waypointName, null);
     return null;
   } catch (error) {
-    console.error('Geocoding error for waypoint:', waypointName, error);
+    console.error('[GoogleRoutesService] Geocoding error for waypoint:', waypointName, error);
     return null;
   }
 }
@@ -217,7 +217,7 @@ export async function computeRouteWithWaypoints(
 
     return computed;
   } catch (error) {
-    console.error('Error computing route:', error);
+    console.error('[GoogleRoutesService] Error computing route:', error);
     return null;
   }
 }

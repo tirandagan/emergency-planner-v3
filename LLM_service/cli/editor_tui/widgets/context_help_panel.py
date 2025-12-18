@@ -299,3 +299,50 @@ Configure general workflow settings.
 • Use fail mode for critical steps"""
 
         content.mount(Static(help_text.strip()))
+
+    def show_inputs_help(self) -> None:
+        """Show help for input management."""
+        self.current_context = "inputs"
+
+        content = self.query_one("#help-content", Vertical)
+        content.remove_children()
+
+        help_text = """[bold cyan]Workflow Inputs[/bold cyan]
+
+Define input parameters that must be provided when executing the workflow.
+
+[bold]Input Fields:[/bold]
+
+• [cyan]Name[/cyan]: Unique input identifier
+  Used in step configs as [cyan]${input.name}[/cyan]
+
+• [cyan]Type[/cyan]: Data type
+  string, number, boolean, object, array
+
+• [cyan]Description[/cyan]: What this input represents
+  Helps users understand what to provide
+
+• [cyan]Required[/cyan]: Whether input is mandatory
+  Optional inputs can have default values
+
+• [cyan]Default[/cyan]: Default value (optional inputs only)
+  Used when input is not provided
+
+[bold]Using Inputs in Steps:[/bold]
+
+Reference inputs in step configurations:
+[cyan]${input.lat}[/cyan]
+[cyan]${input.api_key}[/cyan]
+
+[bold]Rename Propagation:[/bold]
+
+When you rename an input, all references
+in step configs are automatically updated!
+
+[bold]Actions:[/bold]
+
+• [green]+ Add Input[/green]: Create new input
+• [cyan]Edit[/cyan]: Modify input details
+• [red]Delete[/red]: Remove input (careful!)"""
+
+        content.mount(Static(help_text.strip()))

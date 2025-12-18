@@ -8,6 +8,7 @@ import {
 } from '@/db/queries/users';
 import { createBillingTransaction } from '@/db/queries/billing';
 import Stripe from 'stripe';
+import { logPaymentError } from '@/lib/system-logger';
 
 /**
  * Stripe webhook handler
@@ -29,6 +30,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     event = stripe.webhooks.constructEvent(body, signature, STRIPE_CONFIG.webhookSecret);
   } catch (error) {
     console.error('Webhook signature verification failed:', error);
+
+    await logPaymentError(error, {
+      component: 'StripeWebhookHandler',
+      route: '/api/webhooks/stripe',
+      userAction: 'Processing Stripe webhook event',
+      metadata: {
+        signaturePresent: !!signature,
+        webhookSecretConfigured: !!STRIPE_CONFIG.webhookSecret,
+      },
+    });
+
     return NextResponse.json(
       { error: 'Invalid signature' },
       { status: 400 }
@@ -74,6 +86,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     console.error('Error processing webhook:', error);
+
+    await logPaymentError(error, {
+      component: 'StripeWebhookHandler',
+      route: '/api/webhooks/stripe',
+      userAction: 'Processing Stripe webhook event',
+      metadata: {
+        eventType: event?.type,
+        eventId: event?.id,
+      },
+    });
+
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }

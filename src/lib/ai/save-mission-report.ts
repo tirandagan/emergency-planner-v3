@@ -4,6 +4,7 @@ import { getLatestMissionReport, deleteMissionReport } from '@/lib/mission-repor
 import { eq } from 'drizzle-orm';
 import type { MissionPlanResult } from './mission-generator';
 import type { WizardFormData } from '@/types/wizard';
+import { logSystemError } from '@/lib/system-logger';
 
 /**
  * Save Mission Report to Database
@@ -83,6 +84,19 @@ export async function saveMissionReport({
     return { reportId: report.id, previousReportId };
   } catch (error) {
     console.error('Failed to save mission report:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'SaveMissionReport',
+      route: '/lib/ai/save-mission-report',
+      userAction: 'Saving AI-generated mission plan to database',
+      metadata: {
+        userTier,
+        scenarios: missionPlan.formData.scenarios,
+      },
+    });
+
     throw new Error('Failed to save mission report to database');
   }
 }

@@ -6,6 +6,7 @@ import {
   updateUserSubscription,
   type UpdateSubscriptionData,
 } from '@/db/queries/users';
+import { logPaymentError, logSystemError } from '@/lib/system-logger';
 
 export type SubscriptionTier = 'BASIC' | 'PRO';
 
@@ -55,18 +56,39 @@ export async function createCheckoutSession(
     });
 
     if (!session.url) {
+      await logPaymentError(new Error('Stripe checkout session created without URL'), {
+        userId,
+        stripeCustomerId: userEmail,
+        amount: tier === 'BASIC' ? 9.99 : 19.99,
+        currency: 'usd',
+        component: 'SubscriptionActions',
+        route: '/app/actions/subscriptions',
+      });
+
       return {
         success: false,
-        error: 'Failed to create checkout session URL',
+        error: "We're experiencing issues processing your subscription. Our team has been notified and will resolve this shortly.",
       };
     }
 
     return { success: true, checkoutUrl: session.url };
   } catch (error) {
     console.error('Error creating checkout session:', error);
+
+    await logPaymentError(error, {
+      userId,
+      stripeCustomerId: userEmail,
+      amount: tier === 'BASIC' ? 9.99 : 19.99,
+      currency: 'usd',
+      component: 'SubscriptionActions',
+      route: '/app/actions/subscriptions',
+    });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create checkout session',
+      error: error instanceof Error
+        ? `Unable to process subscription: ${error.message}. Our team has been notified and will resolve this shortly.`
+        : "We're experiencing technical difficulties with payment processing. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -94,9 +116,19 @@ export async function createCustomerPortalSession(
     return { success: true, portalUrl: session.url };
   } catch (error) {
     console.error('Error creating portal session:', error);
+
+    await logPaymentError(error, {
+      userId: stripeCustomerId,
+      stripeCustomerId,
+      component: 'SubscriptionActions',
+      route: '/app/actions/subscriptions',
+    });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create portal session',
+      error: error instanceof Error
+        ? `Unable to access subscription management: ${error.message}. Our team has been notified and will resolve this shortly.`
+        : "We're experiencing technical difficulties accessing subscription management. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -121,6 +153,19 @@ export async function syncUserSubscription(
     return result;
   } catch (error) {
     console.error('Error syncing user subscription:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'SubscriptionActions',
+      route: '/app/actions/subscriptions',
+      userAction: 'Syncing subscription from Stripe webhook',
+      metadata: {
+        operation: 'syncUserSubscription',
+        subscriptionData: data,
+      },
+    });
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to sync subscription',

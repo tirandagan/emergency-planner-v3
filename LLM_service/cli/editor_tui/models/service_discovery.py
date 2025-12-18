@@ -115,12 +115,13 @@ class ServiceDiscovery:
             operations=[
                 ServiceOperation(
                     name="current",
-                    required_params=["q"],
+                    required_params=["lat", "lng"],
                     optional_params=["aqi", "lang"],
                     param_descriptions={
-                        "q": "Location query (lat,lng or city name)",
-                        "aqi": "Include air quality data (yes/no)",
-                        "lang": "Language code for condition text"
+                        "lat": "Latitude coordinate",
+                        "lng": "Longitude coordinate",
+                        "aqi": "Include air quality data (true/false)",
+                        "lang": "Language code for weather condition text"
                     }
                 )
             ]

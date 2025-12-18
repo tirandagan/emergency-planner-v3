@@ -27,6 +27,7 @@ from .models.settings import EditorSettings
 from .widgets.workflow_tree import WorkflowTree
 from .widgets.metadata_panel import MetadataPanel, MetadataChanged
 from .widgets.step_edit_panel import StepEditPanel
+from .widgets.input_manage_panel import InputManagePanel
 from .widgets.context_help_panel import ContextHelpPanel
 from .screens.file_browser import FileBrowserScreen
 from .screens.settings_screen import SettingsScreen
@@ -316,6 +317,9 @@ class WorkflowEditorApp(App):
         if isinstance(node_data, dict) and node_data.get("type") == "metadata":
             # Show metadata panel
             self._show_metadata_panel(center_panel, help_panel)
+        elif isinstance(node_data, dict) and node_data.get("type") == "inputs_header":
+            # Show input management panel
+            self._show_inputs_panel(center_panel, help_panel)
         else:
             # Check if it's a step
             step_index = tree.get_selected_step_index()
@@ -358,6 +362,21 @@ class WorkflowEditorApp(App):
 
         # Track current view
         self.current_view = "step"
+
+    def _show_inputs_panel(self, container: Vertical, help_panel: ContextHelpPanel) -> None:
+        """Show input management panel in center."""
+        # Remove existing content
+        container.remove_children()
+
+        # Mount input management panel with workflow data
+        inputs_panel = InputManagePanel(workflow=self.state.workflow, id="inputs-panel")
+        container.mount(inputs_panel)
+
+        # Update help panel
+        help_panel.show_inputs_help()
+
+        # Track current view
+        self.current_view = "inputs"
 
     def _show_placeholder(self, container: Vertical, help_panel: ContextHelpPanel) -> None:
         """Show placeholder message in center."""
@@ -430,6 +449,58 @@ class WorkflowEditorApp(App):
                 pass
         elif message.selection_type == "step_type":
             help_panel.show_step_type_help(message.selection_value)
+
+    def on_input_manage_panel_input_changed(self, message: InputManagePanel.InputChanged) -> None:
+        """Handle input changes from input management panel"""
+        import re
+
+        # Record action for undo/redo
+        before_snapshot = self.state.get_snapshot()
+
+        # Update workflow inputs
+        self.state.workflow["inputs"] = message.inputs
+        self.state.unsaved_changes = True
+
+        # Handle input rename - propagate to all step references
+        if message.renamed:
+            old_name, new_name = message.renamed
+            self._propagate_input_rename(old_name, new_name)
+
+        after_snapshot = self.state.get_snapshot()
+        self.action_history.record_action(
+            f"Update workflow inputs",
+            before_snapshot,
+            after_snapshot
+        )
+
+        # Revalidate and refresh
+        self._validate_workflow()
+        self._refresh_all_widgets()
+
+        self.notify("✓ Inputs updated", severity="information")
+
+    def _propagate_input_rename(self, old_name: str, new_name: str) -> None:
+        """
+        Propagate input rename across all step references.
+
+        Args:
+            old_name: Old input name
+            new_name: New input name
+        """
+        import json
+        import re
+
+        # Pattern to find ${input.old_name}
+        pattern = re.compile(re.escape(f"${{input.{old_name}}}"))
+
+        # Convert workflow to JSON string
+        workflow_str = json.dumps(self.state.workflow)
+
+        # Replace all occurrences
+        updated_str = pattern.sub(f"${{input.{new_name}}}", workflow_str)
+
+        # Parse back to dict
+        self.state.workflow = json.loads(updated_str)
 
     def action_save(self) -> None:
         """Save workflow to file"""

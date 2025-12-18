@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/utils/supabase/server';
 import { deleteMissionReport, getMissionReportById } from '@/lib/mission-reports';
+import { logApiError } from '@/lib/system-logger';
 
 /**
  * API Route: POST /api/mission-plan/cancel
@@ -8,9 +9,12 @@ import { deleteMissionReport, getMissionReportById } from '@/lib/mission-reports
  * and optionally restoring the previous one
  */
 export async function POST(request: NextRequest) {
+  let userId: string | undefined;
+
   try {
     // Get authenticated user from Supabase session
     const user = await getCurrentUser();
+    userId = user?.id;
 
     if (!user) {
       return NextResponse.json(
@@ -58,9 +62,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Failed to cancel plan generation:', error);
 
+    await logApiError(error, {
+      route: '/api/mission-plan/cancel',
+      userId,
+      userAction: 'Cancelling mission plan generation',
+    });
+
     return NextResponse.json(
       {
-        error: 'Failed to cancel plan generation',
+        error: "We're experiencing issues cancelling the plan. Our team has been notified and will resolve this shortly.",
         message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logSystemError } from '@/lib/system-logger';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,6 +34,18 @@ export async function GET(request: Request) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('SerpAPI fetch error:', error);
+
+    await logSystemError(error, {
+      category: 'external_service',
+      component: 'SearchAPI',
+      route: '/api/search',
+      userAction: 'Searching Amazon products via SerpAPI',
+      metadata: {
+        query,
+        engine,
+      },
+    });
+
     return NextResponse.json({ error: 'Failed to fetch from SerpAPI' }, { status: 500 });
   }
 }

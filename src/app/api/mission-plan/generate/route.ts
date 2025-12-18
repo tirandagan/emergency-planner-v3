@@ -3,6 +3,7 @@ import { getCurrentUser, createClient } from '@/utils/supabase/server';
 import { generateMissionPlan } from '@/lib/ai/mission-generator';
 import { saveMissionReport } from '@/lib/ai/save-mission-report';
 import type { WizardFormData } from '@/types/wizard';
+import { logApiError } from '@/lib/system-logger';
 
 /**
  * API Route: POST /api/mission-plan/generate
@@ -61,9 +62,24 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Mission plan generation failed:', error);
 
+    // Get user ID from the request context if available
+    let userId: string | undefined;
+    try {
+      const user = await getCurrentUser();
+      userId = user?.id;
+    } catch {
+      // User context not available
+    }
+
+    await logApiError(error, {
+      route: '/api/mission-plan/generate',
+      userId,
+      userAction: 'Generating mission plan via API',
+    });
+
     return NextResponse.json(
       {
-        error: 'Failed to generate mission plan',
+        error: "We're experiencing issues generating your plan. Our team has been notified and will resolve this shortly.",
         message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

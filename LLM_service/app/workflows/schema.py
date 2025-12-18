@@ -13,6 +13,71 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class WorkflowInput(BaseModel):
+    """
+    Input parameter definition for workflow.
+
+    Inputs are values that must be provided when executing the workflow.
+    They can be referenced in step configs using ${input.name} syntax.
+    """
+
+    name: str = Field(
+        ...,
+        description="Input parameter name (alphanumeric, hyphens, underscores only)",
+        min_length=1,
+        max_length=50
+    )
+
+    type: str = Field(
+        default="string",
+        description="Input data type (string, number, boolean, object, array)"
+    )
+
+    description: Optional[str] = Field(
+        default=None,
+        description="Human-readable description of what this input represents"
+    )
+
+    required: bool = Field(
+        default=True,
+        description="Whether this input must be provided"
+    )
+
+    default: Optional[Any] = Field(
+        default=None,
+        description="Default value if input is not provided (only for optional inputs)"
+    )
+
+    @field_validator('name')
+    @classmethod
+    def validate_input_name(cls, v: str) -> str:
+        """Ensure input name is a valid identifier."""
+        if not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError(
+                f"Input name '{v}' must be alphanumeric (hyphens/underscores allowed)"
+            )
+        return v
+
+    class Config:
+        json_schema_extra = {
+            "examples": [
+                {
+                    "name": "lat",
+                    "type": "string",
+                    "description": "Latitude coordinate of user location",
+                    "required": True
+                },
+                {
+                    "name": "api_key",
+                    "type": "string",
+                    "description": "API key for external service",
+                    "required": False,
+                    "default": "default_key"
+                }
+            ]
+        }
+
+
 class ErrorMode(str, Enum):
     """Error handling strategy for workflow steps."""
     FAIL = "fail"         # Stop workflow immediately, mark as failed
@@ -123,6 +188,11 @@ class Workflow(BaseModel):
     description: Optional[str] = Field(
         default=None,
         description="Human-readable workflow description"
+    )
+
+    inputs: Optional[List[WorkflowInput]] = Field(
+        default=None,
+        description="Input parameters required/accepted by this workflow"
     )
 
     steps: List[WorkflowStep] = Field(

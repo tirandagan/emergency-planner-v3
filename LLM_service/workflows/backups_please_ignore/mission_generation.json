@@ -1,0 +1,125 @@
+{
+  "name": "mission_generation",
+  "description": "Generate comprehensive disaster preparedness mission plan with streaming support",
+  "version": "1.0.0",
+  "timeout": 300,
+  "steps": [
+    {
+      "id": "format_bundles",
+      "type": "transform",
+      "description": "Format product bundles for LLM context injection",
+      "operation": "template",
+      "config": {
+        "source": "${input.bundles}",
+        "template": "Bundle ID: ${id}\nName: ${name}\nDescription: ${description}\nPrice: $${price}\nCategory: ${category}\n\n---\n\n"
+      },
+      "error_mode": "continue",
+      "outputs": ["formatted_bundles"]
+    },
+    {
+      "id": "join_bundles",
+      "type": "transform",
+      "description": "Join bundle data into single context string",
+      "operation": "join",
+      "config": {
+        "source": "${steps.format_bundles.formatted_bundles}",
+        "separator": ""
+      },
+      "error_mode": "continue",
+      "outputs": ["bundle_context"]
+    },
+    {
+      "id": "build_scenario_list",
+      "type": "transform",
+      "description": "Format scenarios into readable list",
+      "operation": "join",
+      "config": {
+        "source": "${input.formData.scenarios}",
+        "separator": ", "
+      },
+      "error_mode": "continue",
+      "outputs": ["scenario_list"]
+    },
+    {
+      "id": "build_user_message",
+      "type": "transform",
+      "description": "Build user message with form data summary",
+      "operation": "template",
+      "config": {
+        "template": "Generate a comprehensive, streaming disaster preparedness mission report.\n\n**SCENARIOS**: ${scenario_list}\n\n**LOCATION**: ${location_city}, ${location_state}\n**Climate Zone**: ${climate_zone}\n\n**FAMILY COMPOSITION** (${family_size} people):\n${family_details}\n\n**HOME TYPE**: ${home_type}\n\n**MOBILITY PLAN**: ${mobility}\n\n**PLANNING DURATION**: ${duration_days} days\n\n**BUDGET**: ${budget_tier} (approximately $${budget_amount})\n\n**CURRENT PREPAREDNESS**: ${preparedness_level}\n\nGenerate the complete mission report following the exact output format specified. Include:\n1. Executive Summary (2-3 paragraphs)\n2. Risk Assessment (with all four subsections)\n3. Recommended Bundles (3-4 bundles with full analysis - ONLY use bundle IDs from the AVAILABLE BUNDLES list)\n4. Survival Skills Needed (3-7 skills)\n5. Day-by-Day Simulation (structured for ${duration_days} days)\n6. Next Steps (3-5 actionable items)\n\nIMPORTANT: Stream the response progressively. The user will see content as it generates.",
+        "variables": {
+          "scenario_list": "${steps.build_scenario_list.scenario_list}",
+          "location_city": "${input.formData.location.city}",
+          "location_state": "${input.formData.location.state}",
+          "climate_zone": "${input.formData.location.climateZone}",
+          "family_size": "${input.formData.familySize}",
+          "family_details": "${input.familyDetails}",
+          "home_type": "${input.formData.homeType}",
+          "mobility": "${input.mobility}",
+          "duration_days": "${input.formData.durationDays}",
+          "budget_tier": "${input.budgetTierLabel}",
+          "budget_amount": "${input.budgetAmount}",
+          "preparedness_level": "${input.formData.existingPreparedness}"
+        }
+      },
+      "error_mode": "fail",
+      "outputs": ["user_message"]
+    },
+    {
+      "id": "generate_mission_plan",
+      "type": "llm",
+      "description": "Generate comprehensive mission plan with Claude Sonnet 3.5",
+      "provider": "openrouter",
+      "model": "anthropic/claude-3.5-sonnet",
+      "prompt_template": "mission-generation/mega-prompt.md",
+      "user_message": "${steps.build_user_message.user_message}",
+      "variables": {
+        "location": "${input.formData.location.city}, ${input.formData.location.state}",
+        "climate_zone": "${input.formData.location.climateZone}",
+        "family_size": "${input.formData.familySize}",
+        "duration_days": "${input.formData.durationDays}",
+        "budget_tier": "${input.budgetTierLabel}",
+        "budget_amount": "${input.budgetAmount}",
+        "bundle_context": "${steps.join_bundles.bundle_context}"
+      },
+      "temperature": 0.7,
+      "max_tokens": 8000,
+      "error_mode": "fail",
+      "outputs": ["mission_plan", "llm_usage"]
+    },
+    {
+      "id": "parse_sections",
+      "type": "transform",
+      "description": "Extract structured sections from mission plan",
+      "operation": "regex_extract",
+      "config": {
+        "source": "${steps.generate_mission_plan.mission_plan}",
+        "patterns": {
+          "executive_summary": "## Executive Summary\\n\\n(.*?)(?=\\n##|$)",
+          "risk_assessment": "## Risk Assessment\\n\\n(.*?)(?=\\n##|$)",
+          "recommended_bundles": "## Recommended Bundles\\n\\n(.*?)(?=\\n##|$)",
+          "survival_skills": "## Survival Skills Needed\\n\\n(.*?)(?=\\n##|$)",
+          "day_by_day": "## Day-by-Day Simulation\\n\\n(.*?)(?=\\n##|$)",
+          "next_steps": "## Next Steps\\n\\n(.*?)(?=\\n##|$)"
+        }
+      },
+      "error_mode": "continue",
+      "outputs": ["parsed_sections"]
+    }
+  ],
+  "outputs": {
+    "mission_plan": "${steps.generate_mission_plan.mission_plan}",
+    "parsed_sections": "${steps.parse_sections.parsed_sections}",
+    "llm_usage": "${steps.generate_mission_plan.llm_usage}",
+    "bundle_recommendations": "${steps.parse_sections.parsed_sections.recommended_bundles}",
+    "form_data": "${input.formData}",
+    "cost_data": {
+      "provider": "openrouter",
+      "model": "anthropic/claude-3.5-sonnet",
+      "input_tokens": "${steps.generate_mission_plan.llm_usage.input_tokens}",
+      "output_tokens": "${steps.generate_mission_plan.llm_usage.output_tokens}",
+      "total_tokens": "${steps.generate_mission_plan.llm_usage.total_tokens}",
+      "cost_usd": "${steps.generate_mission_plan.llm_usage.cost_usd}"
+    }
+  }
+}

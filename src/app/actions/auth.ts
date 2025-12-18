@@ -10,6 +10,7 @@ import {
   sendManualVerificationNotification,
 } from "@/lib/email";
 import { eq } from "drizzle-orm";
+import { logSystemError } from "@/lib/system-logger";
 
 // --- Type Definitions ---
 
@@ -142,9 +143,20 @@ export async function signUpWithEmail(formData: FormData): Promise<AuthResult> {
     };
   } catch (error) {
     console.error("[Auth] Sign up error:", error);
+
+    await logSystemError(error, {
+      category: 'auth_error',
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: 'Creating new user account with email/password',
+      metadata: {
+        operation: 'signUpWithEmail',
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: "We're experiencing issues creating your account. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -153,6 +165,8 @@ export async function signUpWithEmail(formData: FormData): Promise<AuthResult> {
  * Sign in with email and password
  */
 export async function signInWithEmailPassword(formData: FormData): Promise<AuthResult> {
+  let userId: string | undefined;
+
   try {
     const rawData = {
       email: formData.get("email"),
@@ -178,6 +192,10 @@ export async function signInWithEmailPassword(formData: FormData): Promise<AuthR
       email,
       password,
     });
+
+    if (data?.user) {
+      userId = data.user.id;
+    }
 
     if (error) {
       // Don't reveal if email exists or not (security best practice)
@@ -227,6 +245,17 @@ export async function signInWithEmailPassword(formData: FormData): Promise<AuthR
       console.log(`[Activity] Logged login activity for user ${data.user.id}`);
     } catch (activityError) {
       console.error('[Activity] Failed to log user activity:', activityError);
+
+      await logSystemError(activityError, {
+        category: 'database_error',
+        userId: data.user.id,
+        component: 'AuthActions',
+        route: '/app/actions/auth',
+        userAction: 'Logging user login activity',
+        metadata: {
+          operation: 'logUserActivity',
+        },
+      });
       // Don't fail the login if activity logging fails
     }
 
@@ -236,9 +265,21 @@ export async function signInWithEmailPassword(formData: FormData): Promise<AuthR
     };
   } catch (error) {
     console.error("[Auth] Sign in error:", error);
+
+    await logSystemError(error, {
+      category: 'auth_error',
+      userId,
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: 'Signing in with email/password',
+      metadata: {
+        operation: 'signInWithEmailPassword',
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: "We're experiencing issues signing you in. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -250,6 +291,8 @@ export async function verifyEmailCode(
   email: string,
   code: string
 ): Promise<AuthResult> {
+  let userId: string | undefined;
+
   try {
     const validation = verifyCodeSchema.safeParse({ code });
     if (!validation.success) {
@@ -268,6 +311,10 @@ export async function verifyEmailCode(
       token: code,
       type: "email",
     });
+
+    if (data?.user) {
+      userId = data.user.id;
+    }
 
     if (error) {
       return {
@@ -301,9 +348,21 @@ export async function verifyEmailCode(
     };
   } catch (error) {
     console.error("[Auth] Verify code error:", error);
+
+    await logSystemError(error, {
+      category: 'auth_error',
+      userId,
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: 'Verifying email with 6-digit code',
+      metadata: {
+        operation: 'verifyEmailCode',
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: "We're experiencing issues verifying your email. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -334,9 +393,20 @@ export async function resendVerificationCode(email: string): Promise<AuthResult>
     };
   } catch (error) {
     console.error("[Auth] Resend code error:", error);
+
+    await logSystemError(error, {
+      category: 'external_service',
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: 'Resending email verification code',
+      metadata: {
+        operation: 'resendVerificationCode',
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: "We're experiencing issues sending the verification code. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -378,9 +448,20 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthResu
     };
   } catch (error) {
     console.error("[Auth] Password reset error:", error);
+
+    await logSystemError(error, {
+      category: 'external_service',
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: 'Requesting password reset',
+      metadata: {
+        operation: 'requestPasswordReset',
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: "We're experiencing issues sending the password reset email. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -389,6 +470,8 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthResu
  * Update password after reset
  */
 export async function updatePassword(formData: FormData): Promise<AuthResult> {
+  let userId: string | undefined;
+
   try {
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
@@ -427,6 +510,10 @@ export async function updatePassword(formData: FormData): Promise<AuthResult> {
 
     const supabase = await createClient();
 
+    // Get current user for logging
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id;
+
     // Update password (user must have valid reset token from email link)
     const { error } = await supabase.auth.updateUser({
       password: validation.data,
@@ -445,9 +532,21 @@ export async function updatePassword(formData: FormData): Promise<AuthResult> {
     };
   } catch (error) {
     console.error("[Auth] Update password error:", error);
+
+    await logSystemError(error, {
+      category: 'auth_error',
+      userId,
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: 'Updating password after reset',
+      metadata: {
+        operation: 'updatePassword',
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: "We're experiencing issues updating your password. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -458,6 +557,8 @@ export async function updatePassword(formData: FormData): Promise<AuthResult> {
 export async function submitManualVerificationRequest(
   formData: FormData
 ): Promise<AuthResult> {
+  let userId: string | undefined;
+
   try {
     const rawData = {
       reason: formData.get("reason"),
@@ -476,6 +577,7 @@ export async function submitManualVerificationRequest(
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return {
@@ -523,9 +625,21 @@ export async function submitManualVerificationRequest(
     };
   } catch (error) {
     console.error("[Auth] Manual verification request error:", error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: 'Submitting manual verification request',
+      metadata: {
+        operation: 'submitManualVerificationRequest',
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: "We're experiencing issues submitting your request. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -582,9 +696,21 @@ export async function signInWithOAuth(provider: OAuthProvider): Promise<AuthResu
     };
   } catch (error) {
     console.error(`[Auth] OAuth ${provider} error:`, error);
+
+    await logSystemError(error, {
+      category: 'external_service',
+      component: 'AuthActions',
+      route: '/app/actions/auth',
+      userAction: `Signing in with ${provider} OAuth`,
+      metadata: {
+        operation: 'signInWithOAuth',
+        provider,
+      },
+    });
+
     return {
       success: false,
-      error: "An unexpected error occurred. Please try again.",
+      error: `We're experiencing issues signing in with ${provider}. Our team has been notified and will resolve this shortly.`,
     };
   }
 }

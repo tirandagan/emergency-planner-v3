@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, Fragment, useRef } from "react";
-import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Pencil, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download } from "lucide-react";
+import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil } from "lucide-react";
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags } from "./actions";
+import { getCategoryImpact, updateCategory, deleteCategory } from "@/app/actions/categories";
+import { EditCategoryDialog } from "@/components/admin/category-dialogs";
+import { DeleteCategoryDialog } from "@/components/admin/DeleteCategoryDialog";
 import ProductEditDialog from "./components/ProductEditDialog";
 import MasterItemModal from "./components/MasterItemModal";
 import AddProductChoiceModal from "./components/AddProductChoiceModal";
@@ -17,6 +20,7 @@ interface Category {
     id: string;
     name: string;
     parentId: string | null;
+    description: string | null;
     icon: string | null;
 }
 
@@ -457,9 +461,7 @@ export default function ProductsClient({
   const [supplierSubmenuOpen, setSupplierSubmenuOpen] = useState(false);
   const [supplierSubmenuPosition, setSupplierSubmenuPosition] = useState<{ top: number; left: number } | null>(null);
   const supplierButtonRef = useRef<HTMLDivElement>(null);
-  
-  // Master Item Context Menu State
-  const [masterItemContextMenu, setMasterItemContextMenu] = useState<{ x: number; y: number; masterItem: MasterItem } | null>(null);
+
   const [copiedTags, setCopiedTags] = useState<{
       scenarios: string[] | null;
       demographics: string[] | null;
@@ -477,6 +479,31 @@ export default function ProductsClient({
   const [categoryModalCategory, setCategoryModalCategory] = useState<string>("");
   const [categoryModalSubCategory, setCategoryModalSubCategory] = useState<string>("");
   const [categoryModalMasterItem, setCategoryModalMasterItem] = useState<string>("");
+
+  // Category Context Menu State
+  const [categoryContextMenu, setCategoryContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    category: Category | null;
+  }>({ visible: false, x: 0, y: 0, category: null });
+
+  // Master Item Context Menu State
+  const [masterItemContextMenu, setMasterItemContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    masterItem: MasterItem | null;
+  }>({ visible: false, x: 0, y: 0, masterItem: null });
+
+  // Category Edit/Delete Dialog State
+  const [editingCategoryDialog, setEditingCategoryDialog] = useState<Category | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<{
+    subcategoryCount: number;
+    masterItemCount: number;
+    affectedItems: Array<{ id: string; name: string }>;
+  } | null>(null);
 
   // Bulk Selection State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -523,20 +550,6 @@ export default function ProductsClient({
       }
   }, [contextMenu]);
 
-  // Close master item context menu on click outside
-  useEffect(() => {
-      const handleClick = () => setMasterItemContextMenu(null);
-      if (masterItemContextMenu) {
-          const timer = setTimeout(() => {
-              window.addEventListener('click', handleClick);
-          }, 10);
-          return () => {
-              clearTimeout(timer);
-              window.removeEventListener('click', handleClick);
-          };
-      }
-  }, [masterItemContextMenu]);
-
   // Close tagging interface on click outside
   useEffect(() => {
       const handleClick = () => setTaggingProductId(null);
@@ -551,11 +564,110 @@ export default function ProductsClient({
       }
   }, [taggingProductId]);
 
+  // Category Context Menu Handlers
+  const handleCategoryContextMenu = (e: React.MouseEvent, category: Category) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Close master item menu if open
+      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+      // Close product menu if open
+      setContextMenu(null);
+      setCategoryContextMenu({
+          visible: true,
+          x: e.pageX,
+          y: e.pageY,
+          category
+      });
+  };
+
+  const handleCategoryEdit = (category: Category) => {
+      setEditingCategoryDialog(category);
+      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleCategoryDelete = async (category: Category) => {
+      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+
+      const impactRes = await getCategoryImpact(category.id);
+      if (impactRes.success && impactRes.data) {
+          setDeletingCategory(category);
+          setDeleteImpact(impactRes.data);
+      }
+  };
+
+  const handleConfirmDeleteCategory = async () => {
+      if (!deletingCategory) return;
+
+      try {
+          const res = await deleteCategory(deletingCategory.id);
+          if (res.success) {
+              setDeletingCategory(null);
+              setDeleteImpact(null);
+              window.location.reload();
+          } else {
+              alert('Failed to delete: ' + res.message);
+          }
+      } catch (error) {
+          console.error('Delete failed:', error);
+      }
+  };
+
+  // Master Item Context Menu Handlers
   const handleMasterItemContextMenu = (e: React.MouseEvent, masterItem: MasterItem) => {
       e.preventDefault();
       e.stopPropagation();
-      setMasterItemContextMenu({ x: e.clientX, y: e.clientY, masterItem });
+      // Close category menu if open
+      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+      // Close product menu if open
+      setContextMenu(null);
+      setMasterItemContextMenu({
+          visible: true,
+          x: e.pageX,
+          y: e.pageY,
+          masterItem
+      });
   };
+
+  const handleMasterItemEdit = (masterItem: MasterItem) => {
+      openEditMasterItemModal(masterItem.id);
+      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  // Close context menus on global click or Escape
+  useEffect(() => {
+      const handleClick = () => {
+          if (categoryContextMenu.visible) {
+              setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+          }
+          if (masterItemContextMenu.visible) {
+              setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+          }
+      };
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'Escape') {
+              if (categoryContextMenu.visible) {
+                  setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+              }
+              if (masterItemContextMenu.visible) {
+                  setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+              }
+          }
+      };
+
+      if (categoryContextMenu.visible || masterItemContextMenu.visible) {
+          const timer = setTimeout(() => {
+              window.addEventListener('click', handleClick);
+              window.addEventListener('keydown', handleKeyDown);
+          }, 10);
+
+          return () => {
+              clearTimeout(timer);
+              window.removeEventListener('click', handleClick);
+              window.removeEventListener('keydown', handleKeyDown);
+          };
+      }
+  }, [categoryContextMenu.visible, masterItemContextMenu.visible]);
 
   const handleCopyTags = (masterItem: MasterItem) => {
       setCopiedTags({
@@ -565,12 +677,12 @@ export default function ProductsClient({
           locations: masterItem.locations || null,
           sourceName: masterItem.name
       });
-      setMasterItemContextMenu(null);
+      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
       setToastMessage(`Tags copied from "${masterItem.name}"`);
   };
 
   const handlePasteTags = (targetMasterItem: MasterItem) => {
-      setMasterItemContextMenu(null);
+      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
       if (!copiedTags) return;
       
       // Check if target has existing tags
@@ -628,6 +740,10 @@ export default function ProductsClient({
           return;
       }
       e.preventDefault();
+      // Close category menu if open
+      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+      // Close master item menu if open
+      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
       setContextMenu({ x: e.clientX, y: e.clientY, product });
   };
 
@@ -939,9 +1055,9 @@ export default function ProductsClient({
       const ensureGroup = (catId: string, subCatId: string | null) => {
           if (!groups[catId]) {
               if (catId === 'uncategorized') {
-                  groups[catId] = { 
-                      category: { id: 'uncategorized', name: 'Uncategorized', parentId: null, icon: null }, 
-                      subGroups: {} 
+                  groups[catId] = {
+                      category: { id: 'uncategorized', name: 'Uncategorized', parentId: null, description: null, icon: null },
+                      subGroups: {}
                   };
               } else {
                   const cat = categories.find(c => c.id === catId);
@@ -1329,11 +1445,12 @@ export default function ProductsClient({
                     {/* Main Category Header - Collapsible */}
                     <div
                         className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/cat ${
-                            isCategoryActive 
-                                ? 'bg-primary/10 text-primary' 
+                            isCategoryActive
+                                ? 'bg-primary/10 text-primary'
                                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                         }`}
                         onClick={() => toggleCategory(group.category.id)}
+                        onContextMenu={(e) => handleCategoryContextMenu(e, group.category)}
                     >
                          {isExpanded ? (
                              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground group-hover/cat:text-foreground" strokeWidth={2.5} />
@@ -1350,9 +1467,16 @@ export default function ProductsClient({
                             onClick={(e) => { e.stopPropagation(); handleCategorySelect(group.category.id); }}
                             className="flex items-center gap-2 flex-1 text-left"
                          >
-                             <span className={`text-sm font-medium transition-colors ${isCategoryActive ? 'text-primary' : ''}`}>
-                                {group.category.name}
-                             </span>
+                             <div className="flex-1 min-w-0">
+                                 <span className={`text-sm font-medium transition-colors ${isCategoryActive ? 'text-primary' : ''}`}>
+                                    {group.category.name}
+                                 </span>
+                                 {group.category.description && (
+                                     <span className="text-[10px] text-muted-foreground/70 truncate italic block leading-tight">
+                                         {group.category.description}
+                                     </span>
+                                 )}
+                             </div>
                              {isCategoryActive && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Selected</span>}
                          </button>
 
@@ -1363,7 +1487,7 @@ export default function ProductsClient({
 
                     {/* Subgroups - Collapsible Content */}
                     {isExpanded && (
-                    <div className="grid gap-6 mt-2">
+                    <div className="grid gap-6 mt-2 ml-4">
                         {Object.values(group.subGroups).map(subGroup => {
                             const subCatId = subGroup.subCategory?.id || `root-${group.category.id}`;
                             const isSubExpanded = subGroup.subCategory ? expandedSubCategories.has(subCatId) : true;
@@ -1378,52 +1502,66 @@ export default function ProductsClient({
                             });
 
                             return (
-                            <div key={subCatId} className={`bg-card border rounded-xl overflow-hidden shadow-sm transition-colors ${
-                                isSubActive ? 'border-primary ring-1 ring-primary/20' : 'border-border'
-                            }`}>
+                            <div key={subCatId} className="transition-colors">
                                 {/* Subcategory Header (if exists) */}
                                 {subGroup.subCategory && (
-                                    <div className={`px-4 py-2 border-b flex items-center gap-2 transition-colors ${
-                                        isSubActive ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 border-border'
-                                    }`}>
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleSubCategory(subCatId)}
-                                            className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            {isSubExpanded ? <ChevronDown className="w-4 h-4" strokeWidth={2.5} /> : <ChevronRight className="w-4 h-4" strokeWidth={2.5} />}
-                                        </button>
+                                    <div
+                                        className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/subcat ${
+                                            isSubActive
+                                                ? 'bg-primary/10 text-primary'
+                                                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                                        }`}
+                                        onClick={() => toggleSubCategory(subCatId)}
+                                        onContextMenu={(e) => handleCategoryContextMenu(e, subGroup.subCategory!)}
+                                    >
+                                        {isSubExpanded ? (
+                                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground group-hover/subcat:text-foreground" strokeWidth={2.5} />
+                                        ) : (
+                                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover/subcat:text-foreground" strokeWidth={2.5} />
+                                        )}
+                                        
+                                        <span className="category-icon" title={subGroup.subCategory.icon || '📁'}>
+                                            {subGroup.subCategory.icon || '📁'}
+                                        </span>
                                         
                                         <button
                                             type="button"
-                                            onClick={() => handleCategorySelect(subGroup.subCategory!.id)}
-                                            className="flex-1 text-left flex items-center gap-2"
+                                            onClick={(e) => { e.stopPropagation(); handleCategorySelect(subGroup.subCategory!.id); }}
+                                            className="flex items-center gap-2 flex-1 text-left"
                                         >
-                                            <h3 className={`font-medium text-sm flex items-center gap-2 ${isSubActive ? 'text-primary' : 'text-foreground'}`}>
-                                                <span className="category-icon" title={subGroup.subCategory.icon || '📁'}>
-                                                    {subGroup.subCategory.icon || '📁'}
+                                            <div className="flex-1 min-w-0">
+                                                <span className={`text-sm font-medium transition-colors ${isSubActive ? 'text-primary' : ''}`}>
+                                                    {subGroup.subCategory.name}
                                                 </span>
-                                                {subGroup.subCategory.name}
-                                            </h3>
-                                            {isSubActive && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">Selected</span>}
+                                                {subGroup.subCategory.description && (
+                                                    <span className="text-[10px] text-muted-foreground/70 truncate italic block leading-tight">
+                                                        {subGroup.subCategory.description}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {isSubActive && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Selected</span>}
                                         </button>
+                                        
+                                        <span className="text-xs text-muted-foreground/70">
+                                            ({Object.values(subGroup.masterItems).reduce((acc, m) => acc + m.products.length, 0)})
+                                        </span>
                                     </div>
                                 )}
                                 
                                 {/* Master Items Groups */}
                                 {(isSubExpanded || !subGroup.subCategory) && (
-                                <div className="divide-y divide-border">
+                                <div className="space-y-4 mt-2 ml-4">
                                     {sortedMasterGroups.map(masterGroup => {
                                         const isMasterActive = masterGroup.masterItem?.id === activeMasterItemId;
                                         return (
-                                        <div key={masterGroup.masterItem?.id || 'nomaster'} className="bg-background/30">
+                                        <div key={masterGroup.masterItem?.id || 'nomaster'} className="bg-card border rounded-xl overflow-hidden shadow-sm transition-colors">
                                             {/* Master Item Header */}
                                             {masterGroup.masterItem && (
                                                 <div
-                                                    className={`px-6 py-3 border-b cursor-pointer transition-colors ${
+                                                    className={`px-6 py-3 cursor-pointer transition-colors ${
                                                         isMasterActive
-                                                            ? 'bg-success/10 border-success/30'
-                                                            : 'bg-muted/80 border-border/50 hover:bg-muted'
+                                                            ? 'bg-success/10'
+                                                            : 'bg-muted/80 hover:bg-muted'
                                                     }`}
                                                     onClick={() => handleMasterItemSelect(masterGroup.masterItem!.id)}
                                                     onContextMenu={(e) => handleMasterItemContextMenu(e, masterGroup.masterItem!)}
@@ -1439,16 +1577,6 @@ export default function ProductsClient({
                                                                         Selected
                                                                     </span>
                                                                 )}
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if(masterGroup.masterItem) openEditMasterItemModal(masterGroup.masterItem.id);
-                                                                    }}
-                                                                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                                                                    title="Edit Master Item"
-                                                                >
-                                                                    <Pencil className="w-3 h-3" strokeWidth={2.5} />
-                                                                </button>
                                                             </div>
                                                             
                                                             {/* Visual Tags Display */}
@@ -1739,7 +1867,7 @@ export default function ProductsClient({
                 }}
             >
                 <Pencil className="w-4 h-4 text-primary" strokeWidth={2.5} />
-                Edit
+                Edit Specific Product
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
@@ -1844,7 +1972,7 @@ export default function ProductsClient({
       )}
 
       {/* Master Item Context Menu */}
-      {masterItemContextMenu && (
+      {masterItemContextMenu.visible && masterItemContextMenu.masterItem && (
         <div
             className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[180px] overflow-hidden animate-in fade-in zoom-in-95"
             style={{ top: masterItemContextMenu.y, left: masterItemContextMenu.x }}
@@ -1852,7 +1980,15 @@ export default function ProductsClient({
         >
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
-                onClick={() => handleCopyTags(masterItemContextMenu.masterItem)}
+                onClick={() => handleMasterItemEdit(masterItemContextMenu.masterItem!)}
+            >
+                <Edit className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                Edit Master Item
+            </button>
+            <div className="h-px bg-border my-1" />
+            <button
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                onClick={() => handleCopyTags(masterItemContextMenu.masterItem!)}
             >
                 <Copy className="w-4 h-4 text-primary" strokeWidth={2.5} />
                 Copy Tags
@@ -1863,7 +1999,7 @@ export default function ProductsClient({
                         ? 'hover:bg-muted text-foreground'
                         : 'text-muted-foreground cursor-not-allowed'
                 }`}
-                onClick={() => copiedTags && handlePasteTags(masterItemContextMenu.masterItem)}
+                onClick={() => copiedTags && handlePasteTags(masterItemContextMenu.masterItem!)}
                 disabled={!copiedTags}
             >
                 <ClipboardPaste className={`w-4 h-4 ${copiedTags ? 'text-success' : 'text-muted-foreground'}`} strokeWidth={2.5} />
@@ -2123,6 +2259,65 @@ export default function ProductsClient({
                 </button>
             </div>
       )}
+
+      {/* Category Context Menu */}
+      {categoryContextMenu.visible && categoryContextMenu.category && (
+        <div
+          id="category-context-menu"
+          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[160px] overflow-hidden backdrop-blur-sm"
+          style={{
+            top: categoryContextMenu.y,
+            left: categoryContextMenu.x
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleCategoryEdit(categoryContextMenu.category!)}
+            className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+          >
+            <FileText className="w-4 h-4 text-primary" strokeWidth={2.5} />
+            Edit Category
+          </button>
+          <div className="h-px bg-border my-1" />
+          <button
+            onClick={() => handleCategoryDelete(categoryContextMenu.category!)}
+            className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-3 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+            Delete
+          </button>
+        </div>
+      )}
+
+      {/* Category Edit Dialog */}
+      <EditCategoryDialog
+        isOpen={!!editingCategoryDialog}
+        category={editingCategoryDialog ? {
+          id: editingCategoryDialog.id,
+          name: editingCategoryDialog.name,
+          description: editingCategoryDialog.description,
+          icon: editingCategoryDialog.icon,
+          createdAt: editingCategoryDialog.createdAt || new Date()
+        } : null}
+        onClose={() => setEditingCategoryDialog(null)}
+        onSave={async (id, data) => {
+          await updateCategory(id, data);
+          setEditingCategoryDialog(null);
+          window.location.reload();
+        }}
+      />
+
+      {/* Category Delete Dialog */}
+      <DeleteCategoryDialog
+        isOpen={!!deletingCategory}
+        category={deletingCategory}
+        impact={deleteImpact}
+        onClose={() => {
+          setDeletingCategory(null);
+          setDeleteImpact(null);
+        }}
+        onConfirm={handleConfirmDeleteCategory}
+      />
 
     </div>
   );

@@ -5,6 +5,7 @@ import { updateUserProfileData, type UpdateProfileData } from '@/db/queries/user
 import { stripe } from '@/lib/stripe';
 import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
+import { logSystemError, logPaymentError } from '@/lib/system-logger';
 
 export type UpdateProfileResult =
   | { success: true }
@@ -80,9 +81,21 @@ export async function updateUserProfile(
     return { success: true };
   } catch (error) {
     console.error('Error updating profile:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'ProfileActions',
+      route: '/app/actions/profile',
+      userAction: 'Updating user profile information',
+      metadata: {
+        operation: 'updateUserProfile',
+      },
+    });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update profile',
+      error: "We're experiencing issues updating your profile. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -125,9 +138,20 @@ export async function getPaymentMethod(
     return { success: true, data: null };
   } catch (error) {
     console.error('Error fetching payment method:', error);
+
+    await logPaymentError(error, {
+      stripeCustomerId,
+      component: 'ProfileActions',
+      route: '/app/actions/profile',
+      userAction: 'Fetching payment method from Stripe',
+      metadata: {
+        operation: 'getPaymentMethod',
+      },
+    });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch payment method',
+      error: "We're experiencing issues fetching your payment method. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -193,9 +217,21 @@ export async function updateEmailPreferences(
     return { success: true };
   } catch (error) {
     console.error('[Profile] Error updating email preferences:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'ProfileActions',
+      route: '/app/actions/profile',
+      userAction: 'Updating email notification preferences',
+      metadata: {
+        operation: 'updateEmailPreferences',
+      },
+    });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update preferences',
+      error: "We're experiencing issues updating your preferences. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -218,9 +254,20 @@ export async function sendPasswordChangeEmail(
     return result;
   } catch (error) {
     console.error('[Profile] Error sending password change email:', error);
+
+    await logSystemError(error, {
+      category: 'external_service',
+      component: 'ProfileActions',
+      route: '/app/actions/profile',
+      userAction: 'Sending password change confirmation email',
+      metadata: {
+        operation: 'sendPasswordChangeEmail',
+      },
+    });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send email',
+      error: "We're experiencing issues sending the confirmation email. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -435,9 +482,21 @@ export async function exportUserData(
     return { success: true, data: exportData };
   } catch (error) {
     console.error('[Export] Error exporting user data:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'ProfileActions',
+      route: '/app/actions/profile',
+      userAction: 'Exporting user data for GDPR compliance',
+      metadata: {
+        operation: 'exportUserData',
+      },
+    });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to export data',
+      error: "We're experiencing issues exporting your data. Our team has been notified and will resolve this shortly.",
     };
   }
 }

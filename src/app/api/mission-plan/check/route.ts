@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, createClient } from '@/utils/supabase/server';
 import { getLatestMissionReport } from '@/lib/mission-reports';
+import { logApiError } from '@/lib/system-logger';
 
 /**
  * API Route: GET /api/mission-plan/check
  * Check if user has existing plan (for free tier warning)
  */
 export async function GET(request: NextRequest) {
+  let userId: string | undefined;
+
   try {
     // Get authenticated user from Supabase session
     const user = await getCurrentUser();
+    userId = user?.id;
 
     if (!user) {
       return NextResponse.json(
@@ -63,9 +67,15 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Failed to check existing plans:', error);
 
+    await logApiError(error, {
+      route: '/api/mission-plan/check',
+      userId,
+      userAction: 'Checking for existing mission plans',
+    });
+
     return NextResponse.json(
       {
-        error: 'Failed to check existing plans',
+        error: "We're experiencing issues checking your plans. Our team has been notified and will resolve this shortly.",
         message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

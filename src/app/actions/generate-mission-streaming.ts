@@ -16,6 +16,7 @@ import { logAIUsage } from '@/lib/ai/usage-logger';
 import { saveMissionReportV2 } from '@/lib/ai/save-mission-report-v2';
 import type { WizardFormData } from '@/types/wizard';
 import type { ReportDataV2 } from '@/types/mission-report';
+import { logAiError } from '@/lib/system-logger';
 
 // Model for mission generation
 const MISSION_MODEL = MODELS.SONNET;
@@ -161,6 +162,20 @@ export async function generateMissionPlanNonStreaming(
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
       }
     );
+
+    await logAiError(error, {
+      model: MISSION_MODEL,
+      userId,
+      userAction: 'Generating streaming mission plan',
+      component: 'MissionGenerationStreaming',
+      route: '/app/actions/generate-mission-streaming',
+      requestData: {
+        scenarios: formData.scenarios,
+        location: formData.location,
+        familySize: formData.familyMembers.length,
+        mobility,
+      },
+    });
 
     return {
       success: false,

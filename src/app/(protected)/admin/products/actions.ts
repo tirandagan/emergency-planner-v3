@@ -76,6 +76,7 @@ export async function getCategories() {
           id: categories.id,
           name: categories.name,
           parentId: categories.parentId,
+          description: categories.description,
           icon: categories.icon,
         })
         .from(categories)

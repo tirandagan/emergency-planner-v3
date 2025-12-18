@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { Loader2, Plus, ChevronRight, ChevronDown, Trash2, Edit, GripVertical, FolderOpen, FileText, Package, DollarSign, FolderInput, Search, ExternalLink, Image as ImageIcon, Smile } from 'lucide-react';
+import { Loader2, Plus, ChevronRight, ChevronDown, Trash2, Edit, GripVertical, FileText, Package, DollarSign, FolderInput, Search, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import { 
     getCategoryTree, 
     getCategoryImpact, 
@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { EmojiPickerDialog } from '@/components/admin/EmojiPicker';
+import { EditCategoryDialog, CreateCategoryDialog } from '@/components/admin/category-dialogs';
 import { DeleteCategoryDialog } from '@/components/admin/DeleteCategoryDialog';
 import TagSelector from '../products/components/TagSelector';
 import { TIMEFRAMES, DEMOGRAPHICS, LOCATIONS, SCENARIOS } from '../products/constants';
@@ -228,8 +229,6 @@ export default function CategoryManager() {
     
     // Actions
     const [isCreating, setIsCreating] = useState(false);
-    const [newCatName, setNewCatName] = useState('');
-    const [newCatDescription, setNewCatDescription] = useState('');
 
     // Create Master Item State
     const [isCreatingMasterItem, setIsCreatingMasterItem] = useState(false);
@@ -486,24 +485,9 @@ export default function CategoryManager() {
     };
 
     const handleCreateClick = () => {
-        setNewCatName('');
-        setNewCatDescription('');
-        setCurrentIcon('🗂️');
         setIsCreating(true);
     };
 
-    const handleCreateSubmit = async () => {
-        if (!newCatName) return;
-        const res = await createCategory(newCatName, selectedCat, newCatDescription, currentIcon);
-        if (res.success) {
-            setNewCatName('');
-            setNewCatDescription('');
-            setCurrentIcon('🗂️');
-            setIsCreating(false);
-            fetchTree();
-            if (selectedCat) setExpandedIds(prev => new Set(prev).add(selectedCat));
-        }
-    };
 
     const handleDeleteCategoryClick = async () => {
         if (!contextMenu.categoryId) return;
@@ -585,20 +569,6 @@ export default function CategoryManager() {
         setEditingId(null);
     };
 
-    const handleUpdateDescription = async () => {
-        if (!editingDescription) return;
-        const res = await updateCategory(editingDescription.id, {
-            name: editingDescription.name,
-            description: editingDescription.description,
-            icon: editingDescription.icon
-        });
-        if (res.success) {
-            setEditingDescription(null);
-            fetchTree();
-        } else {
-            alert('Error updating description: ' + (res.message || 'Unknown error'));
-        }
-    };
 
     const handleMasterItemSave = async () => {
         if (!editingMasterItem) return;
@@ -1023,171 +993,42 @@ export default function CategoryManager() {
                 )}
             </div>
 
-            {/* Create Category Dialog */}
-            <Dialog open={isCreating} onOpenChange={setIsCreating}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle>{selectedCat ? "Create Sub-Category" : "Create Root Category"}</DialogTitle>
-                        <DialogDescription>
-                            Create a new category to organize your master items.
-                        </DialogDescription>
-                    </DialogHeader>
+            {/* Create Category Dialog - Using Shared Component */}
+            <CreateCategoryDialog
+                isOpen={isCreating}
+                parentId={selectedCat}
+                onClose={() => setIsCreating(false)}
+                onCreate={async (name, parentId, description, icon) => {
+                    const res = await createCategory(name, parentId, description, icon);
+                    if (res.success) {
+                        setIsCreating(false);
+                        fetchTree();
+                        if (parentId) setExpandedIds(prev => new Set(prev).add(parentId));
+                    }
+                }}
+            />
 
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Icon</label>
-                            <div className="flex items-center gap-3">
-                                <div className="text-4xl">{currentIcon}</div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setEmojiPickerOpen(true)}
-                                    className="gap-2"
-                                >
-                                    <Smile className="w-4 h-4" />
-                                    Choose Icon
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label htmlFor="cat-name" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Name</label>
-                            <Input
-                                id="cat-name"
-                                value={newCatName}
-                                onChange={e => setNewCatName(e.target.value)}
-                                placeholder="Category Name"
-                                autoFocus
-                                onKeyDown={(e) => e.key === 'Enter' && handleCreateSubmit()}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="cat-desc" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Description (Optional)</label>
-                            <Textarea
-                                id="cat-desc"
-                                value={newCatDescription}
-                                onChange={e => setNewCatDescription(e.target.value)}
-                                placeholder="Category Description"
-                                className="h-20 resize-none"
-                            />
-                        </div>
-                    </div>
-
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsCreating(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={handleCreateSubmit}
-                            disabled={!newCatName}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            Create
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Category Dialog */}
-            <Dialog open={!!editingDescription} onOpenChange={(open) => !open && setEditingDescription(null)}>
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle>Edit Category</DialogTitle>
-                        <DialogDescription>
-                            Update the category name, icon, and description.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-4">
-                        {/* Name Field */}
-                        <div>
-                            <label htmlFor="edit-name" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Name *</label>
-                            <Input
-                                id="edit-name"
-                                value={editingDescription?.name || ''}
-                                onChange={e => setEditingDescription(prev => prev ? {...prev, name: e.target.value} : null)}
-                                placeholder="Category Name"
-                            />
-                        </div>
-
-                        {/* Icon Picker */}
-                        <div>
-                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Icon</label>
-                            <div className="flex items-center gap-3">
-                                <div className="text-4xl">{editingDescription?.icon || '🗂️'}</div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        if (editingDescription) {
-                                            setCurrentIcon(editingDescription.icon);
-                                            setEmojiPickerOpen(true);
-                                        }
-                                    }}
-                                    className="gap-2"
-                                >
-                                    <Smile className="w-4 h-4" />
-                                    Choose Icon
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Slug Preview (Read-only) */}
-                        <div>
-                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">URL Slug (Auto-generated)</label>
-                            <div className="text-sm text-muted-foreground font-mono bg-muted p-2 rounded border border-border">
-                                {editingDescription?.name
-                                    .toLowerCase()
-                                    .replace(/\s+/g, '-')
-                                    .replace(/[^a-z0-9-]/g, '') || 'preview-slug'}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Used in URLs and API endpoints
-                            </p>
-                        </div>
-
-                        {/* Description Field */}
-                        <div>
-                            <label htmlFor="edit-desc" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Description</label>
-                            <Textarea
-                                id="edit-desc"
-                                value={editingDescription?.description || ''}
-                                onChange={e => setEditingDescription(prev => prev ? {...prev, description: e.target.value} : null)}
-                                placeholder="Enter category description..."
-                                className="h-32"
-                            />
-                        </div>
-
-                        {/* Creation Date (Read-only) */}
-                        <div>
-                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Created</label>
-                            <div className="text-sm text-muted-foreground">
-                                {editingDescription?.createdAt
-                                    ? new Date(editingDescription.createdAt).toLocaleString()
-                                    : 'Unknown'}
-                            </div>
-                        </div>
-                    </div>
-
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setEditingDescription(null)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={handleUpdateDescription}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            disabled={!editingDescription?.name?.trim()}
-                        >
-                            Save Changes
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* Edit Category Dialog - Using Shared Component */}
+            <EditCategoryDialog
+                isOpen={!!editingDescription}
+                category={editingDescription ? {
+                    id: editingDescription.id,
+                    name: editingDescription.name,
+                    description: editingDescription.description,
+                    icon: editingDescription.icon,
+                    createdAt: editingDescription.createdAt
+                } : null}
+                onClose={() => setEditingDescription(null)}
+                onSave={async (id, data) => {
+                    const res = await updateCategory(id, data);
+                    if (res.success) {
+                        setEditingDescription(null);
+                        fetchTree();
+                    } else {
+                        alert('Error updating: ' + (res.message || 'Unknown error'));
+                    }
+                }}
+            />
 
             {/* Create Master Item Dialog */}
             <Dialog open={isCreatingMasterItem} onOpenChange={setIsCreatingMasterItem}>
@@ -1241,6 +1082,20 @@ export default function CategoryManager() {
             {/* Edit Master Item Dialog */}
             <Dialog open={!!editingMasterItem} onOpenChange={(open) => !open && setEditingMasterItem(null)}>
                 <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <style>{`
+                        .edit-master-item-dialog input::selection,
+                        .edit-master-item-dialog textarea::selection,
+                        .edit-master-item-dialog select::selection {
+                            background-color: hsl(var(--primary)) !important;
+                            color: hsl(var(--primary-foreground)) !important;
+                        }
+                        .edit-master-item-dialog input::-moz-selection,
+                        .edit-master-item-dialog textarea::-moz-selection,
+                        .edit-master-item-dialog select::-moz-selection {
+                            background-color: hsl(var(--primary)) !important;
+                            color: hsl(var(--primary-foreground)) !important;
+                        }
+                    `}</style>
                     <DialogHeader>
                         <DialogTitle>Edit Master Item</DialogTitle>
                         <DialogDescription>
@@ -1248,7 +1103,7 @@ export default function CategoryManager() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 edit-master-item-dialog">
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="edit-master-name" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Name</label>

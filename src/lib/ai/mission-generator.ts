@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import { getMissionGenerationModel, MODELS } from '@/lib/openrouter';
 import { buildMegaPrompt, buildUserMessage } from '@/lib/prompts';
 import { logAIUsage } from './usage-logger';
+import { logAiError } from '@/lib/system-logger';
 import type { WizardFormData } from '@/types/wizard';
 
 /**
@@ -114,6 +115,23 @@ export async function generateMissionPlan(
     }
 
     console.error('Mission generation error:', error);
+
+    // Log incident for admin notification
+    await logAiError(error, {
+      model: MISSION_MODEL,
+      userId: userId || 'anonymous',
+      userAction: 'Generating disaster preparedness plan',
+      component: 'MissionGenerator',
+      route: '/lib/ai/mission-generator',
+      requestData: {
+        scenario: formData.scenario,
+        location: formData.location,
+        householdSize: formData.householdSize,
+        householdMembers: formData.householdMembers?.length,
+        hasPets: formData.hasPets,
+      },
+    });
+
     throw error;
   }
 }

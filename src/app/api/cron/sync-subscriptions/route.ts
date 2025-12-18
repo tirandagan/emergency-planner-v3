@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { profiles } from '@/db/schema/profiles';
 import { isNotNull } from 'drizzle-orm';
 import { syncUserSubscription } from '@/app/actions/subscriptions';
+import { logPaymentError } from '@/lib/system-logger';
 
 /**
  * Daily cron job to reconcile subscription status with Stripe
@@ -78,6 +79,18 @@ export async function GET(): Promise<NextResponse> {
         }
       } catch (error) {
         console.error(`Error syncing user ${user.id}:`, error);
+
+        await logPaymentError(error, {
+          userId: user.id,
+          stripeCustomerId: user.stripeCustomerId || undefined,
+          component: 'SubscriptionSyncCron',
+          route: '/api/cron/sync-subscriptions',
+          userAction: 'Syncing subscription status with Stripe',
+          metadata: {
+            stripeSubscriptionId: user.stripeSubscriptionId || undefined,
+          },
+        });
+
         errorCount++;
         errors.push({
           userId: user.id,
@@ -97,6 +110,13 @@ export async function GET(): Promise<NextResponse> {
     });
   } catch (error) {
     console.error('❌ Subscription sync job failed:', error);
+
+    await logPaymentError(error, {
+      component: 'SubscriptionSyncCron',
+      route: '/api/cron/sync-subscriptions',
+      userAction: 'Running subscription sync cron job',
+    });
+
     return NextResponse.json(
       {
         success: false,

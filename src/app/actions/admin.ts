@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { profiles } from '@/db/schema/profiles';
 import { eq } from 'drizzle-orm';
 import { createClient } from '@/lib/supabase/server';
+import { logSystemError } from '@/lib/system-logger';
 
 /**
  * Toggle high-value status for a user
@@ -92,6 +93,19 @@ export async function updateSystemSetting(
     return result;
   } catch (error) {
     console.error('Error updating system setting:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId: user?.id,
+      component: 'AdminActions',
+      route: '/app/actions/admin',
+      userAction: 'Updating system setting (admin operation)',
+      metadata: {
+        settingKey: key,
+        operation: 'updateSystemSetting',
+      },
+    });
+
     return { success: false, error: 'Failed to update setting' };
   }
 }
@@ -134,6 +148,19 @@ export async function cleanupOldDeletedPlans(
     };
   } catch (error) {
     console.error('Error cleaning up deleted plans:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId: user?.id,
+      component: 'AdminActions',
+      route: '/app/actions/admin',
+      userAction: 'Cleaning up old deleted plans (admin operation)',
+      metadata: {
+        daysOld,
+        operation: 'cleanupOldDeletedPlans',
+      },
+    });
+
     return { success: false, error: 'Failed to cleanup deleted plans' };
   }
 }
@@ -206,6 +233,18 @@ export async function getSystemStatistics(): Promise<{
     };
   } catch (error) {
     console.error('Error getting system statistics:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId: user?.id,
+      component: 'AdminActions',
+      route: '/app/actions/admin',
+      userAction: 'Retrieving system statistics (admin operation)',
+      metadata: {
+        operation: 'getSystemStatistics',
+      },
+    });
+
     return { success: false, error: 'Failed to get statistics' };
   }
 }

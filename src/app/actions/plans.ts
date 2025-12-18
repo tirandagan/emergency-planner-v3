@@ -13,6 +13,7 @@ import { createClient } from '@/utils/supabase/server';
 import type { ReportDataV2, EmergencyContactData } from '@/types/mission-report';
 import type { SharePermission } from '@/types/plan-share';
 import { TIER_SHARE_LIMITS } from '@/types/plan-share';
+import { logSystemError } from '@/lib/system-logger';
 
 /**
  * Update mission report with emergency contacts or item ownership
@@ -21,11 +22,14 @@ export async function updateMissionReport(
   reportId: string,
   data: Partial<ReportDataV2>
 ): Promise<{ success: boolean; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -65,7 +69,23 @@ export async function updateMissionReport(
     return { success: true };
   } catch (error) {
     console.error('Error updating mission report:', error);
-    return { success: false, error: 'Failed to update report' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Updating mission report data',
+      metadata: {
+        reportId,
+        operation: 'updateMissionReport',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues updating your plan. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -117,11 +137,24 @@ async function validateShareLimit(
     return { canShare: true, currentCount, tierLimit };
   } catch (error) {
     console.error('Error validating share limit:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Validating plan share limits',
+      metadata: {
+        operation: 'validateShareLimit',
+        additionalSharesNeeded,
+      },
+    });
+
     return {
       canShare: false,
       currentCount: 0,
       tierLimit: 0,
-      error: 'Failed to validate share limit',
+      error: "We're experiencing issues validating your share limit. Our team has been notified and will resolve this shortly.",
     };
   }
 }
@@ -138,11 +171,14 @@ export async function shareMissionReport(
   shares?: Array<{ id: string; shareToken: string; sharedWithEmail: string }>;
   error?: string;
 }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -187,7 +223,25 @@ export async function shareMissionReport(
     return { success: true, shares };
   } catch (error) {
     console.error('Error sharing mission report:', error);
-    return { success: false, error: 'Failed to share report' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Sharing mission report with others',
+      metadata: {
+        reportId,
+        emailCount: emails.length,
+        permissions,
+        operation: 'shareMissionReport',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues sharing your plan. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -197,11 +251,14 @@ export async function shareMissionReport(
 export async function deleteMissionReport(
   reportId: string
 ): Promise<{ success: boolean; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -229,7 +286,23 @@ export async function deleteMissionReport(
     return { success: true };
   } catch (error) {
     console.error('Error deleting mission report:', error);
-    return { success: false, error: 'Failed to delete report' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Soft-deleting mission report',
+      metadata: {
+        reportId,
+        operation: 'deleteMissionReport',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues deleting your plan. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -259,11 +332,14 @@ export async function updateOwnedItems(
 export async function restoreMissionReport(
   reportId: string
 ): Promise<{ success: boolean; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -282,7 +358,23 @@ export async function restoreMissionReport(
     return result;
   } catch (error) {
     console.error('Error restoring mission report:', error);
-    return { success: false, error: 'Failed to restore report' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Restoring deleted mission report',
+      metadata: {
+        reportId,
+        operation: 'restoreMissionReport',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues restoring your plan. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -294,11 +386,14 @@ export async function createMissionReportVersion(
   changesSummary?: string,
   editReason?: string
 ): Promise<{ success: boolean; versionId?: string; versionNumber?: number; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -330,7 +425,25 @@ export async function createMissionReportVersion(
     };
   } catch (error) {
     console.error('Error creating mission report version:', error);
-    return { success: false, error: 'Failed to create version' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Creating mission report version snapshot',
+      metadata: {
+        reportId,
+        changesSummary,
+        editReason,
+        operation: 'createMissionReportVersion',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues creating a version snapshot. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -342,11 +455,14 @@ export async function updateMissionReportWithVersioning(
   data: Partial<ReportDataV2>,
   changesSummary?: string
 ): Promise<{ success: boolean; versionNumber?: number; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -376,7 +492,24 @@ export async function updateMissionReportWithVersioning(
     };
   } catch (error) {
     console.error('Error updating mission report with versioning:', error);
-    return { success: false, error: 'Failed to update report' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Updating mission report with versioning',
+      metadata: {
+        reportId,
+        changesSummary,
+        operation: 'updateMissionReportWithVersioning',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues updating your plan. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -395,11 +528,14 @@ export async function shareMissionReportWithEmail(
   emailsSent?: number;
   emailsFailed?: number;
 }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -471,7 +607,25 @@ export async function shareMissionReportWithEmail(
     };
   } catch (error) {
     console.error('Error sharing mission report with email:', error);
-    return { success: false, error: 'Failed to share report' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Sharing mission report with email notifications',
+      metadata: {
+        reportId,
+        emailCount: emails.length,
+        permissions,
+        operation: 'shareMissionReportWithEmail',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues sharing your plan. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -487,11 +641,14 @@ export async function resendShareEmail(
   shareId: string,
   customMessage?: string
 ): Promise<{ success: boolean; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -587,7 +744,23 @@ export async function resendShareEmail(
     return { success: true };
   } catch (error) {
     console.error('Error resending share email:', error);
-    return { success: false, error: 'Failed to resend email' };
+
+    await logSystemError(error, {
+      category: 'external_service',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Resending plan share email notification',
+      metadata: {
+        shareId,
+        operation: 'resendShareEmail',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues resending the email. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -611,11 +784,14 @@ export async function getMissionReportShares(
   }>;
   error?: string;
 }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -639,7 +815,23 @@ export async function getMissionReportShares(
     return { success: true, shares };
   } catch (error) {
     console.error('Error getting mission report shares:', error);
-    return { success: false, error: 'Failed to get shares' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Retrieving mission report shares',
+      metadata: {
+        reportId,
+        operation: 'getMissionReportShares',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues retrieving plan shares. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -649,11 +841,14 @@ export async function getMissionReportShares(
 export async function revokePlanShare(
   shareId: string
 ): Promise<{ success: boolean; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -678,7 +873,23 @@ export async function revokePlanShare(
     return { success: true };
   } catch (error) {
     console.error('Error revoking plan share:', error);
-    return { success: false, error: 'Failed to revoke share' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Revoking plan share access',
+      metadata: {
+        shareId,
+        operation: 'revokePlanShare',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues revoking the share. Our team has been notified and will resolve this shortly.",
+    };
   }
 }
 
@@ -688,11 +899,14 @@ export async function revokePlanShare(
 export async function reactivatePlanShare(
   shareId: string
 ): Promise<{ success: boolean; error?: string }> {
+  let userId: string | undefined;
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id;
 
     if (!user) {
       return { success: false, error: 'Unauthorized' };
@@ -729,6 +943,22 @@ export async function reactivatePlanShare(
     return result;
   } catch (error) {
     console.error('Error reactivating plan share:', error);
-    return { success: false, error: 'Failed to reactivate share' };
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Reactivating disabled plan share',
+      metadata: {
+        shareId,
+        operation: 'reactivatePlanShare',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues reactivating the share. Our team has been notified and will resolve this shortly.",
+    };
   }
 }

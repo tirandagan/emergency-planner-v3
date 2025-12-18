@@ -1,5 +1,7 @@
 'use server';
 
+import { logSystemError } from '@/lib/system-logger';
+
 /**
  * Google Maps Geocoding API Integration
  * Converts waypoint names to geographic coordinates
@@ -96,6 +98,19 @@ export async function geocodeWaypoint(
   } catch (error) {
     console.error(`❌ Geocoding exception for "${waypointName}":`, error instanceof Error ? error.message : error);
     console.error(`   Stack trace:`, error instanceof Error ? error.stack : 'N/A');
+
+    await logSystemError(error, {
+      category: 'external_service',
+      component: 'GeocodingService',
+      route: '/lib/geocoding',
+      userAction: 'Geocoding waypoint to coordinates',
+      metadata: {
+        waypointName,
+        locationContext,
+        operation: 'geocodeWaypoint',
+      },
+    });
+
     return null;
   }
 }

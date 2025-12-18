@@ -6,19 +6,25 @@ import { userActivityLog } from '@/db/schema/analytics';
 import { billingTransactions } from '@/db/schema/billing';
 import { eq, desc } from 'drizzle-orm';
 import { createClient } from '@/lib/supabase/server';
+import { logApiError } from '@/lib/system-logger';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  let adminUserId: string | undefined;
+  let targetUserId: string | undefined;
+
   try {
     const { userId } = await params;
+    targetUserId = userId;
 
     // Check admin authorization
     const supabase = await createClient();
     const {
       data: { user: authUser },
     } = await supabase.auth.getUser();
+    adminUserId = authUser?.id;
 
     if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -126,6 +132,16 @@ export async function GET(
     return NextResponse.json(responseData);
   } catch (error) {
     console.error('Error fetching user details:', error);
+
+    await logApiError(error, {
+      route: '/api/admin/users/[userId]',
+      userId: adminUserId,
+      userAction: 'Fetching comprehensive user details (admin operation)',
+      metadata: {
+        targetUserId,
+      },
+    });
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

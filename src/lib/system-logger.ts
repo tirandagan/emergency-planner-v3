@@ -126,6 +126,70 @@ const ERROR_PATTERNS: Record<
 };
 
 /**
+ * Sanitize request/response data before logging to prevent sensitive information exposure
+ * Recursively redacts sensitive keys like passwords, API keys, tokens, etc.
+ */
+function sanitizeLogData(
+  data: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  const sensitiveKeys = [
+    'password',
+    'apikey',
+    'api_key',
+    'secret',
+    'token',
+    'authorization',
+    'creditcard',
+    'cardnumber',
+    'cvv',
+    'ssn',
+    'privatekey',
+    'private_key',
+    'resend_api_key',
+    'openrouter_api_key',
+    'stripe_secret_key',
+    'next_public_google_services_api_key',
+    'access_token',
+    'refresh_token',
+    'bearer',
+    'x-api-key',
+  ];
+
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    const lowerKey = key.toLowerCase();
+
+    // Check if key contains any sensitive pattern
+    const isSensitive = sensitiveKeys.some((sensitiveKey) =>
+      lowerKey.includes(sensitiveKey)
+    );
+
+    if (isSensitive) {
+      sanitized[key] = '[REDACTED]';
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      // Recursively sanitize nested objects
+      sanitized[key] = sanitizeLogData(value as Record<string, unknown>);
+    } else if (Array.isArray(value)) {
+      // Sanitize arrays of objects
+      sanitized[key] = value.map((item) =>
+        typeof item === 'object' && item !== null
+          ? sanitizeLogData(item as Record<string, unknown>)
+          : item
+      );
+    } else {
+      sanitized[key] = value;
+    }
+  }
+
+  return sanitized;
+}
+
+/**
  * Parse error to extract meaningful information
  */
 function parseError(error: unknown): {
@@ -245,6 +309,10 @@ export async function logSystemError(
   }
 
   try {
+    // Sanitize request and response data before logging
+    const sanitizedRequestData = sanitizeLogData(options.requestData);
+    const sanitizedResponseData = sanitizeLogData(options.responseData);
+
     // Prepare log entry
     const logEntry: NewSystemLog = {
       severity,
@@ -257,8 +325,8 @@ export async function logSystemError(
       component: options.component,
       route: options.route,
       stackTrace: options.stackTrace || parsed.stackTrace,
-      requestData: options.requestData,
-      responseData: options.responseData,
+      requestData: sanitizedRequestData,
+      responseData: sanitizedResponseData,
       metadata: {
         ...options.metadata,
         suggestion: pattern.suggestion,
