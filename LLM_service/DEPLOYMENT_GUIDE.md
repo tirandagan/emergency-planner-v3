@@ -371,7 +371,7 @@ Adjust Celery worker concurrency:
 
 ```bash
 # In render.yaml or Render Dashboard
-dockerCommand: celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=20
+dockerCommand: celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=20 --events
 
 # Default: 10 concurrent tasks
 # Increase to 20-30 for more throughput

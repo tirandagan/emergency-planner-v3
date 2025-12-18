@@ -38,7 +38,7 @@ services:
       - ./prompts:/app/prompts
     depends_on:
       - redis
-    command: celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=10
+    command: celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=10 --events
     networks:
       - llm-network
 

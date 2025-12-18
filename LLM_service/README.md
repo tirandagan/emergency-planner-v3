@@ -230,7 +230,7 @@ docker push yourusername/llm-service:latest
 2. Same repository and configuration as Web Service
 3. Configuration:
    - **Name**: `llm-service-worker`
-   - **Start Command**: `celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=10`
+   - **Start Command**: `celery -A app.celery_app worker --loglevel=info --pool=eventlet --concurrency=10 --events`
    - **Same environment variables** as Web Service
 
 **2.5 Create Monitoring Service (Flower - Optional)**
@@ -704,7 +704,7 @@ redis-server
 
 # Terminal 2: Start Celery Worker
 source venv/bin/activate
-celery -A app.celery_app worker --loglevel=debug --pool=eventlet --concurrency=4
+celery -A app.celery_app worker --loglevel=debug --pool=eventlet --concurrency=4 --events
 
 # Terminal 3: Start FastAPI
 source venv/bin/activate
@@ -813,7 +813,7 @@ docker logs llm-redis
 
 ```bash
 # Correct worker command
-celery -A app.celery_app worker --pool=eventlet --concurrency=10
+celery -A app.celery_app worker --pool=eventlet --concurrency=10 --events
 ```
 
 #### 4. Webhook Signature Validation Fails
