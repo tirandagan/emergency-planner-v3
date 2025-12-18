@@ -282,12 +282,22 @@ const QuickTagger = ({
 
     return (
         <div
-            className="bg-card border-x border-b border-border py-6 px-6 shadow-lg rounded-b-lg mx-2 -mt-[1px]"
+            className="bg-card border-x border-b border-border py-6 px-6 shadow-lg rounded-b-lg mx-2 -mt-[1px] relative"
             onClick={(e) => e.stopPropagation()}
             style={{
                 animation: 'slideDown 250ms cubic-bezier(0.4, 0, 0.2, 1)'
             }}
         >
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
+                className="absolute top-4 right-4 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Close"
+            >
+                <X className="w-4 h-4" strokeWidth={2.5} />
+            </button>
             <style>{`
                 @keyframes slideDown {
                     from {
@@ -1626,19 +1636,18 @@ export default function ProductsClient({
                                             )}
 
                                             {/* Products Table */}
-                                            <table className="w-full text-left text-sm text-muted-foreground">
+                                            <table className="w-full text-left text-sm text-muted-foreground table-fixed">
                                                 <thead className="bg-background/50 text-muted-foreground text-[10px] uppercase font-medium border-b border-border/50">
                                                     <tr>
-                                                        <th className="px-6 py-2 w-[40%] cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('name')}>
+                                                        <th className="px-6 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('name')}>
                                                             <div className="flex items-center gap-2">Product <SortIcon field="name" /></div>
                                                         </th>
-                                                        <th className="px-6 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('supplier')}>
+                                                        <th className="px-6 py-2 w-[180px] cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('supplier')}>
                                                             <div className="flex items-center gap-2">Supplier <SortIcon field="supplier" /></div>
                                                         </th>
-                                                        <th className="px-6 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('price')}>
+                                                        <th className="px-6 py-2 w-[120px] cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('price')}>
                                                             <div className="flex items-center gap-2">Price <SortIcon field="price" /></div>
                                                         </th>
-                                                        <th className="px-6 py-2 text-right">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border/50">
@@ -1664,7 +1673,7 @@ export default function ProductsClient({
                                                             onContextMenu={(e) => handleContextMenu(e, product)}
                                                             onClick={(e) => handleProductClick(e, product.id)}
                                                         >
-                                                            <td className="px-6 py-3">
+                                                            <td className="px-6 py-3 min-w-0">
                                                                 <div className="flex gap-3 items-start">
                                                                     {/* Broken link indicator */}
                                                                     {hasOverriddenTags && (
@@ -1675,7 +1684,7 @@ export default function ProductsClient({
                                                                         </div>
                                                                     )}
                                                                     {product.imageUrl && (
-                                                                        <img src={product.imageUrl} alt="" className="w-24 h-24 rounded bg-muted object-cover border border-border" />
+                                                                        <img src={product.imageUrl} alt="" className="w-24 h-24 rounded bg-muted object-cover border border-border shrink-0" />
                                                                     )}
                                                                     <div className="min-w-0 flex-1">
                                                                         <div className="font-medium text-foreground">{product.name}</div>
@@ -1709,15 +1718,15 @@ export default function ProductsClient({
                                                                     </div>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-3">
+                                                            <td className="px-6 py-3 w-[180px]">
                                                                 <div className="flex flex-col gap-0.5">
-                                                                    <div className="text-foreground text-xs flex items-center gap-1.5">
+                                                                    <div className="text-foreground text-xs flex items-center gap-1.5 min-w-0">
                                                                         {!product.supplierId && (
-                                                                            <span title="Missing Supplier">
+                                                                            <span title="Missing Supplier" className="shrink-0">
                                                                                 <AlertCircle className="w-3.5 h-3.5 text-destructive" strokeWidth={2.5} />
                                                                             </span>
                                                                         )}
-                                                                        {product.supplier?.name || <span className="text-destructive italic">No Supplier</span>}
+                                                                        <span className="truncate min-w-0">{product.supplier?.name || <span className="text-destructive italic">No Supplier</span>}</span>
                                                                     </div>
                                                                     <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase ${
                                                                         product.type === 'DROP_SHIP'
@@ -1728,46 +1737,15 @@ export default function ProductsClient({
                                                                     </span>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-3">
+                                                            <td className="px-6 py-3 w-[120px]">
                                                                 <div className="text-foreground font-mono">
                                                                     ${product.price ? Number(product.price).toFixed(2) : '0.00'}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-3 text-right">
-                                                                <div className={`flex justify-end gap-1 transition-opacity ${isTagging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setTaggingProductId(isTagging ? null : product.id);
-                                                                        }}
-                                                                        className={`p-1.5 rounded transition-colors ${
-                                                                            isTagging
-                                                                                ? 'text-primary bg-primary/10 ring-1 ring-primary/20'
-                                                                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                                                                        }`}
-                                                                        title="Quick Tag"
-                                                                    >
-                                                                        <Tag className="w-3.5 h-3.5" strokeWidth={2.5} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => openEditModal(product)}
-                                                                        className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-muted rounded transition-colors"
-                                                                    >
-                                                                        <Pencil className="w-3.5 h-3.5" strokeWidth={2.5} />
-                                                                    </button>
-                                                                    <form action={async () => {
-                                                                        if(confirm('Delete this product?')) await deleteProduct(product.id);
-                                                                    }}>
-                                                                        <button className="text-muted-foreground hover:text-destructive p-1.5 hover:bg-destructive/10 rounded transition-colors">
-                                                                            <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
-                                                                        </button>
-                                                                    </form>
                                                                 </div>
                                                             </td>
                                                         </tr>
                                                         {isTagging && (
                                                             <tr>
-                                                                <td colSpan={4} className="p-0 relative z-10 overflow-hidden">
+                                                                <td colSpan={3} className="p-0 relative z-10 overflow-hidden">
                                                                     <QuickTagger 
                                                                         product={product} 
                                                                         masterItem={masterGroup.masterItem || undefined}
@@ -1869,6 +1847,16 @@ export default function ProductsClient({
             >
                 <Pencil className="w-4 h-4 text-primary" strokeWidth={2.5} />
                 Edit Specific Product
+            </button>
+            <button
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                onClick={() => {
+                    setTaggingProductId(contextMenu.product.id);
+                    setContextMenu(null);
+                }}
+            >
+                <Tag className="w-4 h-4 text-secondary" strokeWidth={2.5} />
+                Quick Tag
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
