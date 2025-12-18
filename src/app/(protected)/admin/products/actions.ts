@@ -521,8 +521,33 @@ export const getProductDetailsFromAmazon = async (query: string) => {
         };
 
     } catch (e: any) {
-        console.error("Decodo Error:", e);
-        return { success: false, message: e.message };
+        // Parse error message to provide better user feedback
+        let userMessage = e.message;
+        let fieldError: string | undefined;
+
+        // Check if this is an ASIN validation error
+        if (userMessage.includes('ASIN length is not valid')) {
+            userMessage = 'Invalid ASIN: ASINs must be exactly 10 characters (letters and numbers). Please check the ASIN and try again.';
+            fieldError = 'asin';
+        } else if (userMessage.includes('Unable to extract a valid Amazon ASIN')) {
+            // Error from URL ASIN extraction
+            fieldError = 'productUrl';
+        } else if (userMessage.includes('Invalid ASIN length')) {
+            // Error from ASIN length validation
+            fieldError = 'asin';
+        } else if (userMessage.includes('Decodo API Error')) {
+            // Extract just the meaningful part of the error
+            const match = userMessage.match(/Decodo API Error: \d+ .+ - (.+)/);
+            if (match) {
+                userMessage = match[1];
+            }
+        }
+
+        return {
+            success: false,
+            message: userMessage,
+            fieldError
+        };
     }
 };
 

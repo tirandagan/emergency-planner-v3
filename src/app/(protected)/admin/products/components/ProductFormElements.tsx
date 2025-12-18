@@ -19,9 +19,11 @@ export const InputGroup = ({ label, required = false, action, children }: { labe
     </div>
 );
 
-export const TextInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input {...props} className={`w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all text-sm ${props.className || ''}`} />
-);
+export const TextInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>((props, ref) => (
+    <input ref={ref} {...props} className={`w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all text-sm ${props.className || ''}`} />
+));
+
+TextInput.displayName = 'TextInput';
 
 export const SelectInput = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
     <select {...props} className={`w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all text-sm appearance-none ${props.className || ''}`} />

@@ -238,37 +238,47 @@ async function expandShortenedUrl(shortUrl: string): Promise<string> {
 }
 
 export async function getDecodoProductDetails(urlOrAsin: string, country = 'US'): Promise<SimplifiedProduct | null> {
-    let processedUrl = urlOrAsin;
+    let processedUrl = urlOrAsin.trim();
 
     // Check if this is a shortened Amazon URL that needs expansion
-    const isShortenedUrl = urlOrAsin.includes('a.co/') || urlOrAsin.includes('amzn.to/');
+    const isShortenedUrl = processedUrl.includes('a.co/') || processedUrl.includes('amzn.to/');
 
     if (isShortenedUrl) {
-        console.log('[Decodo] Detected shortened URL, expanding:', urlOrAsin);
-        processedUrl = await expandShortenedUrl(urlOrAsin);
+        console.log('[Decodo] Detected shortened URL, expanding:', processedUrl);
+        processedUrl = await expandShortenedUrl(processedUrl);
         console.log('[Decodo] Expanded URL:', processedUrl);
     }
 
     // Try to extract ASIN from the (possibly expanded) URL
-    const asinMatch = processedUrl.match(/(?:\/dp\/|\/gp\/product\/|\/product\/)([A-Z0-9]{10})/);
+    // Supports: /dp/, /gp/product/, /product/, /gp/aw/d/ (mobile)
+    const asinMatch = processedUrl.match(/(?:\/dp\/|\/gp\/product\/|\/gp\/aw\/d\/|\/product\/)([A-Z0-9]{10})(?:\/|$|\?)/);
     const isAsin = /^[A-Z0-9]{10}$/.test(processedUrl);
 
-    let query = processedUrl;
+    let query: string;
 
     if (isAsin) {
+        // User provided a direct ASIN
         query = processedUrl;
+        console.log('[Decodo] Using direct ASIN:', query);
     } else if (asinMatch && asinMatch[1]) {
+        // Successfully extracted ASIN from URL
         query = asinMatch[1];
-        console.log('[Decodo] Extracted ASIN:', query);
+        console.log('[Decodo] Extracted ASIN from URL:', query);
     } else {
-        // If we cannot extract ASIN but it is a URL, we might need to use a different target or assume 'query' allows URL?
-        // However, the error message specifically said "amazon_product target is not available with url parameter, use query parameter instead".
-        // It is safest to pass ASIN as 'query'.
-        // If we only have a URL and no ASIN, maybe we can use 'amazon_url' target or 'universal'.
-        // But let's assume it is an Amazon URL and we can extract ASIN.
-        // If we fail to extract ASIN, we will try to pass the whole URL as query, as some scrapers allow that.
-        // But better to warn.
-        console.warn('[Decodo] Could not extract ASIN from URL, sending URL as query:', processedUrl);
+        // Could not extract a valid ASIN from the URL
+        throw new Error(
+            'Unable to extract a valid Amazon ASIN from the provided URL. ' +
+            'Please ensure the URL contains a valid product identifier (e.g., /dp/B001234567). ' +
+            'Alternatively, you can enter the 10-character ASIN directly in the SKU/ASIN field.'
+        );
+    }
+
+    // Validate the extracted/provided ASIN is exactly 10 characters
+    if (query.length !== 10) {
+        throw new Error(
+            `Invalid ASIN length: "${query}" is ${query.length} characters, but ASINs must be exactly 10 characters. ` +
+            'Please check the product URL or enter a valid ASIN directly.'
+        );
     }
 
     // Based on error: "amazon_product target is not available with url parameter, use query parameter instead."
@@ -284,21 +294,21 @@ export async function getDecodoProductDetails(urlOrAsin: string, country = 'US')
     if (!task.id) throw new Error('No task ID returned from Decodo');
 
     const result = await pollDecodoTask(task.id);
-    
+
     if (!result || (Array.isArray(result) && result.length === 0)) return null;
-    
+
     // The result from Decodo with 'parse: true' returns an array of results.
     // Each result has a 'content' property which contains the product details.
     // Based on logs: {"results":[{"content":{...}}]}
     // So result is the array `results`.
-    
+
     // Check if first item has 'content'
     const firstItem = Array.isArray(result) ? result[0] : result;
-    
+
     if (firstItem && firstItem.content) {
         return mapProductDetails(firstItem.content);
     }
-    
+
     // Fallback if structure is different
     return mapProductDetails(firstItem);
 }

@@ -128,8 +128,10 @@ export default function ProductEditDialog({
     const [productSuggestions, setProductSuggestions] = useState<Record<string, any> | null>(null);
     const [searchResults, setSearchResults] = useState<any[]>([]);
 
-    // Refs for debouncing
+    // Refs for debouncing and field focus
     const asinDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+    const asinInputRef = useRef<HTMLInputElement | null>(null);
+    const productUrlInputRef = useRef<HTMLInputElement | null>(null);
     
     // Dropdown State
     const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -649,19 +651,26 @@ export default function ProductEditDialog({
     };
 
     const handleAsinChange = (newAsin: string) => {
-        setFormState({ ...formState, asin: newAsin });
+        // Only allow alphanumeric characters for ASIN
+        const sanitizedAsin = newAsin.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+        setFormState({ ...formState, asin: sanitizedAsin });
 
         // Clear any existing timer
         if (asinDebounceTimer.current) {
             clearTimeout(asinDebounceTimer.current);
         }
 
+        // Clear any previous ASIN errors when user starts editing
+        if (decodoError && decodoError.includes('ASIN')) {
+            setDecodoError(null);
+        }
+
         // Only trigger modal if ASIN is exactly 10 characters (valid Amazon ASIN length)
         const currentSupplier = localSuppliers.find(s => s.id === formState.supplierId);
-        if (newAsin.length === 10 && currentSupplier?.name === 'Amazon') {
+        if (sanitizedAsin.length === 10 && currentSupplier?.name === 'Amazon') {
             // Debounce: wait 2.5 seconds before showing modal (in case user is still typing)
             asinDebounceTimer.current = setTimeout(() => {
-                setFetchContext({ method: 'asin', value: newAsin });
+                setFetchContext({ method: 'asin', value: sanitizedAsin });
                 setIsFetchFromAmazonModalOpen(true);
             }, 2500);
         }
@@ -707,9 +716,23 @@ export default function ProductEditDialog({
                 applyAutoFillData(res.data);
             } else {
                 setDecodoError(res.message || 'Unknown error');
+
+                // Focus the appropriate field based on the error
+                if (res.fieldError === 'asin' && asinInputRef.current) {
+                    // ASIN-related error: focus ASIN field
+                    setTimeout(() => {
+                        asinInputRef.current?.focus();
+                        asinInputRef.current?.select();
+                    }, 100);
+                } else if (res.fieldError === 'productUrl' && productUrlInputRef.current) {
+                    // URL extraction error: focus Product URL field
+                    setTimeout(() => {
+                        productUrlInputRef.current?.focus();
+                        productUrlInputRef.current?.select();
+                    }, 100);
+                }
             }
         } catch (error: any) {
-            console.error(error);
             setDecodoError("Error fetching details: " + error.message);
         } finally {
             setIsFetchingDetails(false);
@@ -896,6 +919,7 @@ export default function ProductEditDialog({
                                         <div className="flex flex-col gap-2">
                                             <div className="flex gap-2">
                                                 <TextInput
+                                                    ref={productUrlInputRef}
                                                     name="productUrl"
                                                     type="url"
                                                     value={formState.productUrl || ''}
@@ -1150,6 +1174,7 @@ export default function ProductEditDialog({
                                 <div className="space-y-4">
                                     <InputGroup label="SKU / ASIN">
                                         <TextInput
+                                            ref={asinInputRef}
                                             name="asin"
                                             value={formState.asin || formState.sku || ''}
                                             onChange={e => handleAsinChange(e.target.value)}
