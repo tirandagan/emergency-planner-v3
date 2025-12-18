@@ -34,9 +34,14 @@ export function UpgradeButton({
 
     const result = await createCheckoutSession(targetTier, userId, userEmail);
 
+    // DEBUG: Log the result to console
+    console.log('[UpgradeButton] createCheckoutSession result:', result);
+
     if (result.success) {
+      console.log('[UpgradeButton] Success! Redirecting to:', result.checkoutUrl);
       window.location.href = result.checkoutUrl;
     } else {
+      console.log('[UpgradeButton] Error occurred:', result.error);
       toast.error(result.error || 'Failed to start checkout');
       setIsRedirecting(false);
     }

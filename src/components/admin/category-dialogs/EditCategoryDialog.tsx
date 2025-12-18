@@ -23,7 +23,7 @@ interface EditCategoryDialogProps {
   onSave: (id: string, data: { name: string; description: string; icon: string }) => Promise<void>;
 }
 
-export function EditCategoryDialog({ isOpen, category, onClose, onSave }: EditCategoryDialogProps): JSX.Element | null {
+export function EditCategoryDialog({ isOpen, category, onClose, onSave }: EditCategoryDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('🗂️');

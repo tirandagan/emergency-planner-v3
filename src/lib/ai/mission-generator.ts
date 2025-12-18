@@ -124,11 +124,11 @@ export async function generateMissionPlan(
       component: 'MissionGenerator',
       route: '/lib/ai/mission-generator',
       requestData: {
-        scenario: formData.scenario,
+        scenarios: formData.scenarios,
         location: formData.location,
-        householdSize: formData.householdSize,
-        householdMembers: formData.householdMembers?.length,
-        hasPets: formData.hasPets,
+        familyMembersCount: formData.familyMembers?.length,
+        durationDays: formData.durationDays,
+        homeType: formData.homeType,
       },
     });
 

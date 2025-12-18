@@ -27,7 +27,10 @@ export async function createCheckoutSession(
   userId: string,
   userEmail: string
 ): Promise<CreateCheckoutSessionResult> {
+  console.log('[createCheckoutSession] Starting - Tier:', tier, 'UserId:', userId);
+
   try {
+    console.log('[createCheckoutSession] Creating Stripe session...');
     const priceId = tier === 'BASIC' ? STRIPE_CONFIG.basicPriceId : STRIPE_CONFIG.proPriceId;
 
     if (!priceId) {
@@ -71,9 +74,10 @@ export async function createCheckoutSession(
       };
     }
 
+    console.log('[createCheckoutSession] SUCCESS - Checkout URL created');
     return { success: true, checkoutUrl: session.url };
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('[createCheckoutSession] CAUGHT ERROR:', error);
 
     await logPaymentError(error, {
       userId,

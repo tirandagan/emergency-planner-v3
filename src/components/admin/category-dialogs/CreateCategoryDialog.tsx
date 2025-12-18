@@ -15,7 +15,7 @@ interface CreateCategoryDialogProps {
   onCreate: (name: string, parentId: string | null, description: string, icon: string) => Promise<void>;
 }
 
-export function CreateCategoryDialog({ isOpen, parentId, onClose, onCreate }: CreateCategoryDialogProps): JSX.Element {
+export function CreateCategoryDialog({ isOpen, parentId, onClose, onCreate }: CreateCategoryDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('🗂️');

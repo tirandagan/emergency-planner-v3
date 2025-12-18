@@ -422,6 +422,7 @@ export async function logApiError(
     userAction?: string;
     requestData?: Record<string, unknown>;
     responseData?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
   }
 ): Promise<string | null> {
   return logSystemError(error, {
