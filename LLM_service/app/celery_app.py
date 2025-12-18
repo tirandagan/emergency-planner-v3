@@ -9,6 +9,18 @@ if 'celery' in sys.argv[0] or 'worker' in sys.argv:
         import eventlet
         eventlet.monkey_patch()
         print("✅ eventlet.monkey_patch() applied successfully")
+
+        # CRITICAL: Patch psycopg2 for PostgreSQL connections under eventlet
+        # This prevents "Second simultaneous read on fileno" errors when multiple
+        # green threads access database connections from the connection pool
+        try:
+            from eventlet.support import psycopg2_patcher
+            psycopg2_patcher.make_psycopg_green()
+            print("✅ psycopg2 patched for eventlet green threads")
+        except Exception as e:
+            print(f"⚠️  Failed to patch psycopg2: {e}")
+            print("   This may cause socket conflicts with PostgreSQL connections")
+
     except ImportError:
         print("⚠️  eventlet not available")
 
