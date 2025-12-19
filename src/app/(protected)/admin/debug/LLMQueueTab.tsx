@@ -110,6 +110,31 @@ export function LLMQueueTab() {
     }
   }, [isLoadingURL, statusFilter, fetchHealth, fetchJobs]);
 
+  // Auto-refresh when there are processing jobs
+  useEffect(() => {
+    const hasProcessingJobs = jobs.some(job => job.status === 'processing');
+
+    if (!hasProcessingJobs) return;
+
+    // Poll in the background without showing loading state
+    const pollInterval = setInterval(() => {
+      // Silently fetch jobs without triggering loading state
+      fetchLLMJobs(statusFilter, limitResults)
+        .then((data: LLMJobsResponse) => {
+          setJobs(data.jobs);
+          setError(null);
+        })
+        .catch((err) => {
+          console.error('Background poll failed:', err);
+          // Don't update error state to avoid UI flicker
+        });
+    }, 2000); // Poll every 2 seconds
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [jobs, statusFilter, limitResults]);
+
   // Refresh both health and jobs
   const handleRefresh = () => {
     fetchHealth();
@@ -178,6 +203,12 @@ export function LLMQueueTab() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              {jobs.some(job => job.status === 'processing') && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-50 dark:bg-yellow-950/20 text-yellow-800 dark:text-yellow-400 text-sm border border-yellow-200 dark:border-yellow-900/30">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                  <span className="font-medium">Auto-refreshing</span>
+                </div>
+              )}
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as JobStatusFilter)}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Filter status" />
@@ -198,7 +229,7 @@ export function LLMQueueTab() {
                   <SelectItem value="50">50 records</SelectItem>
                   <SelectItem value="100">100 records</SelectItem>
                   <SelectItem value="200">200 records</SelectItem>
-                  <SelectItem value="Today">Today</SelectItem>
+                  <SelectItem value="Today">Last 24 Hours</SelectItem>
                   <SelectItem value="7 Days">Last 7 Days</SelectItem>
                   <SelectItem value="30 Days">Last 30 Days</SelectItem>
                 </SelectContent>

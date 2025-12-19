@@ -174,10 +174,10 @@ def list_jobs(
             now = datetime.now(timezone.utc)
 
             if limit_results == "Today":
-                # Jobs created today (UTC)
-                start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-                query = query.filter(WorkflowJob.created_at >= start_of_day)
-                logger.debug(f"Applied 'Today' filter (since {start_of_day.isoformat()})")
+                # Jobs created in the last 24 hours
+                twenty_four_hours_ago = now - timedelta(hours=24)
+                query = query.filter(WorkflowJob.created_at >= twenty_four_hours_ago)
+                logger.debug(f"Applied 'Today' filter (last 24 hours since {twenty_four_hours_ago.isoformat()})")
 
             elif limit_results == "7 Days":
                 # Jobs created in last 7 days

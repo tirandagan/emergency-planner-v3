@@ -84,6 +84,25 @@ export function LLMJobDetailModal({ jobId, onClose }: LLMJobDetailModalProps) {
     fetchJobDetail();
   }, [jobId]);
 
+  // Poll for updates when job is processing
+  useEffect(() => {
+    if (!jobId || !jobDetail || jobDetail.status !== 'processing') return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const data: LLMJobDetail = await fetchLLMJobDetails(jobId);
+        setJobDetail(data);
+      } catch (err) {
+        console.error('Failed to poll job details:', err);
+        // Don't update error state during polling to avoid UI flicker
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [jobId, jobDetail?.status]);
+
   const formatDate = (date: string | null): string => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleString();

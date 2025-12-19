@@ -538,7 +538,7 @@ curl -X POST https://llm-service-api.onrender.com/api/v1/workflow \
 
 **Limit Results Filter Values**:
 - Numeric value (e.g., `25`, `100`, `500`): Return up to N jobs (overrides `limit` parameter, range: 1-500)
-- `Today`: Jobs created today (UTC timezone)
+- `Today`: Jobs created in the last 24 hours
 - `7 Days`: Jobs created in the last 7 days
 - `30 Days`: Jobs created in the last 30 days
 
