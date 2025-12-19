@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Fragment, useRef } from "react";
 import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield, Baby, UserCheck, User, MoveRight } from "lucide-react";
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
-import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags } from "./actions";
+import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags, getMasterItems } from "./actions";
 import { getCategoryImpact, updateCategory, deleteCategory, createCategory, moveMasterItem } from "@/app/actions/categories";
 import { EditCategoryDialog, AddCategoryDialog, MoveCategoryDialog, MoveMasterItemDialog } from "@/components/admin/category-dialogs";
 import { DeleteCategoryDialog } from "@/components/admin/DeleteCategoryDialog";
@@ -563,6 +563,33 @@ export default function ProductsClient({
       if (!result.success) {
           alert(result.message || 'Failed to move master item');
           throw new Error(result.message);
+      }
+
+      // Reload master items to show new location while preserving expansion state
+      const updatedMasterItems = await getMasterItems();
+      setAllMasterItems(updatedMasterItems);
+
+      // Expand parent category and subcategory to show the moved item
+      const movedItem = updatedMasterItems.find(item => item.id === masterItemId);
+      if (movedItem) {
+          const parentCategory = allCategories.find(cat =>
+              cat.id === targetCategoryId ||
+              (cat.parentId && allCategories.find(c => c.id === cat.parentId)?.id === targetCategoryId)
+          );
+
+          if (parentCategory) {
+              // If target is a root category, expand it
+              if (!parentCategory.parentId) {
+                  navigation.expandCategory(parentCategory.id);
+              } else {
+                  // If target is a subcategory, expand both parent and subcategory
+                  const rootCategory = allCategories.find(c => c.id === parentCategory.parentId);
+                  if (rootCategory) {
+                      navigation.expandCategory(rootCategory.id);
+                  }
+                  navigation.expandSubCategory(parentCategory.id);
+              }
+          }
       }
   };
 
@@ -1456,6 +1483,21 @@ export default function ProductsClient({
              setAllMasterItems(prev => [...prev, newItem].sort((a, b) => a.name.localeCompare(b.name)));
              if (modals.isCategoryModalOpen) {
                 modals.setCategoryModalMasterItem(newItem.id);
+             }
+
+             // Auto-expand the parent subcategory to show the new item
+             if (newItem.categoryId) {
+                 const parentCategory = allCategories.find(cat => cat.id === newItem.categoryId);
+                 if (parentCategory) {
+                     // If it's a subcategory, expand both parent category and subcategory
+                     if (parentCategory.parentId) {
+                         navigation.expandCategory(parentCategory.parentId);
+                         navigation.expandSubCategory(parentCategory.id);
+                     } else {
+                         // If it's a root category, just expand it
+                         navigation.expandCategory(parentCategory.id);
+                     }
+                 }
              }
           }}
           onUpdated={(updatedItem) => {

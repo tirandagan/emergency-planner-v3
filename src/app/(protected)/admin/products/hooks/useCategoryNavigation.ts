@@ -17,6 +17,8 @@ export interface UseCategoryNavigationReturn {
   activeMasterItemId: string | null;
   toggleCategory: (catId: string) => void;
   toggleSubCategory: (subCatId: string) => void;
+  expandCategory: (catId: string) => void;
+  expandSubCategory: (subCatId: string) => void;
   expandAll: (categoryIds: string[], subCategoryIds: string[]) => void;
   collapseAll: () => void;
   handleCategorySelect: (catId: string) => void;
@@ -61,6 +63,24 @@ export function useCategoryNavigation(
     });
   }, []);
 
+  const expandCategory = useCallback((catId: string): void => {
+    setExpandedCategories(prev => {
+      if (prev.has(catId)) return prev; // Already expanded
+      const next = new Set(prev);
+      next.add(catId);
+      return next;
+    });
+  }, []);
+
+  const expandSubCategory = useCallback((subCatId: string): void => {
+    setExpandedSubCategories(prev => {
+      if (prev.has(subCatId)) return prev; // Already expanded
+      const next = new Set(prev);
+      next.add(subCatId);
+      return next;
+    });
+  }, []);
+
   const handleCategorySelect = useCallback((catId: string): void => {
     setActiveCategoryId(prev => prev === catId ? null : catId);
     setActiveMasterItemId(null); // Clear master item selection when category changes
@@ -87,6 +107,8 @@ export function useCategoryNavigation(
     activeMasterItemId,
     toggleCategory,
     toggleSubCategory,
+    expandCategory,
+    expandSubCategory,
     expandAll,
     collapseAll,
     handleCategorySelect,
