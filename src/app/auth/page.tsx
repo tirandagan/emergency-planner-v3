@@ -11,18 +11,24 @@ export const metadata = {
 // Force dynamic rendering (uses cookies for auth check)
 export const dynamic = 'force-dynamic';
 
-export default async function AuthPage() {
+interface AuthPageProps {
+  searchParams: Promise<{ redirect?: string }>;
+}
+
+export default async function AuthPage({ searchParams }: AuthPageProps) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const params = await searchParams;
+  const redirectUrl = params.redirect ? decodeURIComponent(params.redirect) : "/dashboard";
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users to their intended destination
   if (user) {
-    redirect("/dashboard");
+    redirect(redirectUrl);
   }
 
   return (
     <AuthLayout title="Welcome">
-      <UnifiedAuthForm />
+      <UnifiedAuthForm redirectUrl={redirectUrl} />
     </AuthLayout>
   );
 }

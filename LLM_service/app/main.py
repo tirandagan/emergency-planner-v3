@@ -106,11 +106,10 @@ def health_check(db: Session = Depends(get_db)):
         }
 
         if settings.REDIS_URL.startswith("rediss://"):
-            # Create SSL context for secure Redis connections (Render, etc.)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            redis_kwargs["ssl"] = ssl_context
+            # Use individual SSL parameters for redis-py 5.x compatibility
+            # (matches Celery configuration pattern)
+            redis_kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
+            redis_kwargs["ssl_check_hostname"] = False
 
         redis_client = redis.from_url(
             settings.REDIS_URL,

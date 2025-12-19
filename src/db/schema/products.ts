@@ -38,7 +38,7 @@ export const specificProducts = pgTable(
       .notNull()
       .references(() => masterItems.id, { onDelete: 'cascade' }),
     supplierId: uuid('supplier_id')
-      .references(() => suppliers.id, { onDelete: 'restrict' }),
+      .references(() => suppliers.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description'),
     price: decimal('price', { precision: 10, scale: 2 }),

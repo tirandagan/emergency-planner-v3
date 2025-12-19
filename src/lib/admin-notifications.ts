@@ -4,7 +4,7 @@ import { profiles } from '@/db/schema/profiles';
 import { eq } from 'drizzle-orm';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const FROM_EMAIL = `BePrepared.AI System Alert <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://beprepared.ai';
 

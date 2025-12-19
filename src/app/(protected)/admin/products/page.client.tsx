@@ -2526,45 +2526,45 @@ export default function ProductsClient({
       {/* Context Menu */}
       {contextMenu && (
         <div
-            className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[180px] animate-in fade-in zoom-in-95"
+            className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit animate-in fade-in zoom-in-95"
             style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
         >
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => {
                     openEditModal(contextMenu.product);
                     setContextMenu(null);
                 }}
             >
-                <Pencil className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <Pencil className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Edit Specific Product
             </button>
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => {
                     setTaggingProductId(contextMenu.product.id);
                     setContextMenu(null);
                 }}
             >
-                <Tag className="w-4 h-4 text-secondary" strokeWidth={2.5} />
+                <Tag className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
                 Quick Tag
             </button>
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => openCategoryModal(contextMenu.product)}
             >
-                <FolderTree className="w-4 h-4 text-warning" strokeWidth={2.5} />
+                <FolderTree className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
                 Change Category
             </button>
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => {
                     openAddToBundleModal(contextMenu.product);
                     setContextMenu(null);
                 }}
             >
-                <Package className="w-4 h-4 text-secondary" strokeWidth={2.5} />
+                <Package className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
                 Add to bundle
             </button>
             {/* Supplier Submenu with Flyout */}
@@ -2584,7 +2584,7 @@ export default function ProductsClient({
                 onMouseLeave={() => setSupplierSubmenuOpen(false)}
             >
                 <button
-                    className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors ${supplierSubmenuOpen ? 'bg-muted' : ''}`}
+                    className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap ${supplierSubmenuOpen ? 'bg-muted' : ''}`}
                     onClick={(e) => {
                         e.stopPropagation();
                         if (supplierButtonRef.current) {
@@ -2597,18 +2597,17 @@ export default function ProductsClient({
                         setSupplierSubmenuOpen(!supplierSubmenuOpen);
                     }}
                 >
-                    <Truck className="w-4 h-4 text-info" strokeWidth={2.5} />
+                    <Truck className="w-4 h-4 text-info flex-shrink-0" strokeWidth={2.5} />
                     {contextMenu.product.supplierId ? 'Change Supplier' : 'Assign Supplier'}
-                    <ChevronRight className={`w-4 h-4 ml-auto text-muted-foreground transition-transform ${supplierSubmenuOpen ? '' : ''}`} strokeWidth={2.5} />
+                    <ChevronRight className={`w-4 h-4 ml-auto text-muted-foreground transition-transform flex-shrink-0 ${supplierSubmenuOpen ? '' : ''}`} strokeWidth={2.5} />
                 </button>
                 {/* Flyout submenu - positioned to the right */}
                 {supplierSubmenuOpen && supplierSubmenuPosition && (
                     <div 
-                        className="fixed z-[80]"
+                        className="fixed z-[80] inline-flex flex-col w-fit"
                         style={{ 
                             top: supplierSubmenuPosition.top,
-                            left: supplierSubmenuPosition.left,
-                            minWidth: '180px'
+                            left: supplierSubmenuPosition.left
                         }}
                     >
                         <div className="bg-card border border-border rounded-lg shadow-2xl py-1 max-h-[300px] overflow-y-auto">
@@ -2638,7 +2637,7 @@ export default function ProductsClient({
             </div>
             <div className="h-px bg-border my-1" />
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-destructive/10 text-sm text-destructive flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-destructive/10 text-sm text-destructive flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={async () => {
                     if (confirm('Delete this product?')) {
                         await deleteProduct(contextMenu.product.id);
@@ -2655,41 +2654,41 @@ export default function ProductsClient({
       {/* Master Item Context Menu */}
       {masterItemContextMenu.visible && masterItemContextMenu.masterItem && (
         <div
-            className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[180px] overflow-hidden animate-in fade-in zoom-in-95"
+            className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden animate-in fade-in zoom-in-95"
             style={{ top: masterItemContextMenu.y, left: masterItemContextMenu.x }}
             onClick={(e) => e.stopPropagation()}
         >
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => handleMasterItemEdit(masterItemContextMenu.masterItem!)}
             >
-                <Edit className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <Edit className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Edit Master Item
             </button>
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => handleAddProductFromMasterItem(masterItemContextMenu.masterItem!)}
             >
-                <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <Plus className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Add Product
             </button>
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => handleMoveMasterItem(masterItemContextMenu.masterItem!)}
             >
-                <MoveRight className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <MoveRight className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Move Master Item
             </button>
             <div className="h-px bg-border my-1" />
             <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => handleCopyTags(masterItemContextMenu.masterItem!)}
             >
-                <Copy className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <Copy className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Copy Tags
             </button>
             <button
-                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${
+                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors whitespace-nowrap ${
                     copiedTags
                         ? 'hover:bg-muted text-foreground'
                         : 'text-muted-foreground cursor-not-allowed'
@@ -2697,7 +2696,7 @@ export default function ProductsClient({
                 onClick={() => copiedTags && handlePasteTags(masterItemContextMenu.masterItem!)}
                 disabled={!copiedTags}
             >
-                <ClipboardPaste className={`w-4 h-4 ${copiedTags ? 'text-success' : 'text-muted-foreground'}`} strokeWidth={2.5} />
+                <ClipboardPaste className={`w-4 h-4 flex-shrink-0 ${copiedTags ? 'text-success' : 'text-muted-foreground'}`} strokeWidth={2.5} />
                 Paste Tags
                 {copiedTags && (
                     <span className="ml-auto text-[10px] text-muted-foreground truncate max-w-[80px]">
@@ -2959,7 +2958,7 @@ export default function ProductsClient({
       {categoryContextMenu.visible && categoryContextMenu.category && (
         <div
           id="category-context-menu"
-          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[180px] overflow-hidden backdrop-blur-sm"
+          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden backdrop-blur-sm"
           style={{
             top: categoryContextMenu.y,
             left: categoryContextMenu.x
@@ -2968,9 +2967,9 @@ export default function ProductsClient({
         >
           <button
             onClick={() => handleCategoryEdit(categoryContextMenu.category!)}
-            className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
           >
-            <Edit className="w-4 h-4 text-primary" strokeWidth={2.5} />
+            <Edit className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
             Edit Category
           </button>
 
@@ -2978,9 +2977,9 @@ export default function ProductsClient({
           {categoryContextMenu.category.parentId === null && (
             <button
               onClick={() => handleCategoryAdd(categoryContextMenu.category!)}
-              className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+              className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
             >
-              <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
+              <Plus className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
               Add Subcategory
             </button>
           )}
@@ -2990,16 +2989,16 @@ export default function ProductsClient({
             <>
               <button
                 onClick={() => handleCategoryMove(categoryContextMenu.category!)}
-                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
               >
-                <FolderTree className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <FolderTree className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Move Category
               </button>
               <button
                 onClick={() => handleAddMasterItem(categoryContextMenu.category!)}
-                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
               >
-                <Layers className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <Layers className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Add Master Item
               </button>
             </>
@@ -3008,9 +3007,9 @@ export default function ProductsClient({
           <div className="h-px bg-border my-1" />
           <button
             onClick={() => handleCategoryDelete(categoryContextMenu.category!)}
-            className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-3 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-3 transition-colors whitespace-nowrap"
           >
-            <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+            <Trash2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
             Delete
           </button>
         </div>
@@ -3060,7 +3059,7 @@ export default function ProductsClient({
       {backgroundContextMenu.visible && (
         <div
           id="background-context-menu"
-          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[160px] overflow-hidden backdrop-blur-sm"
+          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden backdrop-blur-sm"
           style={{
             top: backgroundContextMenu.y,
             left: backgroundContextMenu.x
@@ -3072,9 +3071,9 @@ export default function ProductsClient({
               setAddingCategoryDialog('root');
               setBackgroundContextMenu(prev => ({ ...prev, visible: false }));
             }}
-            className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
           >
-            <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
+            <Plus className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
             Add Root Category
           </button>
         </div>

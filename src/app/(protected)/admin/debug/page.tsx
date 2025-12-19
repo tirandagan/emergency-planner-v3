@@ -11,6 +11,7 @@ import {
   type HealthStatus,
 } from './actions'
 import { SystemLogsTab } from './SystemLogsTab'
+import { SystemSettingsTab } from './SystemSettingsTab'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -42,6 +43,12 @@ import {
   Clock,
   User,
   Bug,
+  Cpu,
+  Layers,
+  HardDrive,
+  Radio,
+  Zap,
+  DollarSign,
 } from 'lucide-react'
 
 const statusColors: Record<HealthStatus, string> = {
@@ -59,12 +66,21 @@ const statusIcons: Record<HealthStatus, React.ReactNode> = {
 }
 
 const serviceIcons: Record<string, React.ReactNode> = {
-  'Database (PostgreSQL)': <Database className="w-5 h-5" />,
+  'Supabase': <Database className="w-5 h-5" />,
   'Supabase Auth': <Shield className="w-5 h-5" />,
   'Stripe': <CreditCard className="w-5 h-5" />,
   'Resend (Email)': <Mail className="w-5 h-5" />,
   'OpenRouter (AI)': <Bot className="w-5 h-5" />,
+  'WeatherAPI': <Activity className="w-5 h-5" />,
+  'LLM Service': <Cpu className="w-5 h-5" />,
   'Environment Config': <Settings className="w-5 h-5" />,
+}
+
+// Helper function for connection pool badge color
+function getConnectionPoolBadgeColor(usage: number): string {
+  if (usage > 90) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+  if (usage > 70) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+  return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
 }
 
 export default function DebugPage() {
@@ -169,7 +185,7 @@ export default function DebugPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-2xl grid-cols-5">
+        <TabsList className="grid w-full max-w-3xl grid-cols-6">
           <TabsTrigger value="health" className="gap-2">
             <Activity className="w-4 h-4" />
             Health
@@ -181,6 +197,10 @@ export default function DebugPage() {
           <TabsTrigger value="activity" className="gap-2">
             <Clock className="w-4 h-4" />
             Activity
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2">
+            <Settings className="w-4 h-4" />
+            Settings
           </TabsTrigger>
           <TabsTrigger value="cache" className="gap-2">
             <Trash2 className="w-4 h-4" />
@@ -216,7 +236,7 @@ export default function DebugPage() {
           )}
 
           {/* Service Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             {health?.services.map((service) => (
               <Card key={service.name} className="border-border">
                 <CardHeader className="pb-2">
@@ -232,21 +252,657 @@ export default function DebugPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{service.message}</p>
+                  <div className={`text-sm ${service.status === 'unhealthy' ? 'text-red-600 dark:text-red-400 font-medium' : service.status === 'degraded' ? 'text-yellow-600 dark:text-yellow-400 font-medium' : 'text-muted-foreground'}`}>
+                    {service.status !== 'healthy' && (
+                      <div className="flex items-start gap-2 mb-2">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span>{service.message}</span>
+                      </div>
+                    )}
+                    {service.status === 'healthy' && <p>{service.message}</p>}
+                  </div>
                   {service.latency !== undefined && (
                     <p className="text-xs mt-2">
                       Latency: {formatLatency(service.latency)}
                     </p>
                   )}
                   {service.details && Object.keys(service.details).length > 0 && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                        View details
-                      </summary>
-                      <pre className="text-xs mt-2 p-2 bg-muted rounded overflow-auto max-h-32">
-                        {JSON.stringify(service.details, null, 2)}
-                      </pre>
-                    </details>
+                    <>
+                      {service.name === 'Supabase' && service.details.supabaseUrl ? (
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            View details
+                          </summary>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Activity className="w-3 h-3" />
+                                <span className="font-medium">Supabase URL</span>
+                              </div>
+                              <span className="font-mono text-[10px]">{(service.details.supabaseUrl as string).replace('https://', '')}</span>
+                            </div>
+                            {service.details.userCount !== undefined && (
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-3 h-3" />
+                                  <span className="font-medium">Total Users</span>
+                                </div>
+                                <Badge variant="outline">{service.details.userCount as number}</Badge>
+                              </div>
+                            )}
+                            {service.details.totalLogs !== undefined && (
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <Bug className="w-3 h-3" />
+                                  <span className="font-medium">Total Logs</span>
+                                </div>
+                                <Badge variant="outline">{service.details.totalLogs as number}</Badge>
+                              </div>
+                            )}
+                            {service.details.unresolvedErrors !== undefined && (
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span className="font-medium">Unresolved Errors</span>
+                                </div>
+                                <Badge className={`${(service.details.unresolvedErrors as number) > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}`}>
+                                  {service.details.unresolvedErrors as number}
+                                </Badge>
+                              </div>
+                            )}
+                            {service.details.criticalAlerts !== undefined && (
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <XCircle className="w-3 h-3" />
+                                  <span className="font-medium">Critical Alerts</span>
+                                </div>
+                                <Badge className={`${(service.details.criticalAlerts as number) > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}`}>
+                                  {service.details.criticalAlerts as number}
+                                </Badge>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-3 h-3" />
+                                <span className="font-medium">Response Time</span>
+                              </div>
+                              <span>{service.details.responseTime as string}</span>
+                            </div>
+                            
+                            {/* Database Performance Section */}
+                            {service.details.activeConnections !== undefined && (
+                              <>
+                                <div className="text-xs font-semibold text-muted-foreground mt-3 mb-1">
+                                  Database Performance
+                                </div>
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Layers className="w-3 h-3" />
+                                    <span className="font-medium">Active Connections</span>
+                                  </div>
+                                  <Badge variant="outline">
+                                    {service.details.activeConnections as number} / {service.details.maxConnections as number}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Activity className="w-3 h-3" />
+                                    <span className="font-medium">Connection Pool Usage</span>
+                                  </div>
+                                  <Badge className={getConnectionPoolBadgeColor(service.details.connectionPoolUsage as number)}>
+                                    {service.details.connectionPoolUsage as number}%
+                                  </Badge>
+                                </div>
+                                {(service.details.slowQueries as number) > 0 && (
+                                  <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-2">
+                                      <AlertTriangle className="w-3 h-3" />
+                                      <span className="font-medium">Slow Queries</span>
+                                    </div>
+                                    <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                      {service.details.slowQueries as number}
+                                    </Badge>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            
+                            {/* Storage Metrics Section */}
+                            {service.details.storageUsedGB !== undefined && (
+                              <>
+                                <div className="text-xs font-semibold text-muted-foreground mt-3 mb-1">
+                                  Storage
+                                </div>
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <HardDrive className="w-3 h-3" />
+                                    <span className="font-medium">Storage Used</span>
+                                  </div>
+                                  <Badge variant="outline">{service.details.storageUsedGB as number} GB</Badge>
+                                </div>
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Database className="w-3 h-3" />
+                                    <span className="font-medium">File Count</span>
+                                  </div>
+                                  <Badge variant="outline">{(service.details.fileCount as number)?.toLocaleString()}</Badge>
+                                </div>
+                                {(service.details.storageBandwidthGB as number) > 0 && (
+                                  <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-2">
+                                      <Zap className="w-3 h-3" />
+                                      <span className="font-medium">Bandwidth Used</span>
+                                    </div>
+                                    <Badge variant="outline">{service.details.storageBandwidthGB as number} GB</Badge>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            
+                            {/* Realtime Metrics Section */}
+                            {service.details.realtimeConnections !== undefined && (
+                              <>
+                                <div className="text-xs font-semibold text-muted-foreground mt-3 mb-1">
+                                  Realtime Subscriptions
+                                </div>
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Radio className="w-3 h-3" />
+                                    <span className="font-medium">Active Connections</span>
+                                  </div>
+                                  <Badge variant="outline">{service.details.realtimeConnections as number}</Badge>
+                                </div>
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Layers className="w-3 h-3" />
+                                    <span className="font-medium">Active Channels</span>
+                                  </div>
+                                  <Badge variant="outline">{service.details.realtimeChannels as number}</Badge>
+                                </div>
+                                {(service.details.realtimeMessagesPerSec as number) > 0 && (
+                                  <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-2">
+                                      <Zap className="w-3 h-3" />
+                                      <span className="font-medium">Messages/Sec</span>
+                                    </div>
+                                    <Badge variant="outline">{service.details.realtimeMessagesPerSec as number}</Badge>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </details>
+                      ) : service.name === 'Supabase Auth' && service.details.activeUsersNow !== undefined ? (
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            View details
+                          </summary>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <User className="w-3 h-3" />
+                                <span className="font-medium">Active Users Now</span>
+                                <span className="text-muted-foreground text-[10px]">(last 15 min)</span>
+                              </div>
+                              <Badge variant="outline">{service.details.activeUsersNow as number}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span className="font-medium">Logins Today</span>
+                              </div>
+                              <Badge variant="outline">{service.details.loginsToday as number}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <XCircle className="w-3 h-3" />
+                                <span className="font-medium">Failed Logins Today</span>
+                              </div>
+                              <Badge className={`${(service.details.failedLoginsToday as number) > 10 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : (service.details.failedLoginsToday as number) > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}`}>
+                                {service.details.failedLoginsToday as number}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Activity className="w-3 h-3" />
+                                <span className="font-medium">Recent Signups</span>
+                                <span className="text-muted-foreground text-[10px]">(24h)</span>
+                              </div>
+                              <Badge variant="outline">{service.details.recentSignups24h as number}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-3 h-3" />
+                                <span className="font-medium">Admin Users</span>
+                              </div>
+                              <Badge variant="outline">{service.details.adminUsers as number}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-3 h-3" />
+                                <span className="font-medium">Auth Errors</span>
+                                <span className="text-muted-foreground text-[10px]">(unresolved)</span>
+                              </div>
+                              <Badge className={`${(service.details.authErrors as number) > 5 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : (service.details.authErrors as number) > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}`}>
+                                {service.details.authErrors as number}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-3 h-3" />
+                                <span className="font-medium">Response Time</span>
+                              </div>
+                              <span>{service.details.responseTime as string}</span>
+                            </div>
+                          </div>
+                        </details>
+                      ) : service.name === 'LLM Service' ? (
+                        <div className="mt-3 space-y-2">
+                          {!!service.details.serviceUrl && (
+                            <div className="mb-2">
+                              <a
+                                href={service.details.serviceUrl as string}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-muted-foreground hover:text-foreground underline"
+                              >
+                                {service.details.serviceUrl as string}
+                              </a>
+                            </div>
+                          )}
+                          {!!service.details.services && Object.entries(service.details.services as Record<string, any>).map(([key, value]) => {
+                            const isHealthy = value.status === 'healthy'
+                            const hasDetails = value.error || value.message || value.details
+                            return (
+                              <div key={key} className="space-y-1">
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    {key === 'database' && <Database className="w-3 h-3" />}
+                                    {key === 'redis' && <Activity className="w-3 h-3" />}
+                                    {key === 'celery' && <Cpu className="w-3 h-3" />}
+                                    <span className="font-medium capitalize">{key}</span>
+                                    {value.type && <span className="text-muted-foreground">({value.type})</span>}
+                                    {value.workers !== undefined && (
+                                      <span className="text-muted-foreground">({value.workers} worker{value.workers !== 1 ? 's' : ''})</span>
+                                    )}
+                                  </div>
+                                  <Badge className={`${isHealthy ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                    {isHealthy ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                    <span className="ml-1">{value.status}</span>
+                                  </Badge>
+                                </div>
+                                {!isHealthy && hasDetails && (
+                                  <div className="text-[10px] text-red-600 dark:text-red-400 pl-2 pr-2 py-1 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                                    {value.error && (
+                                      <div className="flex items-start gap-1">
+                                        <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                        <span className="flex-1"><strong>Error:</strong> {value.error}</span>
+                                      </div>
+                                    )}
+                                    {value.message && !value.error && (
+                                      <div className="flex items-start gap-1">
+                                        <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                        <span className="flex-1">{value.message}</span>
+                                      </div>
+                                    )}
+                                    {value.details && typeof value.details === 'string' && (
+                                      <div className="mt-1 text-muted-foreground">{value.details}</div>
+                                    )}
+                                    {value.details && typeof value.details === 'object' && (
+                                      <div className="mt-1 space-y-0.5">
+                                        {Object.entries(value.details).map(([detailKey, detailValue]) => (
+                                          <div key={detailKey} className="flex justify-between">
+                                            <span className="text-muted-foreground">{detailKey}:</span>
+                                            <span className="font-medium">{String(detailValue)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : service.name === 'Resend (Email)' && service.details.emailsSentToday !== undefined ? (
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            View details
+                          </summary>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Send className="w-3 h-3" />
+                                <span className="font-medium">Emails Sent Today</span>
+                              </div>
+                              <Badge variant="outline">{service.details.emailsSentToday as number}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-3 h-3" />
+                                <span className="font-medium">Emails Sent This Week</span>
+                              </div>
+                              <Badge variant="outline">{service.details.emailsSentThisWeek as number}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-3 h-3" />
+                                <span className="font-medium">Recent Bounces</span>
+                              </div>
+                              <Badge className={`${(service.details.recentBounces as number) > 10 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : (service.details.recentBounces as number) > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}`}>
+                                {service.details.recentBounces as number}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <XCircle className="w-3 h-3" />
+                                <span className="font-medium">Recent Failures</span>
+                              </div>
+                              <Badge className={`${(service.details.recentFailures as number) > 5 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : (service.details.recentFailures as number) > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}`}>
+                                {service.details.recentFailures as number}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Database className="w-3 h-3" />
+                                <span className="font-medium">Domains Configured</span>
+                              </div>
+                              <Badge variant="outline">{service.details.domainsConfigured as number}</Badge>
+                            </div>
+                            {!!service.details.domains && (service.details.domains as string[]).length > 0 && (
+                              <div className="text-xs p-2 bg-muted rounded">
+                                <div className="font-medium mb-1">Domains:</div>
+                                <div className="space-y-1">
+                                  {(service.details.domains as string[]).map((domain) => (
+                                    <div key={domain} className="font-mono text-[10px] text-muted-foreground">{domain}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-3 h-3" />
+                                <span className="font-medium">Last Email Sent</span>
+                              </div>
+                              <span className="text-[10px]">{service.details.lastEmailSent === 'Never' ? 'Never' : formatDate(service.details.lastEmailSent as string)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                              <div className="flex items-center gap-2">
+                                <Activity className="w-3 h-3" />
+                                <span className="font-medium">Response Time</span>
+                              </div>
+                              <span>{service.details.responseTime as string}</span>
+                            </div>
+                          </div>
+                        </details>
+                      ) : service.name === 'OpenRouter (AI)' && service.details.modelsAvailable !== undefined ? (
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            View details
+                          </summary>
+                          <div className="mt-3 space-y-3">
+                            {/* API Status Section */}
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">API Status</div>
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <Bot className="w-3 h-3" />
+                                  <span className="font-medium">Models Available</span>
+                                </div>
+                                <Badge variant="outline">{service.details.modelsAvailable as number}</Badge>
+                              </div>
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-3 h-3" />
+                                  <span className="font-medium">API Response Time</span>
+                                </div>
+                                <Badge variant="outline">{service.details.responseTime as string}</Badge>
+                              </div>
+                            </div>
+
+                            {/* Account Balance Section */}
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Account Balance</div>
+                              <div className="flex items-center justify-between text-xs p-3 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <CreditCard className="w-4 h-4" />
+                                  <span className="font-medium">Available Credits</span>
+                                </div>
+                                <Badge 
+                                  className={`font-mono text-sm px-3 py-1 ${
+                                    service.details.creditBalance === 'N/A' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' :
+                                    parseFloat((service.details.creditBalance as string).replace('$', '')) < 1 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                    parseFloat((service.details.creditBalance as string).replace('$', '')) < 10 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  }`}
+                                >
+                                  {service.details.creditBalance as string}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            {/* Usage - Today */}
+                            {service.details.requestsToday !== undefined && (
+                              <div className="space-y-2">
+                                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Today's Usage</div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <Activity className="w-3 h-3" />
+                                      <span className="text-[10px]">Requests</span>
+                                    </div>
+                                    <div className="font-semibold">{(service.details.requestsToday as number).toLocaleString()}</div>
+                                  </div>
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <DollarSign className="w-3 h-3" />
+                                      <span className="text-[10px]">Cost</span>
+                                    </div>
+                                    <div className="font-semibold font-mono">{service.details.costToday as string}</div>
+                                  </div>
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <Zap className="w-3 h-3" />
+                                      <span className="text-[10px]">Tokens</span>
+                                    </div>
+                                    <div className="font-semibold">{(service.details.tokensToday as number).toLocaleString()}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Usage - Last 7 Days */}
+                            {service.details.requests7Days !== undefined && (
+                              <div className="space-y-2">
+                                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Last 7 Days</div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <Activity className="w-3 h-3" />
+                                      <span className="text-[10px]">Requests</span>
+                                    </div>
+                                    <div className="font-semibold">{(service.details.requests7Days as number).toLocaleString()}</div>
+                                  </div>
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <DollarSign className="w-3 h-3" />
+                                      <span className="text-[10px]">Cost</span>
+                                    </div>
+                                    <div className="font-semibold font-mono">{service.details.cost7Days as string}</div>
+                                  </div>
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <Zap className="w-3 h-3" />
+                                      <span className="text-[10px]">Tokens</span>
+                                    </div>
+                                    <div className="font-semibold">{(service.details.tokens7Days as number).toLocaleString()}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Usage - Last 30 Days */}
+                            {service.details.requests30Days !== undefined && (
+                              <div className="space-y-2">
+                                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Last 30 Days</div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <Activity className="w-3 h-3" />
+                                      <span className="text-[10px]">Requests</span>
+                                    </div>
+                                    <div className="font-semibold">{(service.details.requests30Days as number).toLocaleString()}</div>
+                                  </div>
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <DollarSign className="w-3 h-3" />
+                                      <span className="text-[10px]">Cost</span>
+                                    </div>
+                                    <div className="font-semibold font-mono">{service.details.cost30Days as string}</div>
+                                  </div>
+                                  <div className="text-xs p-2 bg-muted rounded">
+                                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                      <Zap className="w-3 h-3" />
+                                      <span className="text-[10px]">Tokens</span>
+                                    </div>
+                                    <div className="font-semibold">{(service.details.tokens30Days as number).toLocaleString()}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                      ) : service.name === 'Stripe' && service.details.availableBalance !== undefined ? (
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            View details
+                          </summary>
+                          <div className="mt-3 space-y-3">
+                            {/* Balance Section */}
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Account Balance</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                    <CreditCard className="w-3 h-3" />
+                                    <span className="text-[10px]">Available</span>
+                                  </div>
+                                  <div className="font-semibold font-mono">{service.details.availableBalance as string}</div>
+                                </div>
+                                <div className="text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                    <Clock className="w-3 h-3" />
+                                    <span className="text-[10px]">Pending</span>
+                                  </div>
+                                  <div className="font-semibold font-mono">{service.details.pendingBalance as string}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Transactions (Last 24h) Section */}
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Transactions (Last 24h)</div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                                    <Activity className="w-3 h-3" />
+                                    <span className="text-[10px]">Total</span>
+                                  </div>
+                                  <div className="font-semibold">{service.details.chargesLast24h as number}</div>
+                                </div>
+                                <div className="text-xs p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                                  <div className="flex items-center gap-1 text-green-700 dark:text-green-400 mb-1">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span className="text-[10px]">Success</span>
+                                  </div>
+                                  <div className="font-semibold text-green-700 dark:text-green-400">{service.details.successfulCharges as number}</div>
+                                </div>
+                                <div className="text-xs p-2 bg-red-50 dark:bg-red-900/20 rounded">
+                                  <div className="flex items-center gap-1 text-red-700 dark:text-red-400 mb-1">
+                                    <XCircle className="w-3 h-3" />
+                                    <span className="text-[10px]">Failed</span>
+                                  </div>
+                                  <div className="font-semibold text-red-700 dark:text-red-400">{service.details.failedCharges as number}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Account Metrics Section */}
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Account Metrics</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Bot className="w-3 h-3" />
+                                    <span className="font-medium">Active Subscriptions</span>
+                                  </div>
+                                  <Badge variant="outline">{service.details.activeSubscriptions as string}</Badge>
+                                </div>
+                                <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-3 h-3" />
+                                    <span className="font-medium">Total Customers</span>
+                                  </div>
+                                  <Badge variant="outline">{service.details.totalCustomers as string}</Badge>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span className="font-medium">Open Disputes</span>
+                                </div>
+                                <Badge className={`${
+                                  (service.details.openDisputes as number) > 3 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                  (service.details.openDisputes as number) > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                  'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                }`}>
+                                  {service.details.openDisputes as number}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-3 h-3" />
+                                  <span className="font-medium">API Response Time</span>
+                                </div>
+                                <Badge variant="outline">{service.details.responseTime as string}</Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </details>
+                      ) : service.name === 'Environment Config' && service.details.variables ? (
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            View details
+                          </summary>
+                          <div className="mt-3 space-y-2">
+                            {Object.entries(service.details.variables as Record<string, string>).map(([varName, status]) => {
+                              const isConfigured = status === 'configured'
+                              return (
+                                <div key={varName} className="flex items-center justify-between text-xs p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Settings className="w-3 h-3" />
+                                    <span className="font-mono text-[10px]">{varName}</span>
+                                  </div>
+                                  <Badge className={`${isConfigured ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                    {isConfigured ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                    <span className="ml-1">{status}</span>
+                                  </Badge>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </details>
+                      ) : (
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            View details
+                          </summary>
+                          <pre className="text-xs mt-2 p-2 bg-muted rounded overflow-auto max-h-32">
+                            {JSON.stringify(service.details, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -263,6 +919,11 @@ export default function DebugPage() {
         {/* System Logs Tab */}
         <TabsContent value="logs" className="mt-6">
           <SystemLogsTab />
+        </TabsContent>
+
+        {/* System Settings Tab */}
+        <TabsContent value="settings" className="mt-6">
+          <SystemSettingsTab />
         </TabsContent>
 
         {/* Activity Logs Tab */}

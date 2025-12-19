@@ -121,10 +121,26 @@ export async function updateSupplier(formData: FormData) {
     return data;
 }
 
+export async function getProductsBySupplier(supplierId: string) {
+    const { specificProducts } = await import('@/db/schema/products');
+
+    const products = await db
+        .select({
+            id: specificProducts.id,
+            name: specificProducts.name,
+            price: specificProducts.price,
+            imageUrl: specificProducts.imageUrl,
+        })
+        .from(specificProducts)
+        .where(eq(specificProducts.supplierId, supplierId));
+
+    return products;
+}
+
 export async function deleteSupplier(id: string) {
     await checkAdmin();
-    
+
     await db.delete(suppliers).where(eq(suppliers.id, id));
-    
+
     revalidatePath('/admin/suppliers');
 }

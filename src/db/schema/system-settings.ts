@@ -72,4 +72,11 @@ export const DEFAULT_SYSTEM_SETTINGS = [
     description: 'Maximum number of versions to retain per plan',
     category: 'versioning',
   },
+  {
+    key: 'llm_service_url',
+    value: 'https://llm-service-api.onrender.com',
+    valueType: 'string' as const,
+    description: 'Base URL for LLM Workflow Microservice API endpoints',
+    category: 'integrations',
+  },
 ];

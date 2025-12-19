@@ -73,6 +73,7 @@ export const systemLogs = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    // Single column indexes
     severityIdx: index('idx_system_logs_severity').on(table.severity),
     categoryIdx: index('idx_system_logs_category').on(table.category),
     userIdIdx: index('idx_system_logs_user_id').on(table.userId),
@@ -80,6 +81,11 @@ export const systemLogs = pgTable(
     unresolvedIdx: index('idx_system_logs_unresolved').on(table.severity, table.resolved),
     errorCodeIdx: index('idx_system_logs_error_code').on(table.errorCode),
     componentIdx: index('idx_system_logs_component').on(table.component),
+    
+    // Composite indexes for grouping and sorting performance
+    categoryCreatedAtIdx: index('idx_system_logs_category_created_at').on(table.category, table.createdAt.desc()),
+    severityCategoryCreatedAtIdx: index('idx_system_logs_severity_category_created_at').on(table.severity, table.category, table.createdAt.desc()),
+    createdAtDescIdx: index('idx_system_logs_created_at_desc').on(table.createdAt.desc()),
   })
 );
 

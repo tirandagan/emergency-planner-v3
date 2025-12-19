@@ -54,19 +54,19 @@ import {
 } from 'lucide-react'
 
 const severityColors: Record<string, string> = {
-  debug: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  error: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  critical: 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-300',
+  debug: 'text-gray-500 dark:text-gray-400',
+  info: 'text-blue-500 dark:text-blue-400',
+  warning: 'text-yellow-500 dark:text-yellow-400',
+  error: 'text-red-500 dark:text-red-400',
+  critical: 'text-red-600 dark:text-red-300',
 }
 
 const severityIcons: Record<string, React.ReactNode> = {
-  debug: <Bug className="w-3 h-3" />,
-  info: <Info className="w-3 h-3" />,
-  warning: <AlertTriangle className="w-3 h-3" />,
-  error: <AlertCircle className="w-3 h-3" />,
-  critical: <XCircle className="w-3 h-3" />,
+  debug: <Bug className="w-4 h-4" />,
+  info: <Info className="w-4 h-4" />,
+  warning: <AlertTriangle className="w-4 h-4" />,
+  error: <AlertCircle className="w-4 h-4" />,
+  critical: <XCircle className="w-4 h-4" />,
 }
 
 const categoryColors: Record<string, string> = {
@@ -82,6 +82,97 @@ const categoryColors: Record<string, string> = {
   user_action: 'border-indigo-500',
 }
 
+// Log Entry Component
+function LogEntry({ 
+  log, 
+  onView, 
+  onResolve 
+}: { 
+  log: SystemLogEntry
+  onView: (log: SystemLogEntry) => void
+  onResolve: (log: SystemLogEntry) => void
+}) {
+  const formatTime = (date: Date | string | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleTimeString()
+  }
+
+  return (
+    <div
+      className={`border-l-4 ${categoryColors[log.category] || 'border-gray-500'} bg-card rounded-r-lg p-3 space-y-2`}
+    >
+      {/* Header row with time, severity, status, actions */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {formatTime(log.createdAt)}
+        </span>
+
+        <div className={`${severityColors[log.severity]}`} title={log.severity}>
+          {severityIcons[log.severity]}
+        </div>
+
+        <Badge variant="outline" className="text-xs">
+          {log.category.replace(/_/g, ' ')}
+        </Badge>
+
+        <div className="ml-auto flex items-center gap-2">
+          {log.resolved ? (
+            <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 text-xs">
+              <Check className="w-3 h-3 mr-1" />
+              Resolved
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 text-xs">
+              Open
+            </Badge>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onView(log)}
+            className="h-7 w-7 p-0"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </Button>
+
+          {!log.resolved && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onResolve(log)}
+              className="h-7 w-7 p-0"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Message */}
+      <div className="text-sm break-words">
+        {log.errorName && <span className="font-medium">{log.errorName}: </span>}
+        <span className="text-muted-foreground">{log.message}</span>
+      </div>
+
+      {/* Component and User info */}
+      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+        {log.component && (
+          <span className="break-all">{log.component}</span>
+        )}
+        {log.userId && (
+          <div className="flex items-center gap-1">
+            <User className="w-3 h-3" />
+            <span className="truncate max-w-32" title={log.userEmail || log.userId}>
+              {log.userEmail || log.userId.slice(0, 8)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function SystemLogsTab() {
   const [logs, setLogs] = useState<SystemLogEntry[]>([])
   const [stats, setStats] = useState<SystemLogStats | null>(null)
@@ -94,6 +185,7 @@ export function SystemLogsTab() {
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [unresolvedOnly, setUnresolvedOnly] = useState(false)
+  const [groupBy, setGroupBy] = useState<'date' | 'category' | 'severity'>('date')
 
   // View log modal
   const [selectedLog, setSelectedLog] = useState<SystemLogEntry | null>(null)
@@ -196,132 +288,183 @@ export function SystemLogsTab() {
     return new Date(date).toLocaleString()
   }
 
+  const formatTime = (date: Date | string | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleTimeString()
+  }
+
+  const getDateKey = (date: Date | string) => {
+    const d = new Date(date)
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  }
+
+  const groupLogsByDate = (logs: SystemLogEntry[]) => {
+    const grouped = new Map<string, SystemLogEntry[]>()
+
+    logs.forEach((log) => {
+      const dateKey = getDateKey(log.createdAt)
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, [])
+      }
+      grouped.get(dateKey)!.push(log)
+    })
+
+    return Array.from(grouped.entries()).map(([date, logs]) => ({ 
+      date, 
+      logs: logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }))
+  }
+
+  const groupLogsByCategory = (logs: SystemLogEntry[]) => {
+    const grouped = new Map<string, SystemLogEntry[]>()
+
+    logs.forEach((log) => {
+      const categoryKey = log.category.replace(/_/g, ' ')
+      if (!grouped.has(categoryKey)) {
+        grouped.set(categoryKey, [])
+      }
+      grouped.get(categoryKey)!.push(log)
+    })
+
+    return Array.from(grouped.entries()).map(([category, categoryLogs]) => ({
+      category,
+      dateGroups: groupLogsByDate(categoryLogs)
+    }))
+  }
+
+  const groupLogsBySeverity = (logs: SystemLogEntry[]) => {
+    const severityOrder = ['critical', 'error', 'warning', 'info', 'debug']
+    const grouped = new Map<string, SystemLogEntry[]>()
+
+    logs.forEach((log) => {
+      if (!grouped.has(log.severity)) {
+        grouped.set(log.severity, [])
+      }
+      grouped.get(log.severity)!.push(log)
+    })
+
+    const sortedGroups = Array.from(grouped.entries())
+      .sort((a, b) => severityOrder.indexOf(a[0]) - severityOrder.indexOf(b[0]))
+
+    return sortedGroups.map(([severity, severityLogs]) => ({
+      severity,
+      categoryGroups: categoryFilter === 'all' 
+        ? groupLogsByCategory(severityLogs)
+        : [{ category: 'all', dateGroups: groupLogsByDate(severityLogs) }]
+    }))
+  }
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Logs</CardDescription>
-            <CardTitle className="text-2xl">
-              {isLoadingStats ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.total || 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardDescription>Unresolved</CardDescription>
-            <CardTitle className="text-2xl text-red-600 dark:text-red-400">
-              {isLoadingStats ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.unresolved || 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardHeader className="pb-2">
-            <CardDescription>Last 24 Hours</CardDescription>
-            <CardTitle className="text-2xl">
-              {isLoadingStats ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.last24Hours || 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardDescription>Critical/Error</CardDescription>
-            <CardTitle className="text-2xl">
-              {isLoadingStats ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                (stats?.bySeverity?.critical || 0) + (stats?.bySeverity?.error || 0)
-              )}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      {/* Test Notification Button */}
+      {/* Logs Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Bell className="w-5 h-5" />
-            Admin Notifications
-          </CardTitle>
-          <CardDescription>Test the admin error notification system</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            onClick={handleSendTestNotification}
-            disabled={isSendingTestNotification}
-            className="gap-2"
-          >
-            {isSendingTestNotification ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Bell className="w-4 h-4" />
-            )}
-            Send Test Notification
-          </Button>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle className="text-lg">System Logs</CardTitle>
+              <CardDescription>Recent error and system logs</CardDescription>
+            </div>
 
+            {/* Stats Pills */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {isLoadingStats ? (
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <Badge variant="secondary" className="gap-1">
+                    Total: {stats?.total || 0}
+                  </Badge>
+                  <Badge variant="outline" className="gap-1 border-red-500 text-red-600 dark:text-red-400">
+                    Unresolved: {stats?.unresolved || 0}
+                  </Badge>
+                  <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-600 dark:text-yellow-400">
+                    24h: {stats?.last24Hours || 0}
+                  </Badge>
+                  <Badge variant="outline" className="gap-1 border-blue-500 text-blue-600 dark:text-blue-400">
+                    Critical/Error: {(stats?.bySeverity?.critical || 0) + (stats?.bySeverity?.error || 0)}
+                  </Badge>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleSendTestNotification}
+                disabled={isSendingTestNotification}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                {isSendingTestNotification ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Bell className="w-4 h-4" />
+                )}
+                Test Admin Notification
+              </Button>
+
+              <Button
+                onClick={loadLogs}
+                disabled={isLoading}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          {/* Notification Result */}
           {notificationResult && (
-            <div className={`p-4 rounded-lg ${
+            <div className={`p-3 rounded-lg text-sm mt-4 ${
               notificationResult.success
                 ? 'bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-400'
                 : 'bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400'
             }`}>
               <div className="flex items-center gap-2">
-                {notificationResult.success ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                {notificationResult.success ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                 {notificationResult.message}
               </div>
             </div>
           )}
 
-          <p className="text-xs text-muted-foreground">
-            Admin email: {process.env.ADMIN_EMAIL || 'Not configured (set ADMIN_EMAIL in .env.local)'}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Logs Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">System Logs</CardTitle>
-              <CardDescription>Recent error and system logs</CardDescription>
-            </div>
-            <Button
-              onClick={loadLogs}
-              disabled={isLoading}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Refresh
-            </Button>
-          </div>
-
           {/* Filters */}
-          <div className="flex flex-wrap gap-3 pt-4">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Severity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Severity</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                  <SelectItem value="debug">Debug</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center gap-2 pt-4 flex-wrap">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+
+            <Select value={groupBy} onValueChange={(v) => setGroupBy(v as 'date' | 'category' | 'severity')}>
+              <SelectTrigger className="w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Group by Date</SelectItem>
+                <SelectItem value="category">Group by Category</SelectItem>
+                <SelectItem value="severity">Group by Severity</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="h-4 w-px bg-border" />
+
+            <Select value={severityFilter} onValueChange={setSeverityFilter}>
+              <SelectTrigger className="w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Severity</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="debug">Debug</SelectItem>
+              </SelectContent>
+            </Select>
 
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Category" />
+              <SelectTrigger className="w-auto">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
@@ -337,14 +480,14 @@ export function SystemLogsTab() {
               </SelectContent>
             </Select>
 
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={unresolvedOnly}
                 onChange={(e) => setUnresolvedOnly(e.target.checked)}
-                className="rounded border-gray-300"
+                className="h-4 w-4 rounded border-gray-300 cursor-pointer"
               />
-              Unresolved only
+              <span className="whitespace-nowrap">Unresolved</span>
             </label>
           </div>
         </CardHeader>
@@ -361,96 +504,97 @@ export function SystemLogsTab() {
               <p className="text-sm">System logs will appear here when errors occur</p>
             </div>
           ) : (
-            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => (
-                    <TableRow key={log.id} className={`border-l-4 ${categoryColors[log.category] || 'border-gray-500'}`}>
-                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                        {formatDate(log.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={severityColors[log.severity]}>
-                          {severityIcons[log.severity]}
-                          <span className="ml-1">{log.severity}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {log.category.replace(/_/g, ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="truncate text-sm" title={log.message}>
-                          {log.errorName && <span className="font-medium">{log.errorName}: </span>}
-                          {log.message.slice(0, 60)}
-                          {log.message.length > 60 && '...'}
+            <div className="max-h-[600px] overflow-y-auto">
+              <div className="space-y-6">
+                {groupBy === 'date' && groupLogsByDate(logs).map(({ date, logs: dateLogs }) => (
+                  <div key={date} className="space-y-2">
+                    {/* Date Header */}
+                    <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b pb-2 mb-2">
+                      <h3 className="text-sm font-semibold text-muted-foreground">{date}</h3>
+                    </div>
+
+                    {/* Logs for this date */}
+                    <div className="space-y-2">
+                      {dateLogs.map((log) => (
+                        <LogEntry 
+                          key={log.id} 
+                          log={log} 
+                          onView={handleViewLog}
+                          onResolve={handleOpenResolveModal}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {groupBy === 'category' && groupLogsByCategory(logs).map(({ category, dateGroups }) => (
+                  <div key={category} className="space-y-2">
+                    {/* Category Header */}
+                    <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b pb-2 mb-2">
+                      <h3 className="text-sm font-semibold text-foreground capitalize">{category}</h3>
+                    </div>
+
+                    {/* Date groups within category */}
+                    <div className="space-y-4 ml-4">
+                      {dateGroups.map(({ date, logs: dateLogs }) => (
+                        <div key={date} className="space-y-2">
+                          <h4 className="text-xs font-medium text-muted-foreground">{date}</h4>
+                          <div className="space-y-2">
+                            {dateLogs.map((log) => (
+                              <LogEntry 
+                                key={log.id} 
+                                log={log}
+                                onView={handleViewLog}
+                                onResolve={handleOpenResolveModal}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        {log.component && (
-                          <div className="text-xs text-muted-foreground">
-                            {log.component}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {log.userId ? (
-                          <div className="flex items-center gap-1">
-                            <User className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-xs truncate max-w-20" title={log.userEmail}>
-                              {log.userEmail || log.userId.slice(0, 8)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {log.resolved ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400">
-                            <Check className="w-3 h-3 mr-1" />
-                            Resolved
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400">
-                            Open
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewLog(log)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {!log.resolved && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenResolveModal(log)}
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {groupBy === 'severity' && groupLogsBySeverity(logs).map(({ severity, categoryGroups }) => (
+                  <div key={severity} className="space-y-2">
+                    {/* Severity Header */}
+                    <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b pb-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={severityColors[severity]}>{severityIcons[severity]}</div>
+                        <h3 className={`text-sm font-semibold capitalize ${severityColors[severity]}`}>{severity}</h3>
+                      </div>
+                    </div>
+
+                    {/* Category groups within severity */}
+                    <div className="space-y-4 ml-4">
+                      {categoryGroups.map(({ category, dateGroups }) => (
+                        <div key={category} className="space-y-2">
+                          {category !== 'all' && (
+                            <h4 className="text-xs font-medium text-foreground capitalize">{category}</h4>
                           )}
+                          <div className={category !== 'all' ? 'ml-4 space-y-4' : 'space-y-4'}>
+                            {dateGroups.map(({ date, logs: dateLogs }) => (
+                              <div key={date} className="space-y-2">
+                                <h5 className="text-xs font-medium text-muted-foreground">{date}</h5>
+                                <div className="space-y-2">
+                                  {dateLogs.map((log) => (
+                                    <LogEntry 
+                                      key={log.id} 
+                                      log={log}
+                                      onView={handleViewLog}
+                                      onResolve={handleOpenResolveModal}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>

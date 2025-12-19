@@ -92,16 +92,16 @@ const CategoryTreeNode = ({
     );
 };
 
-export default function BundlesClient({ 
-    bundles, 
-    categories, 
-    masterItems, 
+export default function BundlesClient({
+    bundles,
+    categories,
+    masterItems,
     products,
     suppliers
-}: { 
-    bundles: any[], 
-    categories: any[], 
-    masterItems: any[], 
+}: {
+    bundles: any[],
+    categories: any[],
+    masterItems: any[],
     products: any[],
     suppliers: any[]
 }) {
@@ -110,10 +110,14 @@ export default function BundlesClient({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [bundleToDelete, setBundleToDelete] = useState<string | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  
+
   // Product Edit Dialog State
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
+  // Resizable Panel State
+  const [leftPanelWidth, setLeftPanelWidth] = useState(35); // percentage
+  const [isResizing, setIsResizing] = useState(false);
 
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -122,6 +126,9 @@ export default function BundlesClient({
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [bundleDesc, setBundleDesc] = useState("");
   const [bundlePrice, setBundlePrice] = useState("0.00");
+
+  // Track initial state for dirty checking
+  const [initialState, setInitialState] = useState<any>(null);
 
   // Targeting State
   const [targetScenarios, setTargetScenarios] = useState<string[]>([]);
@@ -325,6 +332,21 @@ export default function BundlesClient({
       setBundleItems([]);
       setIsEditMode(false);
       setIsModalOpen(true);
+
+      // Capture initial state for dirty checking
+      setInitialState({
+          name: "",
+          slug: "",
+          desc: "",
+          price: "0.00",
+          scenarios: [],
+          minPeople: "",
+          maxPeople: "",
+          gender: [],
+          ageGroups: [],
+          climates: [],
+          items: []
+      });
   };
 
   const openEditModal = (bundle: any) => {
@@ -334,7 +356,7 @@ export default function BundlesClient({
       setIsSlugManuallyEdited(true); // Don't auto-update slug when editing existing bundle
       setBundleDesc(bundle.description || "");
       setBundlePrice(bundle.totalEstimatedPrice);
-      
+
       setTargetScenarios(bundle.scenarios || []);
       setMinPeople(bundle.minPeople || "");
       setMaxPeople(bundle.maxPeople || "");
@@ -343,7 +365,7 @@ export default function BundlesClient({
       setTargetClimates(bundle.climates || []);
 
       // Map existing items to form structure
-      setBundleItems(bundle.items.map((item: any) => ({
+      const items = bundle.items.map((item: any) => ({
           id: item.product.id,
           name: item.product.name,
           price: item.product.price || 0,
@@ -352,10 +374,26 @@ export default function BundlesClient({
           quantity: item.quantity,
           master_item_name: masterItems.find((m: any) => m.id === item.product.masterItemId)?.name,
           metadata: item.product.metadata
-      })));
-      
+      }));
+      setBundleItems(items);
+
       setIsEditMode(true);
       setIsModalOpen(true);
+
+      // Capture initial state for dirty checking
+      setInitialState({
+          name: bundle.name,
+          slug: bundle.slug,
+          desc: bundle.description || "",
+          price: bundle.totalEstimatedPrice,
+          scenarios: bundle.scenarios || [],
+          minPeople: bundle.minPeople || "",
+          maxPeople: bundle.maxPeople || "",
+          gender: bundle.gender || [],
+          ageGroups: bundle.ageGroups || [],
+          climates: bundle.climates || [],
+          items: items
+      });
   };
 
   const handleAddItem = (product: any) => {
@@ -444,15 +482,99 @@ export default function BundlesClient({
     const handleEditProduct = (product: any) => {
         // Fetch the master item to ensure we have complete data for inheritance logic
         const masterItem = masterItems.find(m => m.id === product.masterItemId);
-        
+
         // The product object from bundle items might be partial or flattened.
         // Ensure we have the full product structure expected by ProductEditDialog.
         // Note: ProductEditDialog expects `timeframes`, `demographics`, etc. to be `null` if inheriting.
         // If they are coming from DB as `null`, that's good.
-        
+
         setEditingProduct(product);
         setIsProductModalOpen(true);
     };
+
+    // Resize handlers
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isResizing) return;
+
+        const modalElement = document.querySelector('.bundle-editor-modal');
+        if (!modalElement) return;
+
+        const modalRect = modalElement.getBoundingClientRect();
+        const newWidth = ((e.clientX - modalRect.left) / modalRect.width) * 100;
+
+        // Constrain between 25% and 50%
+        const constrainedWidth = Math.min(Math.max(newWidth, 25), 50);
+        setLeftPanelWidth(constrainedWidth);
+    };
+
+    const handleMouseUp = () => {
+        setIsResizing(false);
+    };
+
+    // Attach mouse event listeners for resizing
+    useEffect(() => {
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isResizing]);
+
+    // Check if the bundle has been modified
+    const hasChanges = useMemo(() => {
+        if (!initialState) return false;
+
+        return (
+            bundleName !== initialState.name ||
+            bundleSlug !== initialState.slug ||
+            bundleDesc !== initialState.desc ||
+            bundlePrice !== initialState.price ||
+            JSON.stringify(targetScenarios) !== JSON.stringify(initialState.scenarios) ||
+            minPeople !== initialState.minPeople ||
+            maxPeople !== initialState.maxPeople ||
+            JSON.stringify(targetGender) !== JSON.stringify(initialState.gender) ||
+            JSON.stringify(targetAgeGroups) !== JSON.stringify(initialState.ageGroups) ||
+            JSON.stringify(targetClimates) !== JSON.stringify(initialState.climates) ||
+            JSON.stringify(bundleItems) !== JSON.stringify(initialState.items)
+        );
+    }, [
+        initialState,
+        bundleName,
+        bundleSlug,
+        bundleDesc,
+        bundlePrice,
+        targetScenarios,
+        minPeople,
+        maxPeople,
+        targetGender,
+        targetAgeGroups,
+        targetClimates,
+        bundleItems
+    ]);
+
+    // Handle ESC key to close modal if no changes
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isModalOpen && !hasChanges) {
+                setIsModalOpen(false);
+            }
+        };
+
+        if (isModalOpen) {
+            document.addEventListener('keydown', handleKeyDown);
+            return () => {
+                document.removeEventListener('keydown', handleKeyDown);
+            };
+        }
+    }, [isModalOpen, hasChanges]);
 
 
   return (
@@ -548,21 +670,24 @@ export default function BundlesClient({
 
             <div className="bg-muted/30 rounded-lg p-3 mb-4 text-sm text-muted-foreground max-h-32 overflow-y-auto border border-border">
                 <ul className="space-y-2">
-                    {bundle.items.map((item: any, idx: number) => (
-                        <li key={idx} className="flex justify-between items-center">
-                            <span className="truncate pr-2">
-                                <span className="text-muted-foreground text-xs mr-2">{item.quantity}x</span>
-                                {item.product?.name}
-                            </span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                item.product?.type === 'DROP_SHIP'
-                                ? 'bg-secondary/20 text-secondary border-secondary/50'
-                                : 'bg-primary/20 text-primary border-primary/50'
-                            }`}>
-                                {item.product?.type === 'DROP_SHIP' ? 'DS' : 'AFF'}
-                            </span>
-                        </li>
-                    ))}
+                    {bundle.items.map((item: any, idx: number) => {
+                        const masterItemName = masterItems.find((m: any) => m.id === item.product?.masterItemId)?.name || item.product?.name;
+                        return (
+                            <li key={idx} className="flex justify-between items-center">
+                                <span className="truncate pr-2">
+                                    <span className="text-muted-foreground text-xs mr-2">{item.quantity}x</span>
+                                    {masterItemName}
+                                </span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                    item.product?.type === 'DROP_SHIP'
+                                    ? 'bg-secondary/20 text-secondary border-secondary/50'
+                                    : 'bg-primary/20 text-primary border-primary/50'
+                                }`}>
+                                    {item.product?.type === 'DROP_SHIP' ? 'DS' : 'AFF'}
+                                </span>
+                            </li>
+                        );
+                    })}
                 </ul>
             </div>
 
@@ -576,7 +701,7 @@ export default function BundlesClient({
       {/* Editor Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-background/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-[95vw] h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+          <div className="bundle-editor-modal bg-card border border-border rounded-2xl w-full max-w-[95vw] h-[90vh] shadow-2xl flex flex-col overflow-hidden">
 
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
@@ -593,9 +718,12 @@ export default function BundlesClient({
 
             {/* Modal Body: Split View */}
             <div className="flex-1 flex overflow-hidden">
-                
+
                 {/* LEFT PANEL: Bundle Configuration */}
-                <div className="w-[35%] min-w-[400px] border-r border-border bg-card flex flex-col">
+                <div
+                    className="min-w-[400px] border-r border-border bg-card flex flex-col"
+                    style={{ width: `${leftPanelWidth}%` }}
+                >
                     <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                         {/* Basic Info */}
                         <div className="space-y-4">
@@ -832,6 +960,38 @@ export default function BundlesClient({
                             {isEditMode ? 'Save Changes' : 'Create Bundle'}
                         </button>
                     </div>
+                </div>
+
+                {/* RESIZE HANDLE */}
+                <div
+                    className={`relative w-1.5 transition-all group select-none ${
+                        isResizing
+                            ? 'bg-primary/30 cursor-grabbing'
+                            : 'bg-border hover:bg-primary/20 cursor-grab'
+                    }`}
+                    onMouseDown={handleMouseDown}
+                    title="Drag to resize panel"
+                >
+                    {/* Extended hit area for easier grabbing */}
+                    <div className="absolute inset-y-0 -left-2 -right-2" />
+
+                    {/* Grip dots indicator */}
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1.5 transition-opacity ${
+                        isResizing ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
+                    }`}>
+                        <div className="w-1 h-1 rounded-full bg-primary" />
+                        <div className="w-1 h-1 rounded-full bg-primary" />
+                        <div className="w-1 h-1 rounded-full bg-primary" />
+                        <div className="w-1 h-1 rounded-full bg-primary" />
+                        <div className="w-1 h-1 rounded-full bg-primary" />
+                    </div>
+
+                    {/* Hover glow effect */}
+                    <div className={`absolute inset-0 transition-opacity ${
+                        isResizing
+                            ? 'opacity-100 bg-primary/20'
+                            : 'opacity-0 group-hover:opacity-100 bg-primary/10'
+                    }`} />
                 </div>
 
                 {/* RIGHT PANEL: Product Browser */}

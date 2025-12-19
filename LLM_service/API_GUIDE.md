@@ -1,385 +1,672 @@
-# API Integration Guide
+# LLM Workflow Microservice - Complete API Reference
 
-**Complete guide for integrating the LLM Workflow Microservice with Next.js 15+ applications.**
+**Comprehensive API documentation for the LLM Workflow Microservice v1.0.0**
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Environment Setup](#environment-setup)
-- [TypeScript Client](#typescript-client)
-- [Webhook Handler](#webhook-handler)
-- [Workflow Examples](#workflow-examples)
+- [Base URL & Environment](#base-url--environment)
+- [Authentication](#authentication)
+- [API Endpoints](#api-endpoints)
+  - [Health & Status](#health--status)
+  - [Workflow Management](#workflow-management)
+  - [Job Management](#job-management)
+- [Webhook System](#webhook-system)
 - [Error Handling](#error-handling)
-- [Type Definitions](#type-definitions)
-- [Testing](#testing)
-- [Production Deployment](#production-deployment)
+- [Rate Limits & Performance](#rate-limits--performance)
+- [Next.js Integration Guide](#nextjs-integration-guide)
 
 ---
 
 ## Overview
 
-The LLM Workflow Microservice exposes a REST API for submitting AI workflows and delivers results via HMAC-signed webhooks. This guide shows how to integrate it with your Next.js application.
+The LLM Workflow Microservice provides asynchronous AI workflow execution with webhook-based result delivery. Built with FastAPI, Celery, and PostgreSQL, it offers:
 
-### Integration Architecture
+- **Asynchronous Execution**: Submit workflows and receive results via webhooks
+- **Secure Authentication**: API secret-based authentication for all endpoints
+- **HMAC-Signed Webhooks**: SHA-256 HMAC signatures for webhook verification
+- **Job Tracking**: Real-time status queries and comprehensive job history
+- **Cost Tracking**: Token usage and cost data for all LLM operations
+- **Retry Logic**: Exponential backoff for failed webhook deliveries
+
+### Architecture
 
 ```
-Next.js App (Port 3000)          LLM Microservice (Port 8000)
-┌─────────────────────────┐      ┌──────────────────────────┐
-│                         │      │                          │
-│  Server Action          │─────▶│  POST /api/v1/jobs       │
-│  submitWorkflow()       │      │                          │
-│                         │      │  (Returns job_id)        │
-└─────────────────────────┘      └──────────────────────────┘
-         ▲                                   │
-         │                                   │ Webhook
-         │                                   ▼
-┌─────────────────────────┐      ┌──────────────────────────┐
-│                         │◀─────│  Workflow Complete       │
-│  Webhook Handler        │      │  (HMAC Signed)           │
-│  /api/webhooks/llm      │      │                          │
-│                         │      │  {job_id, output, cost}  │
-└─────────────────────────┘      └──────────────────────────┘
+Client (Next.js)              LLM Service              Workers
+┌─────────────┐              ┌──────────┐           ┌─────────┐
+│             │──POST /workflow─→│ FastAPI  │──queue──→│ Celery  │
+│  Browser    │              │  + Redis │           │ Workers │
+│             │              │          │           │         │
+│             │◀──202 job_id───┤          │           │  LLM    │
+│             │              └──────────┘           │  Calls  │
+│             │                    ▲                └─────────┘
+│  Webhook    │◀───────────────────┘                     │
+│  Handler    │           HMAC-Signed                    │
+└─────────────┘           Webhook                        │
+      │                                                   │
+      └──Update Database◀──────────────────────────────┘
 ```
-
-### Key Concepts
-
-1. **Async Execution**: Submit job → Get job_id → Receive webhook when complete
-2. **Webhook Notifications**: Receive results via POST to your webhook endpoint
-3. **HMAC Verification**: Verify webhook authenticity with shared secret
-4. **Cost Tracking**: Receive token usage and cost data in webhook payload
 
 ---
 
-## Prerequisites
+## Base URL & Environment
 
-- **Next.js 15+** with App Router
-- **TypeScript 5+** (strict mode recommended)
-- **LLM Microservice** deployed and accessible
-- **Webhook endpoint** publicly accessible (ngrok for local development)
+### Local Development
+```
+Base URL: http://localhost:8000
+API Prefix: /api/v1
+Full API Base: http://localhost:8000/api/v1
+```
+
+### Production (Render.com)
+```
+Base URL: https://llm-service-api.onrender.com
+API Prefix: /api/v1
+Full API Base: https://llm-service-api.onrender.com/api/v1
+```
+
+### API Documentation
+- **Swagger UI**: `{BASE_URL}/docs`
+- **ReDoc**: `{BASE_URL}/redoc`
+- **OpenAPI JSON**: `{BASE_URL}/openapi.json`
 
 ---
 
-## Environment Setup
+## Authentication
 
-### Next.js Application (.env.local)
+All API endpoints (except `/` and `/health`) require authentication via API secret header.
 
+### Authentication Method
+
+**Header-Based Authentication**:
+```http
+X-API-Secret: your-shared-secret-key
+```
+
+### Configuration
+
+**Server-Side** (LLM Service `.env`):
 ```bash
-# LLM Microservice Configuration
-LLM_SERVICE_URL=http://localhost:8000  # Local Docker
-# LLM_SERVICE_URL=https://llm-service-api.onrender.com  # Production
-
-# Webhook Secret (must match microservice LLM_WEBHOOK_SECRET)
 LLM_WEBHOOK_SECRET=your-shared-secret-key-here
-
-# Public webhook URL (for microservice to call back)
-NEXT_PUBLIC_WEBHOOK_BASE_URL=https://your-app.com
-# NEXT_PUBLIC_WEBHOOK_BASE_URL=https://abc123.ngrok.io  # Local dev with ngrok
 ```
 
-### Local Development with ngrok
+**Client-Side** (Next.js `.env.local`):
+```bash
+LLM_WEBHOOK_SECRET=your-shared-secret-key-here  # Must match server
+```
 
-For local development, use ngrok to expose your webhook endpoint:
+### Security Best Practices
+
+1. **Secret Strength**: Use cryptographically strong secrets (minimum 32 characters)
+2. **Secret Rotation**: Rotate secrets periodically (every 90 days recommended)
+3. **Environment Variables**: Never hardcode secrets in source code
+4. **HTTPS Only**: Always use HTTPS in production
+5. **Secret Storage**: Use secure secret management services (AWS Secrets Manager, etc.)
+
+### Authentication Errors
+
+```json
+{
+  "error": "InvalidAPISecret",
+  "message": "Invalid or missing API secret. Include X-API-Secret header with valid secret."
+}
+```
+
+**HTTP Status**: `401 Unauthorized`
+
+---
+
+## API Endpoints
+
+### Health & Status
+
+#### `GET /` - Root Endpoint
+
+**Description**: Service information and health check
+
+**Authentication**: None required
+
+**Response**:
+```json
+{
+  "service": "LLM Workflow Microservice",
+  "version": "1.0.0",
+  "status": "online",
+  "docs": "/docs"
+}
+```
+
+**Status Code**: `200 OK`
+
+---
+
+#### `GET /health` - Comprehensive Health Check
+
+**Description**: Check health status of all service dependencies
+
+**Authentication**: None required
+
+**Health Checks**:
+- ✓ API server status
+- ✓ PostgreSQL database connectivity
+- ✓ Redis connectivity (Celery broker)
+- ✓ Celery worker availability
+
+**Response (Healthy)**:
+```json
+{
+  "status": "healthy",
+  "services": {
+    "database": {
+      "status": "healthy",
+      "type": "postgresql"
+    },
+    "redis": {
+      "status": "healthy"
+    },
+    "celery": {
+      "status": "healthy",
+      "workers": 2
+    }
+  }
+}
+```
+
+**Response (Degraded)**:
+```json
+{
+  "status": "degraded",
+  "services": {
+    "database": {
+      "status": "healthy",
+      "type": "postgresql"
+    },
+    "redis": {
+      "status": "unhealthy",
+      "error": "Connection timeout"
+    },
+    "celery": {
+      "status": "no_workers",
+      "workers": 0
+    }
+  }
+}
+```
+
+**Status Codes**:
+- `200 OK`: Service is operational (healthy or degraded)
+
+**Status Values**:
+- `healthy`: All services operational
+- `degraded`: Some non-critical services unavailable (Redis, Celery)
+- `unhealthy`: Critical services unavailable (Database)
+
+---
+
+### Workflow Management
+
+#### `POST /api/v1/workflow` - Submit Workflow
+
+**Description**: Submit a workflow for asynchronous execution via Celery queue
+
+**Authentication**: Required (`X-API-Secret` header)
+
+**Request Body**:
+```json
+{
+  "workflow_name": "emergency_contacts",
+  "user_id": "123e4567-e89b-12d3-a456-426614174000",
+  "input_data": {
+    "formData": {
+      "location": "Seattle, WA",
+      "scenarios": ["earthquake", "wildfire"],
+      "familyMembers": [...]
+    }
+  },
+  "webhook_url": "https://app.beprepared.ai/api/webhooks/llm",
+  "webhook_secret": "optional-job-specific-secret",
+  "priority": 0,
+  "debug_mode": false
+}
+```
+
+**Request Parameters**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workflow_name` | string | Yes | Workflow definition name (e.g., `emergency_contacts`, `mission_generation`) |
+| `user_id` | string (UUID) | No | User identifier from Supabase Auth |
+| `input_data` | object | Yes | Workflow-specific input data (structure varies by workflow) |
+| `webhook_url` | string (URL) | Yes | HTTPS URL to receive completion webhook |
+| `webhook_secret` | string | No | Job-specific HMAC secret (uses global default if omitted) |
+| `priority` | integer (0-10) | No | Job priority (higher = more urgent, default: 0) |
+| `debug_mode` | boolean | No | Include debug info in webhook payloads (default: false) |
+
+**Response (Success - 202 Accepted)**:
+```json
+{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "celery_task_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "queued",
+  "estimated_wait_seconds": null,
+  "status_url": "/api/v1/status/123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+**Status Codes**:
+- `202 Accepted`: Workflow queued successfully
+- `400 Bad Request`: Invalid request (validation error, workflow not found)
+- `401 Unauthorized`: Missing or invalid API secret
+- `404 Not Found`: Workflow definition not found
+- `500 Internal Server Error`: Database or Celery error
+
+**Error Responses**:
+
+```json
+// Workflow not found
+{
+  "error": "WorkflowNotFound",
+  "message": "Workflow 'invalid_workflow' not found",
+  "workflow_name": "invalid_workflow"
+}
+
+// Invalid input data
+{
+  "error": "WorkflowValidationError",
+  "message": "Workflow definition invalid: ...",
+  "workflow_name": "emergency_contacts"
+}
+
+// Database error
+{
+  "error": "DatabaseError",
+  "message": "Failed to create job record: ...",
+  "job_id": "123e4567-e89b-12d3-a456-426614174000"
+}
+
+// Celery error
+{
+  "error": "CeleryError",
+  "message": "Failed to queue workflow execution: ...",
+  "job_id": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+**Example (curl)**:
+```bash
+curl -X POST https://llm-service-api.onrender.com/api/v1/workflow \
+  -H "Content-Type: application/json" \
+  -H "X-API-Secret: your-secret-key" \
+  -d '{
+    "workflow_name": "emergency_contacts",
+    "user_id": "123e4567-e89b-12d3-a456-426614174000",
+    "input_data": {
+      "formData": {
+        "location": "Seattle, WA",
+        "scenarios": ["earthquake"]
+      }
+    },
+    "webhook_url": "https://app.beprepared.ai/api/webhooks/llm",
+    "priority": 0
+  }'
+```
+
+---
+
+#### `POST /api/v1/workflow/validate` - Validate Workflow
+
+**Description**: Validate workflow configuration and estimate resources (dry-run mode)
+
+**Authentication**: Required (`X-API-Secret` header)
+
+**Request Body**:
+```json
+{
+  "workflow_name": "emergency_contacts",
+  "input_data": {
+    "formData": {
+      "location": "Seattle, WA"
+    }
+  }
+}
+```
+
+**Request Parameters**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workflow_name` | string | Yes | Workflow definition name to validate |
+| `input_data` | object | Yes | Input data to validate against workflow schema |
+
+**Response (Valid - 200 OK)**:
+```json
+{
+  "valid": true,
+  "workflow_name": "emergency_contacts",
+  "errors": null,
+  "estimated_tokens": 5000,
+  "estimated_cost_usd": 0.15,
+  "estimated_duration_seconds": 20
+}
+```
+
+**Response (Invalid - 200 OK)**:
+```json
+{
+  "valid": false,
+  "workflow_name": "emergency_contacts",
+  "errors": [
+    "Missing required field: location",
+    "Invalid scenario type"
+  ],
+  "estimated_tokens": null,
+  "estimated_cost_usd": null,
+  "estimated_duration_seconds": null
+}
+```
+
+**Status Codes**:
+- `200 OK`: Validation complete (check `valid` field)
+- `400 Bad Request`: Workflow not found
+- `401 Unauthorized`: Missing or invalid API secret
+
+**Use Cases**:
+- Pre-flight validation before workflow submission
+- Cost estimation for budgeting
+- Input data validation for user feedback
+
+---
+
+#### `GET /api/v1/status/{job_id}` - Get Job Status
+
+**Description**: Query execution status and results for a specific job
+
+**Authentication**: Required (`X-API-Secret` header)
+
+**Path Parameters**:
+- `job_id` (string, UUID): Job identifier returned from workflow submission
+
+**Response (Queued)**:
+```json
+{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "queued",
+  "workflow_name": "emergency_contacts",
+  "created_at": "2024-12-18T10:00:00Z",
+  "started_at": null,
+  "completed_at": null,
+  "duration_ms": null,
+  "result": null,
+  "error_message": null,
+  "current_step": null,
+  "steps_completed": null,
+  "total_steps": null
+}
+```
+
+**Response (Processing)**:
+```json
+{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "processing",
+  "workflow_name": "emergency_contacts",
+  "created_at": "2024-12-18T10:00:00Z",
+  "started_at": "2024-12-18T10:00:05Z",
+  "completed_at": null,
+  "duration_ms": null,
+  "result": null,
+  "error_message": null,
+  "current_step": "fetch_hospitals",
+  "steps_completed": 2,
+  "total_steps": 8
+}
+```
+
+**Response (Completed)**:
+```json
+{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "completed",
+  "workflow_name": "emergency_contacts",
+  "created_at": "2024-12-18T10:00:00Z",
+  "started_at": "2024-12-18T10:00:05Z",
+  "completed_at": "2024-12-18T10:00:25Z",
+  "duration_ms": 20000,
+  "result": {
+    "contacts": [
+      {
+        "name": "Swedish Medical Center",
+        "service_type": "hospital",
+        "phone": "(206) 744-3000",
+        "address": "747 Broadway, Seattle, WA 98122",
+        "priority": 1
+      }
+    ],
+    "metadata": {
+      "total_tokens": 8000,
+      "total_cost": 0.24,
+      "llm_calls": [...]
+    }
+  },
+  "error_message": null,
+  "current_step": null,
+  "steps_completed": null,
+  "total_steps": null
+}
+```
+
+**Response (Failed)**:
+```json
+{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "failed",
+  "workflow_name": "emergency_contacts",
+  "created_at": "2024-12-18T10:00:00Z",
+  "started_at": "2024-12-18T10:00:05Z",
+  "completed_at": "2024-12-18T10:00:15Z",
+  "duration_ms": 10000,
+  "result": null,
+  "error_message": "{\"type\":\"APIError\",\"category\":\"EXTERNAL_ERROR\",\"message\":\"OpenRouter API rate limit exceeded\",\"retryable\":true,\"retry_after\":60}",
+  "current_step": null,
+  "steps_completed": null,
+  "total_steps": null
+}
+```
+
+**Status Values**:
+- `pending`: Job created but not yet queued
+- `queued`: Job queued in Celery, waiting for worker
+- `processing`: Job actively executing
+- `completed`: Job finished successfully
+- `failed`: Job failed with error
+- `cancelled`: Job cancelled by user (future feature)
+
+**Status Codes**:
+- `200 OK`: Job found, status returned
+- `400 Bad Request`: Invalid job_id format
+- `401 Unauthorized`: Missing or invalid API secret
+- `404 Not Found`: Job not found
+- `500 Internal Server Error`: Database error
+
+**Error Responses**:
+
+```json
+// Invalid job ID format
+{
+  "error": "InvalidJobID",
+  "message": "Invalid job ID format (expected UUID): invalid-id",
+  "job_id": "invalid-id"
+}
+
+// Job not found
+{
+  "error": "JobNotFound",
+  "message": "Job not found: 123e4567-e89b-12d3-a456-426614174000",
+  "job_id": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+---
+
+### Job Management
+
+#### `GET /api/v1/jobs` - List Jobs
+
+**Description**: Query workflow jobs with filtering and pagination (for admin dashboards)
+
+**Authentication**: Required (`X-API-Secret` header)
+
+**Query Parameters**:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | string | No | Filter by status: `running`, `completed`, `failed`, `all` (default: all) |
+| `user_id` | string (UUID) | No | Filter by user ID |
+| `limit` | integer (1-200) | No | Max jobs to return (default: 50) |
+| `offset` | integer | No | Pagination offset (default: 0) |
+
+**Status Filter Values**:
+- `running`: Jobs in `queued` or `processing` state
+- `completed`: Jobs in `completed` state
+- `failed`: Jobs in `failed` state
+- `all` (or omit): All jobs regardless of status
+
+**Response (200 OK)**:
+```json
+{
+  "jobs": [
+    {
+      "job_id": "123e4567-e89b-12d3-a456-426614174000",
+      "workflow_name": "emergency_contacts",
+      "status": "completed",
+      "priority": 0,
+      "user_id": "user-123",
+      "created_at": "2025-12-18T10:00:00Z",
+      "started_at": "2025-12-18T10:00:05Z",
+      "completed_at": "2025-12-18T10:00:25Z",
+      "duration_ms": 20000,
+      "error_message": null
+    },
+    {
+      "job_id": "456e7890-e12b-34c5-d678-901234567890",
+      "workflow_name": "mission_generation",
+      "status": "processing",
+      "priority": 5,
+      "user_id": "user-456",
+      "created_at": "2025-12-18T10:05:00Z",
+      "started_at": "2025-12-18T10:05:02Z",
+      "completed_at": null,
+      "duration_ms": null,
+      "error_message": null
+    }
+  ],
+  "total": 42,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+**Response Fields**:
+- `jobs`: Array of job summaries (excludes heavy `result_data` and `input_data`)
+- `total`: Total jobs matching filter criteria
+- `limit`: Number of jobs returned
+- `offset`: Starting offset used
+
+**Status Codes**:
+- `200 OK`: Jobs retrieved successfully
+- `400 Bad Request`: Invalid status filter or user_id format
+- `401 Unauthorized`: Missing or invalid API secret
+- `500 Internal Server Error`: Database error
+
+**Error Responses**:
+
+```json
+// Invalid status filter
+{
+  "error": "InvalidStatusFilter",
+  "message": "Invalid status filter: 'invalid'. Valid values: 'running', 'completed', 'failed', 'all'",
+  "valid_values": ["running", "completed", "failed", "all"]
+}
+
+// Invalid user_id format
+{
+  "error": "InvalidUserID",
+  "message": "Invalid user_id format (expected UUID): invalid-uuid",
+  "user_id": "invalid-uuid"
+}
+```
+
+**Example Queries**:
 
 ```bash
-# Terminal 1: Start Next.js app
-npm run dev
+# Get all running jobs
+curl "https://llm-service-api.onrender.com/api/v1/jobs?status=running" \
+  -H "X-API-Secret: your-secret-key"
 
-# Terminal 2: Start ngrok
-ngrok http 3000
+# Get completed jobs for specific user
+curl "https://llm-service-api.onrender.com/api/v1/jobs?status=completed&user_id=123e4567-e89b-12d3-a456-426614174000" \
+  -H "X-API-Secret: your-secret-key"
 
-# Copy the HTTPS URL and set as NEXT_PUBLIC_WEBHOOK_BASE_URL
-# Example: https://abc123.ngrok.io
+# Paginated query (page 2, 100 jobs per page)
+curl "https://llm-service-api.onrender.com/api/v1/jobs?limit=100&offset=100" \
+  -H "X-API-Secret: your-secret-key"
+
+# Get all failed jobs
+curl "https://llm-service-api.onrender.com/api/v1/jobs?status=failed" \
+  -H "X-API-Secret: your-secret-key"
 ```
+
+**Use Cases**:
+- Admin dashboards showing job queue status
+- User activity monitoring
+- Debugging failed workflows
+- Usage analytics and reporting
+- Load monitoring and capacity planning
 
 ---
 
-## TypeScript Client
+## Webhook System
 
-### Client Implementation
+### Overview
 
-Create `src/lib/llm-microservice-client.ts`:
+The LLM service delivers results via HMAC-signed webhooks to ensure authenticity and data integrity. Webhooks use exponential backoff retry strategy with up to 4 attempts.
 
-```typescript
-import type { WizardFormData } from '@/types/wizard';
+### Webhook Events
 
-const LLM_SERVICE_URL = process.env.LLM_SERVICE_URL || 'http://localhost:8000';
-const WEBHOOK_BASE_URL = process.env.NEXT_PUBLIC_WEBHOOK_BASE_URL || 'http://localhost:3000';
+| Event Type | Description | Trigger |
+|------------|-------------|---------|
+| `workflow.completed` | Workflow finished successfully | Job status = completed |
+| `workflow.failed` | Workflow execution failed | Job status = failed |
+| `llm.step.completed` | Individual LLM step completed | Debug mode only |
 
-export interface JobSubmission {
-  workflow_name: string;
-  input_data: unknown;
-  webhook_url: string;
-  webhook_secret?: string;
-  user_id?: string;
-  debug_mode?: boolean;
-}
+### Webhook Headers
 
-export interface JobResponse {
-  job_id: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  workflow_name: string;
-  created_at: string;
-}
+All webhook requests include these headers:
 
-export interface JobStatus extends JobResponse {
-  output?: unknown;
-  error_message?: string;
-  metadata?: {
-    duration_ms: number;
-    total_tokens: number;
-    total_cost_usd: number;
-  };
-  completed_at?: string;
-}
-
-export interface WorkflowError {
-  type: string;
-  category: 'USER_ERROR' | 'CONFIG_ERROR' | 'SYSTEM_ERROR' | 'EXTERNAL_ERROR';
-  message: string;
-  retryable: boolean;
-  retry_after?: number;
-  step_id?: string;
-  details?: {
-    service?: string;
-    operation?: string;
-    suggestions?: string[];
-  };
-}
-
-/**
- * Submit a workflow job to the LLM microservice
- */
-export async function submitWorkflow(
-  workflowName: string,
-  inputData: unknown,
-  userId?: string,
-  debugMode: boolean = false
-): Promise<JobResponse> {
-  const webhookUrl = `${WEBHOOK_BASE_URL}/api/webhooks/llm`;
-
-  const response = await fetch(`${LLM_SERVICE_URL}/api/v1/jobs`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      workflow_name: workflowName,
-      input_data: inputData,
-      webhook_url: webhookUrl,
-      user_id: userId,
-      debug_mode: debugMode,
-    } satisfies JobSubmission),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to submit workflow: ${error.detail || response.statusText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Get job status and results
- */
-export async function getJobStatus(jobId: string): Promise<JobStatus> {
-  const response = await fetch(`${LLM_SERVICE_URL}/api/v1/jobs/${jobId}`, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to get job status: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Validate a workflow JSON file before submission
- */
-export async function validateWorkflow(workflowName: string): Promise<{ valid: boolean; errors?: string[] }> {
-  const response = await fetch(`${LLM_SERVICE_URL}/api/v1/workflows/${workflowName}/validate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  return response.json();
-}
+```http
+Content-Type: application/json
+X-Webhook-Signature: sha256=<hmac_hex_digest>
+X-Webhook-Event: workflow.completed
+User-Agent: LLM Workflow Microservice/1.0.0
 ```
 
-### Usage in Server Actions
+### HMAC Signature Verification
 
-Create `src/actions/llm-workflows.ts`:
+**Signature Format**: `sha256=<hex_digest>`
 
+**Verification Algorithm**:
 ```typescript
-'use server';
-
-import { createClient } from '@/utils/supabase/server';
-import { submitWorkflow, getJobStatus } from '@/lib/llm-microservice-client';
-import { revalidatePath } from 'next/cache';
-import type { WizardFormData } from '@/types/wizard';
-
-export async function generateEmergencyContacts(formData: WizardFormData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  try {
-    // Submit workflow to microservice
-    const job = await submitWorkflow(
-      'emergency_contacts',
-      {
-        formData,
-        city: formData.location.city,
-        state: formData.location.state,
-        lat: formData.location.coordinates.lat,
-        lng: formData.location.coordinates.lng,
-        scenarios: formData.scenarios,
-        familySize: formData.familyMembers.length,
-        duration: `${formData.durationDays}_days`,
-        userTier: 'BASIC', // From user profile
-        staticContacts: '', // Optional pre-filled data
-      },
-      user.id,
-      false // debug_mode
-    );
-
-    // Store job_id in database for tracking
-    // The webhook will update this record when complete
-    const { error } = await supabase
-      .from('ai_workflow_jobs')
-      .insert({
-        job_id: job.job_id,
-        user_id: user.id,
-        workflow_name: job.workflow_name,
-        status: job.status,
-        created_at: job.created_at,
-      });
-
-    if (error) {
-      console.error('Failed to store job in database:', error);
-    }
-
-    return {
-      success: true,
-      jobId: job.job_id,
-      status: job.status,
-    };
-  } catch (error) {
-    console.error('Error submitting workflow:', error);
-    throw error;
-  }
-}
-
-export async function generateMissionPlan(formData: WizardFormData, bundles: unknown[]) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  try {
-    const job = await submitWorkflow(
-      'mission_generation',
-      {
-        formData,
-        bundles,
-        familyDetails: formData.familyMembers.map((m, i) =>
-          `Person ${i + 1}: ${m.age < 18 ? 'child' : m.age >= 65 ? 'senior' : 'adult'} (age ${m.age})${m.medicalConditions ? `; medical: ${m.medicalConditions}` : ''}${m.specialNeeds ? `; special needs: ${m.specialNeeds}` : ''}`
-        ).join('\n- '),
-        mobility: 'BUG_IN',
-        budgetTierLabel: getBudgetTierLabel(formData.budgetTier),
-        budgetAmount: getBudgetAmount(formData.budgetTier),
-      },
-      user.id
-    );
-
-    return {
-      success: true,
-      jobId: job.job_id,
-      status: job.status,
-    };
-  } catch (error) {
-    console.error('Error submitting mission generation:', error);
-    throw error;
-  }
-}
-
-// Helper functions
-function getBudgetTierLabel(tier: string): string {
-  const tiers: Record<string, string> = {
-    LOW: 'Tight Budget (<$500)',
-    MEDIUM: 'Moderate Budget ($500-1,500)',
-    HIGH: 'Premium Budget ($1,500+)',
-  };
-  return tiers[tier] || 'Moderate Budget ($500-1,500)';
-}
-
-function getBudgetAmount(tier: string): number {
-  const budgets: Record<string, number> = {
-    LOW: 350,
-    MEDIUM: 1000,
-    HIGH: 2000,
-  };
-  return budgets[tier] || 1000;
-}
-```
-
----
-
-## Webhook Handler
-
-### Webhook Route Handler
-
-Create `src/app/api/webhooks/llm/route.ts`:
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
 import { createHmac } from 'crypto';
 
-const WEBHOOK_SECRET = process.env.LLM_WEBHOOK_SECRET!;
-
-interface WebhookPayload {
-  event: 'workflow.completed' | 'workflow.failed';
-  job_id: string;
-  status: string;
-  workflow_name: string;
-  output?: unknown;
-  error?: {
-    type: string;
-    category: string;
-    message: string;
-    retryable: boolean;
-  };
-  metadata?: {
-    duration_ms: number;
-    total_tokens: number;
-    total_cost_usd: number;
-  };
-}
-
-/**
- * Verify HMAC signature from webhook
- */
-function verifySignature(payload: string, signature: string): boolean {
+function verifySignature(payload: string, signature: string, secret: string): boolean {
   if (!signature.startsWith('sha256=')) {
     return false;
   }
 
   const expectedSignature = signature.slice(7); // Remove 'sha256=' prefix
-  const hmac = createHmac('sha256', WEBHOOK_SECRET);
+  const hmac = createHmac('sha256', secret);
   hmac.update(payload);
   const computedSignature = hmac.digest('hex');
 
@@ -389,10 +676,213 @@ function verifySignature(payload: string, signature: string): boolean {
     Buffer.from(computedSignature, 'hex')
   );
 }
+```
 
-/**
- * Handle webhook POST requests from LLM microservice
- */
+**Security Best Practices**:
+1. Always verify HMAC signature before processing webhook
+2. Use constant-time comparison to prevent timing attacks
+3. Reject webhooks with invalid or missing signatures (401 Unauthorized)
+4. Log all webhook attempts for audit trail
+5. Return 200 OK only after successful processing and signature verification
+
+### Webhook Retry Strategy
+
+**Retry Schedule** (Exponential Backoff):
+1. **Attempt 1**: Immediate (0 seconds)
+2. **Attempt 2**: +5 seconds delay
+3. **Attempt 3**: +15 seconds delay
+4. **Attempt 4**: +45 seconds delay (final attempt)
+
+**Retry Triggers**:
+- HTTP status codes: 4xx, 5xx (except 200-299)
+- Network errors (timeout, connection refused)
+- DNS resolution failures
+
+**Permanent Failure**:
+After 4 failed attempts, webhook is marked as permanently failed and:
+- No further retry attempts
+- Admin notification email sent (if configured)
+- Job marked with `webhook_permanently_failed = true`
+
+### Webhook Payload Structures
+
+#### `workflow.completed` Event
+
+```json
+{
+  "event": "workflow.completed",
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "completed",
+  "workflow_name": "emergency_contacts",
+  "result": {
+    "contacts": [
+      {
+        "name": "Swedish Medical Center",
+        "service_type": "hospital",
+        "phone": "(206) 744-3000",
+        "address": "747 Broadway, Seattle, WA 98122",
+        "priority": 1
+      }
+    ],
+    "meeting_locations": [
+      {
+        "name": "Cal Anderson Park",
+        "address": "1635 11th Ave, Seattle, WA 98122",
+        "coordinates": {"lat": 47.6174, "lng": -122.3201},
+        "type": "park"
+      }
+    ]
+  },
+  "cost_data": {
+    "total_tokens": 8000,
+    "cost_usd": 0.24,
+    "llm_calls": [
+      {
+        "step_id": "generate_contacts",
+        "model": "anthropic/claude-3.5-sonnet",
+        "input_tokens": 5000,
+        "output_tokens": 3000,
+        "cost_usd": 0.24,
+        "duration_ms": 1500
+      }
+    ]
+  },
+  "duration_ms": 20000,
+  "timestamp": "2024-12-18T10:00:25.000Z"
+}
+```
+
+#### `workflow.failed` Event (Structured Error)
+
+```json
+{
+  "event": "workflow.failed",
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "failed",
+  "workflow_name": "emergency_contacts",
+  "error_message": "OpenRouter API rate limit exceeded",
+  "error": {
+    "type": "RateLimitError",
+    "category": "EXTERNAL_ERROR",
+    "message": "OpenRouter API rate limit exceeded. Please retry after 60 seconds.",
+    "retryable": true,
+    "retry_after": 60,
+    "step_id": "generate_contacts",
+    "details": {
+      "service": "openrouter",
+      "operation": "chat_completion",
+      "suggestions": [
+        "Wait 60 seconds before retrying",
+        "Reduce request frequency",
+        "Upgrade to higher tier plan"
+      ]
+    }
+  },
+  "duration_ms": 5000,
+  "created_at": "2024-12-18T10:00:00.000Z",
+  "timestamp": "2024-12-18T10:00:05.000Z"
+}
+```
+
+**Error Categories**:
+- `USER_ERROR`: Invalid input data, fixable by user
+- `CONFIG_ERROR`: Configuration issue (missing API keys, etc.)
+- `SYSTEM_ERROR`: Internal system error (database failure, etc.)
+- `EXTERNAL_ERROR`: External API failure (OpenRouter, Google Maps, etc.)
+
+#### `llm.step.completed` Event (Debug Mode Only)
+
+```json
+{
+  "event": "llm.step.completed",
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "workflow_name": "emergency_contacts",
+  "step_id": "generate_contacts",
+  "result": {
+    "contacts": [...]
+  },
+  "tokens": {
+    "input": 5000,
+    "output": 3000,
+    "total": 8000
+  },
+  "cost_usd": 0.24,
+  "duration_ms": 1500,
+  "debug": {
+    "prompt": "Generate emergency contacts for Seattle, WA...",
+    "model": "anthropic/claude-3.5-sonnet",
+    "temperature": 0.7
+  },
+  "timestamp": "2024-12-18T10:00:20.000Z"
+}
+```
+
+**Note**: `llm.step.completed` events are only sent when `debug_mode: true` in workflow submission.
+
+### Webhook Handler Implementation
+
+**Next.js Route Handler** (`app/api/webhooks/llm/route.ts`):
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
+import { createHmac } from 'crypto';
+
+const WEBHOOK_SECRET = process.env.LLM_WEBHOOK_SECRET!;
+
+interface WorkflowCompletedPayload {
+  event: 'workflow.completed';
+  job_id: string;
+  status: 'completed';
+  workflow_name: string;
+  result: any;
+  cost_data: {
+    total_tokens: number;
+    cost_usd: number;
+    llm_calls: any[];
+  };
+  duration_ms: number;
+  timestamp: string;
+}
+
+interface WorkflowFailedPayload {
+  event: 'workflow.failed';
+  job_id: string;
+  status: 'failed';
+  workflow_name: string;
+  error_message: string;
+  error?: {
+    type: string;
+    category: 'USER_ERROR' | 'CONFIG_ERROR' | 'SYSTEM_ERROR' | 'EXTERNAL_ERROR';
+    message: string;
+    retryable: boolean;
+    retry_after?: number;
+    step_id?: string;
+    details?: any;
+  };
+  duration_ms?: number;
+  created_at?: string;
+  timestamp: string;
+}
+
+type WebhookPayload = WorkflowCompletedPayload | WorkflowFailedPayload;
+
+function verifySignature(payload: string, signature: string): boolean {
+  if (!signature.startsWith('sha256=')) {
+    return false;
+  }
+
+  const expectedSignature = signature.slice(7);
+  const hmac = createHmac('sha256', WEBHOOK_SECRET);
+  hmac.update(payload);
+  const computedSignature = hmac.digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedSignature, 'hex'),
+    Buffer.from(computedSignature, 'hex')
+  );
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Get raw body for signature verification
@@ -411,7 +901,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Parse payload
     const payload: WebhookPayload = JSON.parse(rawBody);
-    const { event, job_id, status, workflow_name, output, error, metadata } = payload;
+    const { event, job_id } = payload;
 
     console.log(`Webhook received: ${event} for job ${job_id}`);
 
@@ -424,8 +914,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         .from('ai_workflow_jobs')
         .update({
           status: 'completed',
-          output,
-          metadata,
+          output: payload.result,
+          metadata: payload.cost_data,
           completed_at: new Date().toISOString(),
         })
         .eq('job_id', job_id);
@@ -434,35 +924,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         console.error('Failed to update job status:', updateError);
       }
 
-      // Log AI usage for cost tracking
-      if (metadata) {
-        // Get user_id from job record
-        const { data: job } = await supabase
-          .from('ai_workflow_jobs')
-          .select('user_id')
-          .eq('job_id', job_id)
-          .single();
-
-        if (job?.user_id) {
-          await supabase.from('userActivityLog').insert({
-            userId: job.user_id,
-            action: `llm_workflow_${workflow_name}`,
-            metadata: {
-              job_id,
-              model: 'anthropic/claude-3.5-sonnet',
-              tokens: metadata.total_tokens,
-              cost_usd: metadata.total_cost_usd,
-              duration_ms: metadata.duration_ms,
-            },
-          });
-        }
-      }
-
-      // Workflow-specific handling
-      if (workflow_name === 'emergency_contacts') {
-        await handleEmergencyContactsComplete(job_id, output, supabase);
-      } else if (workflow_name === 'mission_generation') {
-        await handleMissionGenerationComplete(job_id, output, supabase);
+      // Handle workflow-specific processing
+      if (payload.workflow_name === 'emergency_contacts') {
+        await handleEmergencyContactsComplete(job_id, payload.result, supabase);
       }
 
     } else if (event === 'workflow.failed') {
@@ -471,13 +935,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         .from('ai_workflow_jobs')
         .update({
           status: 'failed',
-          error_message: error?.message || 'Workflow failed',
-          error_details: error,
+          error_message: payload.error_message,
+          error_details: payload.error || null,
           completed_at: new Date().toISOString(),
         })
         .eq('job_id', job_id);
 
-      console.error(`Workflow ${job_id} failed:`, error);
+      console.error(`Workflow ${job_id} failed:`, payload.error);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
@@ -489,88 +953,208 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
+```
 
-/**
- * Handle emergency contacts workflow completion
- */
-async function handleEmergencyContactsComplete(
-  jobId: string,
-  output: unknown,
-  supabase: ReturnType<typeof createClient>
-): Promise<void> {
-  // Cast output to expected type
-  const result = output as {
-    contacts: Array<{
-      name: string;
-      service_type: string;
-      phone: string;
-      address: string;
-      priority: number;
-    }>;
-    meeting_locations: Array<{
-      name: string;
-      address: string;
-      coordinates: { lat: number; lng: number };
-    }>;
-  };
+---
 
-  // Store contacts in database or send notification
-  console.log(`Emergency contacts generated for job ${jobId}:`, result);
+## Error Handling
 
-  // Optional: Store in a separate table
-  // await supabase.from('emergency_contacts').insert({
-  //   job_id: jobId,
-  //   contacts: result.contacts,
-  //   meeting_locations: result.meeting_locations,
-  // });
-}
+### Error Response Format
 
-/**
- * Handle mission generation workflow completion
- */
-async function handleMissionGenerationComplete(
-  jobId: string,
-  output: unknown,
-  supabase: ReturnType<typeof createClient>
-): Promise<void> {
-  const result = output as {
-    mission_plan: string;
-    parsed_sections: Record<string, string>;
-    llm_usage: {
-      input_tokens: number;
-      output_tokens: number;
-      total_tokens: number;
-      cost_usd: number;
-    };
-  };
+All API errors follow this standard format:
 
-  console.log(`Mission plan generated for job ${jobId}:`, {
-    length: result.mission_plan.length,
-    tokens: result.llm_usage.total_tokens,
-    cost: result.llm_usage.cost_usd,
-  });
-
-  // Optional: Store mission plan
-  // await supabase.from('mission_reports').insert({
-  //   job_id: jobId,
-  //   content: result.mission_plan,
-  //   parsed_sections: result.parsed_sections,
-  // });
+```json
+{
+  "error": "ErrorType",
+  "message": "Human-readable error description",
+  "field_name": "additional_context"
 }
 ```
 
-### Database Schema for Job Tracking
+### HTTP Status Codes
 
-Add to your Drizzle schema:
+| Status Code | Meaning | Common Errors |
+|-------------|---------|---------------|
+| `200 OK` | Request successful | - |
+| `202 Accepted` | Job queued for processing | - |
+| `400 Bad Request` | Invalid request data | `WorkflowNotFound`, `InvalidStatusFilter`, `InvalidUserID` |
+| `401 Unauthorized` | Authentication failed | `InvalidAPISecret` |
+| `404 Not Found` | Resource not found | `JobNotFound` |
+| `500 Internal Server Error` | Server error | `DatabaseError`, `CeleryError` |
+
+### Error Categories (Workflow Failures)
+
+Structured error objects in `workflow.failed` webhooks include categorization:
+
+| Category | Description | Handling Strategy |
+|----------|-------------|-------------------|
+| `USER_ERROR` | Invalid input data | Show user-friendly message, allow correction |
+| `CONFIG_ERROR` | Configuration issue | Contact support, check environment variables |
+| `SYSTEM_ERROR` | Internal error | Retry later, contact support if persistent |
+| `EXTERNAL_ERROR` | API failure | Retry with backoff, show temporary error message |
+
+### Retry Guidance
+
+Structured errors include `retryable` flag and optional `retry_after` seconds:
 
 ```typescript
-// src/db/schema/ai-workflows.ts
-import { pgTable, uuid, text, timestamp, jsonb, varchar } from 'drizzle-orm/pg-core';
+if (error.retryable && error.retry_after) {
+  // Wait specified seconds before retry
+  setTimeout(() => retryWorkflow(), error.retry_after * 1000);
+} else if (!error.retryable) {
+  // Permanent failure - show error to user
+  showErrorMessage(error.message);
+}
+```
 
+---
+
+## Rate Limits & Performance
+
+### Request Limits
+
+**Current**: No enforced rate limits (trust-based)
+
+**Recommended Client-Side Limits**:
+- Max 10 concurrent workflow submissions
+- Max 100 status queries per minute
+
+**Future Implementation**:
+- Token bucket algorithm
+- Per-user rate limits
+- IP-based throttling
+
+### Performance Metrics
+
+**API Response Times** (95th percentile):
+- `POST /workflow`: <100ms (excluding Celery queue)
+- `GET /status/{job_id}`: <50ms
+- `GET /jobs`: <200ms (50 jobs)
+- `GET /health`: <100ms
+
+**Workflow Execution Times** (varies by workflow):
+- `emergency_contacts`: 15-30 seconds
+- `mission_generation`: 30-60 seconds
+
+**Webhook Delivery**:
+- Timeout: 30 seconds (configurable)
+- Retry delays: 5s, 15s, 45s (exponential backoff)
+
+---
+
+## Next.js Integration Guide
+
+### Quick Start
+
+**1. Environment Configuration** (`.env.local`):
+
+```bash
+# LLM Microservice
+LLM_SERVICE_URL=https://llm-service-api.onrender.com
+LLM_WEBHOOK_SECRET=your-shared-secret-key
+
+# Public webhook URL (for microservice callbacks)
+NEXT_PUBLIC_WEBHOOK_BASE_URL=https://beprepared.ai
+```
+
+**2. TypeScript Client** (`lib/llm-client.ts`):
+
+```typescript
+const LLM_SERVICE_URL = process.env.LLM_SERVICE_URL!;
+const LLM_WEBHOOK_SECRET = process.env.LLM_WEBHOOK_SECRET!;
+const WEBHOOK_BASE_URL = process.env.NEXT_PUBLIC_WEBHOOK_BASE_URL!;
+
+export async function submitWorkflow(
+  workflowName: string,
+  inputData: any,
+  userId?: string
+) {
+  const webhookUrl = `${WEBHOOK_BASE_URL}/api/webhooks/llm`;
+
+  const response = await fetch(`${LLM_SERVICE_URL}/api/v1/workflow`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Secret': LLM_WEBHOOK_SECRET,
+    },
+    body: JSON.stringify({
+      workflow_name: workflowName,
+      input_data: inputData,
+      webhook_url: webhookUrl,
+      user_id: userId,
+      priority: 0,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Workflow submission failed');
+  }
+
+  return response.json();
+}
+
+export async function getJobStatus(jobId: string) {
+  const response = await fetch(`${LLM_SERVICE_URL}/api/v1/status/${jobId}`, {
+    headers: {
+      'X-API-Secret': LLM_WEBHOOK_SECRET,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to get job status');
+  }
+
+  return response.json();
+}
+```
+
+**3. Server Action** (`actions/llm-workflows.ts`):
+
+```typescript
+'use server';
+
+import { createClient } from '@/utils/supabase/server';
+import { submitWorkflow } from '@/lib/llm-client';
+import { revalidatePath } from 'next/cache';
+
+export async function generateEmergencyContacts(formData: any) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const job = await submitWorkflow('emergency_contacts', formData, user.id);
+
+    // Store job_id in database
+    await supabase.from('ai_workflow_jobs').insert({
+      job_id: job.job_id,
+      user_id: user.id,
+      workflow_name: 'emergency_contacts',
+      status: job.status,
+      created_at: new Date().toISOString(),
+    });
+
+    return { success: true, jobId: job.job_id };
+  } catch (error) {
+    console.error('Workflow submission failed:', error);
+    throw error;
+  }
+}
+```
+
+**4. Webhook Handler** (see [Webhook Handler Implementation](#webhook-handler-implementation))
+
+**5. Database Schema** (Drizzle ORM):
+
+```typescript
 export const aiWorkflowJobs = pgTable('ai_workflow_jobs', {
   id: uuid('id').primaryKey().defaultRandom(),
   jobId: uuid('job_id').notNull().unique(),
-  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => profiles.id),
   workflowName: varchar('workflow_name', { length: 100 }).notNull(),
   status: varchar('status', { length: 50 }).notNull().default('queued'),
   output: jsonb('output'),
@@ -582,283 +1166,7 @@ export const aiWorkflowJobs = pgTable('ai_workflow_jobs', {
 });
 ```
 
----
-
-## Workflow Examples
-
-### Emergency Contacts Generation
-
-```typescript
-// In your form submission handler
-async function handleEmergencyContactsSubmit(formData: WizardFormData) {
-  const { jobId } = await generateEmergencyContacts(formData);
-
-  // Redirect to status page or show loading state
-  router.push(`/dashboard/jobs/${jobId}`);
-
-  // The webhook will update the database when complete
-  // Your UI can poll the database or use real-time subscriptions
-}
-```
-
-### Mission Plan Generation
-
-```typescript
-async function handleMissionPlanSubmit(formData: WizardFormData) {
-  // Load product bundles from database
-  const bundles = await db.query.bundles.findMany({
-    where: eq(bundles.isActive, true),
-  });
-
-  const { jobId } = await generateMissionPlan(formData, bundles);
-
-  // Show loading state with job_id
-  router.push(`/dashboard/jobs/${jobId}`);
-}
-```
-
-### Polling for Job Status
-
-```typescript
-'use client';
-
-import { useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
-
-export function JobStatusPolling({ jobId }: { jobId: string }) {
-  const [status, setStatus] = useState<string>('queued');
-  const [output, setOutput] = useState<unknown>(null);
-  const supabase = createClient();
-
-  useEffect(() => {
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel(`job:${jobId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'ai_workflow_jobs',
-          filter: `job_id=eq.${jobId}`,
-        },
-        (payload) => {
-          setStatus(payload.new.status);
-          setOutput(payload.new.output);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [jobId]);
-
-  if (status === 'queued' || status === 'processing') {
-    return <div>Processing workflow... Status: {status}</div>;
-  }
-
-  if (status === 'completed') {
-    return <div>Workflow complete! Output: {JSON.stringify(output)}</div>;
-  }
-
-  if (status === 'failed') {
-    return <div>Workflow failed. Please try again.</div>;
-  }
-
-  return null;
-}
-```
-
----
-
-## Error Handling
-
-### Error Categories
-
-The microservice returns structured errors in four categories:
-
-| Category | Description | Handling Strategy |
-|----------|-------------|-------------------|
-| `USER_ERROR` | Invalid input | Show user-friendly message, allow correction |
-| `CONFIG_ERROR` | Configuration issue | Contact support, check environment variables |
-| `SYSTEM_ERROR` | Internal error | Retry later, contact support if persistent |
-| `EXTERNAL_ERROR` | API failure | Retry with backoff, show temporary error message |
-
-### Error Handling Pattern
-
-```typescript
-try {
-  const job = await submitWorkflow(workflowName, inputData, userId);
-  return { success: true, jobId: job.job_id };
-} catch (error) {
-  if (error instanceof Error) {
-    // Parse error response
-    try {
-      const errorData = JSON.parse(error.message);
-
-      if (errorData.category === 'USER_ERROR') {
-        // Show user-friendly error
-        return {
-          success: false,
-          error: errorData.message,
-          retryable: false,
-        };
-      } else if (errorData.category === 'EXTERNAL_ERROR' && errorData.retryable) {
-        // Show retry option
-        return {
-          success: false,
-          error: errorData.message,
-          retryable: true,
-          retryAfter: errorData.retry_after || 30,
-        };
-      }
-    } catch {
-      // Fallback for non-JSON errors
-      return {
-        success: false,
-        error: error.message,
-        retryable: false,
-      };
-    }
-  }
-
-  throw error;
-}
-```
-
----
-
-## Type Definitions
-
-### Shared Types
-
-Create `src/types/llm-workflows.ts`:
-
-```typescript
-export interface EmergencyContact {
-  name: string;
-  service_type: string;
-  phone: string;
-  address: string;
-  priority: number;
-  distance_miles?: number;
-  hours?: string;
-}
-
-export interface MeetingLocation {
-  name: string;
-  address: string;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
-  type: string;
-}
-
-export interface EmergencyContactsOutput {
-  contacts: EmergencyContact[];
-  meeting_locations: MeetingLocation[];
-}
-
-export interface MissionPlanOutput {
-  mission_plan: string;
-  parsed_sections: {
-    executive_summary?: string;
-    risk_assessment?: string;
-    recommended_bundles?: string;
-    survival_skills?: string;
-    day_by_day?: string;
-    next_steps?: string;
-  };
-  llm_usage: {
-    input_tokens: number;
-    output_tokens: number;
-    total_tokens: number;
-    cost_usd: number;
-  };
-  cost_data: {
-    provider: string;
-    model: string;
-    input_tokens: number;
-    output_tokens: number;
-    total_tokens: number;
-    cost_usd: number;
-  };
-}
-
-export interface WorkflowJob {
-  job_id: string;
-  user_id: string;
-  workflow_name: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  output?: EmergencyContactsOutput | MissionPlanOutput;
-  error_message?: string;
-  error_details?: {
-    type: string;
-    category: string;
-    message: string;
-    retryable: boolean;
-  };
-  metadata?: {
-    duration_ms: number;
-    total_tokens: number;
-    total_cost_usd: number;
-  };
-  created_at: string;
-  completed_at?: string;
-}
-```
-
----
-
-## Testing
-
-### Unit Tests for Client
-
-```typescript
-// src/lib/__tests__/llm-microservice-client.test.ts
-import { submitWorkflow, getJobStatus } from '../llm-microservice-client';
-
-describe('LLM Microservice Client', () => {
-  it('should submit workflow successfully', async () => {
-    const response = await submitWorkflow('test_workflow', { test: 'data' });
-    expect(response.job_id).toBeDefined();
-    expect(response.status).toBe('queued');
-  });
-
-  it('should get job status', async () => {
-    const job = await submitWorkflow('test_workflow', { test: 'data' });
-    const status = await getJobStatus(job.job_id);
-    expect(status.job_id).toBe(job.job_id);
-  });
-});
-```
-
-### Integration Tests
-
-```bash
-# Test webhook handler with test server
-cd LLM_service/tests/webhook_test_server
-python app.py
-
-# Submit test workflow
-curl -X POST http://localhost:8000/api/v1/jobs \
-  -H "Content-Type: application/json" \
-  -d '{
-    "workflow_name": "emergency_contacts",
-    "input_data": {...},
-    "webhook_url": "http://localhost:5001/webhook"
-  }'
-
-# Verify webhook received at http://localhost:5001
-```
-
----
-
-## Production Deployment
-
-### Checklist
+### Production Checklist
 
 - [ ] Set `LLM_SERVICE_URL` to production URL
 - [ ] Set `LLM_WEBHOOK_SECRET` (must match microservice)
@@ -868,34 +1176,25 @@ curl -X POST http://localhost:8000/api/v1/jobs \
 - [ ] Add database indexes for `job_id` lookups
 - [ ] Set up monitoring for webhook failures
 - [ ] Configure retry logic for failed webhooks
-
-### Environment Variables (Production)
-
-```bash
-# Next.js Production
-LLM_SERVICE_URL=https://llm-service-api.onrender.com
-LLM_WEBHOOK_SECRET=<strong-random-secret>
-NEXT_PUBLIC_WEBHOOK_BASE_URL=https://beprepared.ai
-```
-
-### Security Considerations
-
-1. **HMAC Verification**: Always verify webhook signatures in production
-2. **HTTPS Only**: Use HTTPS for both API and webhook endpoints
-3. **Secret Rotation**: Rotate webhook secret periodically
-4. **Rate Limiting**: Implement rate limiting on webhook endpoint
-5. **Logging**: Log all webhook attempts for audit trail
+- [ ] Test error handling for all error categories
+- [ ] Set up alerting for permanent webhook failures
 
 ---
 
 ## Support
 
-- **Documentation**: See [README.md](README.md) and [WORKFLOW_SCHEMA.md](WORKFLOW_SCHEMA.md)
-- **Issues**: GitHub Issues
+- **Documentation**: See `README.md`, `WORKFLOW_SCHEMA.md`, `TESTING_GUIDE.md`
+- **GitHub Issues**: Report bugs and feature requests
 - **Email**: support@beprepared.ai
 
 ---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see LICENSE file for details.
+
+---
+
+**Last Updated**: December 18, 2024
+**API Version**: v1.0.0
+**Service**: LLM Workflow Microservice

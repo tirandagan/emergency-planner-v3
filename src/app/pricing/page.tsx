@@ -1,74 +1,176 @@
 import Link from 'next/link';
-import { Check, Sparkles, Shield, Zap } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { PricingSelector } from '@/components/pricing/PricingSelector';
+import { AutoPurchaseTrigger } from '@/components/pricing/AutoPurchaseTrigger';
+import { createClient } from '@/utils/supabase/server';
+import { stripe, STRIPE_CONFIG } from '@/lib/stripe';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * Pricing Page
  *
  * Displays subscription tiers and their features.
- * Links to authentication for sign up or upgrade.
+ * Fetches dynamic pricing from Stripe and handles authentication flow.
  */
 
-const tiers = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    description: 'Get started with basic emergency planning',
-    features: [
-      '1 emergency plan',
-      'AI-powered recommendations',
-      'Basic supply checklists',
-      'Community resources',
-    ],
-    cta: 'Get Started Free',
-    ctaLink: '/auth/sign-up',
-    highlighted: false,
-    icon: Shield,
-  },
-  {
-    name: 'Basic',
-    price: '$9',
-    period: '/month',
-    description: 'For families who want comprehensive coverage',
-    features: [
-      'Unlimited emergency plans',
-      'Share plans with 5 people',
-      'Advanced AI recommendations',
-      'Custom supply lists',
-      'Founder video calls',
-      'Priority email support',
-    ],
-    cta: 'Sign Up to Subscribe',
-    ctaLink: '/auth/sign-up',
-    highlighted: true,
-    icon: Zap,
-  },
-  {
-    name: 'Pro',
-    price: '$29',
-    period: '/month',
-    description: 'Complete protection for serious preparedness',
-    features: [
-      'Everything in Basic',
-      'Unlimited plan sharing',
-      'Expert consultation calls',
-      'Advanced analytics',
-      'Team collaboration',
-      'API access',
-      'White-glove onboarding',
-    ],
-    cta: 'Sign Up for Pro',
-    ctaLink: '/auth/sign-up',
-    highlighted: false,
-    icon: Sparkles,
-  },
-];
+interface StripePrice {
+  amount: number;
+  currency: string;
+  interval: string;
+  formattedAmount: string;
+}
 
-export default function PricingPage() {
+async function getStripePrices(): Promise<{
+  basic: StripePrice;
+  pro: StripePrice;
+} | null> {
+  try {
+    // Fetch both price objects from Stripe
+    const [basicPrice, proPrice] = await Promise.all([
+      stripe.prices.retrieve(STRIPE_CONFIG.basicPriceId, {
+        expand: ['product'],
+      }),
+      stripe.prices.retrieve(STRIPE_CONFIG.proPriceId, {
+        expand: ['product'],
+      }),
+    ]);
+
+    // Format prices
+    const formatPrice = (price: typeof basicPrice): StripePrice => {
+      const amount = price.unit_amount ? price.unit_amount / 100 : 0;
+      const currency = price.currency.toUpperCase();
+      const interval = price.recurring?.interval || 'month';
+
+      return {
+        amount,
+        currency,
+        interval,
+        formattedAmount: new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: price.currency,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        }).format(amount),
+      };
+    };
+
+    return {
+      basic: formatPrice(basicPrice),
+      pro: formatPrice(proPrice),
+    };
+  } catch (error) {
+    console.error('Error fetching Stripe prices:', error);
+    return null;
+  }
+}
+
+export default async function PricingPage() {
+  // Fetch current user (if authenticated)
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Fetch user's subscription tier if authenticated
+  let currentTier: 'FREE' | 'BASIC' | 'PRO' = 'FREE';
+  if (user) {
+    const [profile] = await db
+      .select({ subscriptionTier: profiles.subscriptionTier })
+      .from(profiles)
+      .where(eq(profiles.id, user.id))
+      .limit(1);
+
+    if (profile) {
+      currentTier = profile.subscriptionTier as 'FREE' | 'BASIC' | 'PRO';
+    }
+  }
+
+  // Fetch dynamic pricing from Stripe
+  const prices = await getStripePrices();
+
+  // Fallback to static prices if Stripe fetch fails
+  const basicPrice = prices?.basic.formattedAmount || '$9';
+  const proPrice = prices?.pro.formattedAmount || '$29';
+
+  const tiers = [
+    {
+      name: 'Free',
+      price: '$0',
+      period: 'forever',
+      description: 'Get started with basic emergency planning',
+      features: [
+        '1 emergency plan',
+        'AI-powered recommendations',
+        'Basic supply checklists',
+        'Community resources',
+      ],
+      highlighted: false,
+      iconName: 'shield' as const,
+      tier: 'FREE' as const,
+    },
+    {
+      name: 'Basic',
+      price: basicPrice,
+      period: '/month',
+      description: 'For families who want comprehensive coverage',
+      features: [
+        'Unlimited emergency plans',
+        'Share plans with 5 people',
+        'Advanced AI recommendations',
+        'Custom supply lists',
+        'Founder video calls',
+        'Priority email support',
+      ],
+      highlighted: true,
+      iconName: 'zap' as const,
+      tier: 'BASIC' as const,
+    },
+    {
+      name: 'Pro',
+      price: proPrice,
+      period: '/month',
+      description: 'Complete protection for serious preparedness',
+      features: [
+        'Everything in Basic',
+        'Unlimited plan sharing',
+        'Expert consultation calls',
+        'Advanced analytics',
+        'Team collaboration',
+        'API access',
+        'White-glove onboarding',
+      ],
+      highlighted: false,
+      iconName: 'sparkles' as const,
+      tier: 'PRO' as const,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Auto-trigger purchase flow if user came from auth with tier parameter */}
+      <AutoPurchaseTrigger
+        user={
+          user
+            ? {
+                id: user.id,
+                email: user.email || '',
+              }
+            : null
+        }
+      />
+
+      {/* Back Navigation */}
+      <div className="container mx-auto px-4 pt-8">
+        <Link
+          href={user ? '/dashboard' : '/'}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to {user ? 'Dashboard' : 'Home'}</span>
+        </Link>
+      </div>
+
       {/* Hero Section */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
@@ -85,59 +187,18 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="pb-16 md:pb-24">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {tiers.map((tier) => {
-              const Icon = tier.icon;
-              return (
-                <Card
-                  key={tier.name}
-                  className={`relative flex flex-col ${
-                    tier.highlighted
-                      ? 'border-primary shadow-lg scale-105 z-10'
-                      : 'border-border'
-                  }`}
-                >
-                  {tier.highlighted && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <span className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1 rounded-full">
-                        Most Popular
-                      </span>
-                    </div>
-                  )}
-                  <CardHeader className="text-center pb-2">
-                    <div className="mx-auto mb-4 p-3 rounded-full bg-primary/10 w-fit">
-                      <Icon className="h-8 w-8 text-primary" />
-                    </div>
-                    <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                    <CardDescription>{tier.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    <div className="text-center mb-6">
-                      <span className="text-4xl font-bold">{tier.price}</span>
-                      <span className="text-muted-foreground">{tier.period}</span>
-                    </div>
-                    <ul className="space-y-3">
-                      {tier.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      asChild
-                      className="w-full"
-                      variant={tier.highlighted ? 'default' : 'outline'}
-                    >
-                      <Link href={tier.ctaLink}>{tier.cta}</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
+          <PricingSelector
+            tiers={tiers}
+            currentTier={currentTier}
+            user={
+              user
+                ? {
+                    id: user.id,
+                    email: user.email || '',
+                  }
+                : null
+            }
+          />
         </div>
       </section>
 
