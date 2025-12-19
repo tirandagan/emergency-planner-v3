@@ -3028,9 +3028,19 @@ export default function ProductsClient({
         } : null}
         onClose={() => setEditingCategoryDialog(null)}
         onSave={async (id, data) => {
-          await updateCategory(id, data);
+          const result = await updateCategory(id, data);
+          if (result.success && result.data) {
+            // Update local state without reloading to preserve tree expansion state
+            setAllCategories(prev => prev.map(cat => 
+              cat.id === id ? { 
+                ...cat, 
+                name: result.data!.name,
+                description: result.data!.description,
+                icon: result.data!.icon
+              } : cat
+            ));
+          }
           setEditingCategoryDialog(null);
-          window.location.reload();
         }}
       />
 

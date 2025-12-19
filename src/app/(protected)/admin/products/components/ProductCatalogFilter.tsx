@@ -253,9 +253,9 @@ export default function ProductCatalogFilter({
                                             <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                                                 priceRange === range.value ? 'bg-success border-success' : 'border-border bg-muted group-hover/item:border-muted-foreground'
                                             }`}>
-                                                {priceRange === range.value && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                                {priceRange === range.value && <svg className="w-3 h-3 text-success-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                                             </div>
-                                            <span className={`text-sm transition-colors ${priceRange === range.value ? 'text-success' : 'text-muted-foreground group-hover/item:text-foreground'}`}>
+                                            <span className={`text-sm transition-colors ${priceRange === range.value ? 'text-success font-semibold' : 'text-muted-foreground group-hover/item:text-foreground'}`}>
                                                 {range.label}
                                             </span>
                                         </div>
@@ -279,15 +279,15 @@ export default function ProductCatalogFilter({
                                                 onClick={() => cycleSupplierState(supplier.id)}
                                             >
                                                 <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                                                    state === 'include' ? 'bg-secondary border-secondary' :
+                                                    state === 'include' ? 'bg-primary border-primary' :
                                                     state === 'exclude' ? 'bg-destructive border-destructive' :
                                                     'border-border bg-muted group-hover/item:border-muted-foreground'
                                                 }`}>
-                                                    {state === 'include' && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                                                    {state === 'exclude' && <Minus className="w-3 h-3 text-white" strokeWidth={2.5} />}
+                                                    {state === 'include' && <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                                    {state === 'exclude' && <Minus className="w-3 h-3 text-destructive-foreground" strokeWidth={2.5} />}
                                                 </div>
                                                 <span className={`text-sm transition-colors ${
-                                                    state === 'include' ? 'text-secondary' :
+                                                    state === 'include' ? 'text-primary font-semibold' :
                                                     state === 'exclude' ? 'text-destructive line-through' :
                                                     'text-muted-foreground group-hover/item:text-foreground'
                                                 }`}>
@@ -319,11 +319,11 @@ export default function ProductCatalogFilter({
                                                         state === 'exclude' ? 'bg-destructive border-destructive' :
                                                         'border-border bg-muted group-hover/item:border-muted-foreground'
                                                     }`}>
-                                                        {state === 'include' && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                                                        {state === 'exclude' && <Minus className="w-3 h-3 text-white" strokeWidth={2.5} />}
+                                                        {state === 'include' && <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                                        {state === 'exclude' && <Minus className="w-3 h-3 text-destructive-foreground" strokeWidth={2.5} />}
                                                     </div>
                                                     <span className={`text-sm transition-colors ${
-                                                        state === 'include' ? 'text-primary' :
+                                                        state === 'include' ? 'text-primary font-semibold' :
                                                         state === 'exclude' ? 'text-destructive line-through' :
                                                         'text-muted-foreground group-hover/item:text-foreground'
                                                     }`}>
