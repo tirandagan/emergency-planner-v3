@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import type { Category, Product, MasterItem, CategoryGroup } from '@/lib/products-types';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { SubCategoryTreeItem } from './SubCategoryTreeItem';
@@ -88,7 +88,7 @@ export function CategoryTreeItem({
     sortField,
     sortDirection,
     onToggleSubCategory
-}: CategoryTreeItemProps): JSX.Element {
+}: CategoryTreeItemProps): React.JSX.Element {
     // Calculate total product count for this category
     const itemCount = Object.values(group.subGroups).reduce((acc, g) =>
         acc + Object.values(g.masterItems).reduce((acc2, m) => acc2 + m.products.length, 0)

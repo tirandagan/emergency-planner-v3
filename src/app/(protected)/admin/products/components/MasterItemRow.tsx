@@ -1,8 +1,8 @@
-import type React from 'react';
+import React from 'react';
 import type { Product, MasterItem, MasterItemGroup } from '@/lib/products-types';
 import { Shield, Users, Clock, MapPin } from 'lucide-react';
 import { ProductRow } from './ProductRow';
-import { TagBadge } from '../components/TagSelector';
+import { TagBadge } from '../page.client';
 import { SCENARIOS } from '../constants';
 
 /**
@@ -56,9 +56,9 @@ export function MasterItemRow({
     onSort,
     sortField,
     sortDirection
-}: MasterItemRowProps): JSX.Element {
+}: MasterItemRowProps): React.JSX.Element {
     // Sort icon helper component
-    const SortIcon = ({ field }: { field: string }): JSX.Element => {
+    const SortIcon = ({ field }: { field: string }): React.JSX.Element => {
         if (sortField !== field) {
             return <span className="text-muted-foreground/30 opacity-0 group-hover/th:opacity-100 transition-opacity">↕</span>;
         }

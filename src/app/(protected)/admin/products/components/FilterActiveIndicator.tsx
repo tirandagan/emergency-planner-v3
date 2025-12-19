@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
 /**
@@ -32,7 +32,7 @@ export function FilterActiveIndicator({
   visibleCount,
   totalCount,
   searchTerm
-}: FilterActiveIndicatorProps): JSX.Element {
+}: FilterActiveIndicatorProps): React.JSX.Element {
   return (
     <div className="mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
       <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={2.5} />

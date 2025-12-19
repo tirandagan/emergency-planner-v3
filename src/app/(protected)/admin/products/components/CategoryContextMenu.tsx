@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import { Edit, Plus, FolderTree, Layers, Trash2 } from 'lucide-react';
 import type { Category } from '@/lib/products-types';
 
@@ -68,7 +68,7 @@ export function CategoryContextMenu({
   onMove,
   onAddMasterItem,
   onDelete
-}: CategoryContextMenuProps): JSX.Element {
+}: CategoryContextMenuProps): React.JSX.Element {
   const isRootCategory = category.parentId === null;
 
   return (

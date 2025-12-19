@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import { Edit, Plus, MoveRight, Copy, ClipboardPaste } from 'lucide-react';
 import type { MasterItem } from '@/lib/products-types';
 
@@ -70,7 +70,7 @@ export function MasterItemContextMenu({
   onPasteTags,
   hasCopiedTags,
   copiedTagsSourceName
-}: MasterItemContextMenuProps): JSX.Element {
+}: MasterItemContextMenuProps): React.JSX.Element {
   return (
     <div
       className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden animate-in fade-in zoom-in-95"

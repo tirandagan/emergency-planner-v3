@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import { Pencil, Tag, FolderTree, Package, Trash2 } from 'lucide-react';
 import type { Product } from '@/lib/products-types';
 
@@ -67,7 +67,7 @@ export function ProductContextMenu({
   onAddToBundle,
   onDelete,
   renderSupplierMenu
-}: ProductContextMenuProps): JSX.Element {
+}: ProductContextMenuProps): React.JSX.Element {
   return (
     <div
       className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit animate-in fade-in zoom-in-95"

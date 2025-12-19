@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import type { Category, Product, MasterItem, SubCategoryGroup, MasterItemGroup } from '@/lib/products-types';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { MasterItemRow } from './MasterItemRow';
@@ -80,7 +80,7 @@ export function SubCategoryTreeItem({
     onSort,
     sortField,
     sortDirection
-}: SubCategoryTreeItemProps): JSX.Element {
+}: SubCategoryTreeItemProps): React.JSX.Element {
     // Sort master groups by name for consistency
     const sortedMasterGroups = Object.values(subGroup.masterItems).sort((a, b) => {
         const nameA = a.masterItem?.name || 'Uncategorized';

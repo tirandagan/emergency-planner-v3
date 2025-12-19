@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import { FolderTree, Truck, X } from 'lucide-react';
 
 /**
@@ -36,7 +36,7 @@ export function BulkActionBar({
   onAssignCategory,
   onAssignSupplier,
   onClearSelection
-}: BulkActionBarProps): JSX.Element {
+}: BulkActionBarProps): React.JSX.Element {
   return (
     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full shadow-2xl px-6 py-3 flex items-center gap-4 z-[50] animate-in slide-in-from-bottom-4 fade-in duration-200">
       <div className="text-sm text-foreground font-medium border-r border-border pr-4 flex items-center gap-2">

@@ -1,9 +1,9 @@
-import type React from 'react';
+import React from 'react';
 import { Fragment } from 'react';
 import type { Product, MasterItem, ProductMetadata } from '@/lib/products-types';
 import { AlertCircle, Shield, Users, Clock, MapPin, Unlink } from 'lucide-react';
 import { QuickTagger } from '../modals/QuickTagger';
-import { TagValueDisplay } from '../components/TagSelector';
+import { TagValueDisplay } from '../page.client';
 import { formatTagValue } from '@/lib/products-utils';
 import { DEMOGRAPHICS } from '../constants';
 
@@ -52,7 +52,7 @@ export function ProductRow({
     onContextMenu,
     onClick,
     onQuickTagClose
-}: ProductRowProps): JSX.Element {
+}: ProductRowProps): React.JSX.Element {
     // Check if product has overridden tags (non-null means inheritance is broken)
     const hasOverriddenTags = product.timeframes !== null ||
         product.demographics !== null ||
