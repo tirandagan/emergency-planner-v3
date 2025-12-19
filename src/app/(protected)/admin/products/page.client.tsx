@@ -4,8 +4,8 @@ import { useState, useMemo, useEffect, Fragment, useRef } from "react";
 import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield, Baby, UserCheck, User } from "lucide-react";
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags } from "./actions";
-import { getCategoryImpact, updateCategory, deleteCategory } from "@/app/actions/categories";
-import { EditCategoryDialog } from "@/components/admin/category-dialogs";
+import { getCategoryImpact, updateCategory, deleteCategory, createCategory } from "@/app/actions/categories";
+import { EditCategoryDialog, AddCategoryDialog, MoveCategoryDialog } from "@/components/admin/category-dialogs";
 import { DeleteCategoryDialog } from "@/components/admin/DeleteCategoryDialog";
 import ProductEditDialog from "./components/ProductEditDialog";
 import MasterItemModal from "./components/MasterItemModal";
@@ -65,7 +65,8 @@ interface Product {
 
 // Gender symbol components (Venus ♀ and Mars ♂)
 const VenusIcon = ({ className, color = "currentColor", title }: { className?: string; color?: string; title?: string }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={title}>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        {title && <title>{title}</title>}
         <circle cx="12" cy="8" r="3"/>
         <path d="M12 11v10"/>
         <path d="M8 15h8"/>
@@ -73,7 +74,8 @@ const VenusIcon = ({ className, color = "currentColor", title }: { className?: s
 );
 
 const MarsIcon = ({ className, color = "currentColor", title }: { className?: string; color?: string; title?: string }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={title}>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        {title && <title>{title}</title>}
         <circle cx="12" cy="8" r="3"/>
         <path d="M12 11v10"/>
         <path d="M16 15l-4-4"/>
@@ -132,7 +134,7 @@ export const TagValueDisplay = ({ value, field, title }: { value: string | { ico
     if (typeof value === 'object' && value.icon) {
         const displayTitle = title || getIconDisplayName(value.icon);
         const commonProps = { className: "w-3.5 h-3.5", title: displayTitle };
-        
+
         if (value.icon === 'user') return <User {...commonProps} />;
         if (value.icon === 'users') return <Users {...commonProps} />;
         if (value.icon === 'zap') return <Zap {...commonProps} />;
@@ -144,7 +146,7 @@ export const TagValueDisplay = ({ value, field, title }: { value: string | { ico
         if (value.icon === 'venus') return <VenusIcon className="w-3.5 h-3.5" color="#ec4899" title={displayTitle} />;
         if (value.icon === 'mars') return <MarsIcon className="w-3.5 h-3.5" color="#3b82f6" title={displayTitle} />;
     }
-    return <span title={title || (typeof value === 'string' ? value : '')}>{value}</span>;
+    return <span title={title || (typeof value === 'string' ? value : '')}>{typeof value === 'string' ? value : ''}</span>;
 };
 
 const TagBadge = ({ 
@@ -479,10 +481,14 @@ export default function ProductsClient({
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
   
+  // Categories State
+  const [allCategories, setAllCategories] = useState(categories);
+
   // Master Items State
   const [allMasterItems, setAllMasterItems] = useState(masterItems);
   const [isMasterItemModalOpen, setIsMasterItemModalOpen] = useState(false);
   const [editingMasterItem, setEditingMasterItem] = useState<MasterItem | null>(null);
+  const [targetCategoryForMasterItem, setTargetCategoryForMasterItem] = useState<Category | null>(null);
 
   // Build category tree from flat array (like /admin/categories does)
   const categoryTree = useMemo(() => {
@@ -490,12 +496,12 @@ export default function ProductsClient({
     const roots: Category[] = [];
 
     // Initialize map
-    categories.forEach(c => {
+    allCategories.forEach(c => {
       map.set(c.id, { ...c, children: [] });
     });
 
     // Build hierarchy
-    categories.forEach(c => {
+    allCategories.forEach(c => {
       const node = map.get(c.id);
       if (c.parentId && map.has(c.parentId)) {
         map.get(c.parentId).children.push(node);
@@ -505,12 +511,13 @@ export default function ProductsClient({
     });
 
     return roots;
-  }, [categories]);
+  }, [allCategories]);
 
   // Sync props to state when server revalidates
   useEffect(() => {
       setAllMasterItems(masterItems);
-  }, [masterItems]);
+      setAllCategories(categories);
+  }, [masterItems, categories]);
   
   const openEditMasterItemModal = (masterItemId: string) => {
       const item = allMasterItems.find(m => m.id === masterItemId);
@@ -627,10 +634,40 @@ export default function ProductsClient({
   const [editingCategoryDialog, setEditingCategoryDialog] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const [deleteImpact, setDeleteImpact] = useState<{
-    subcategoryCount: number;
-    masterItemCount: number;
-    affectedItems: Array<{ id: string; name: string }>;
+    categoryTree: Array<{
+      id: string;
+      name: string;
+      icon: string | null;
+      subcategories: Array<{
+        id: string;
+        name: string;
+        icon: string | null;
+        masterItems: Array<{
+          id: string;
+          name: string;
+          productCount: number;
+        }>;
+      }>;
+      masterItems: Array<{
+        id: string;
+        name: string;
+        productCount: number;
+      }>;
+    }>;
+    totalMasterItems: number;
+    totalProducts: number;
   } | null>(null);
+
+  // Category Add/Move Dialog State
+  const [addingCategoryDialog, setAddingCategoryDialog] = useState<{ id: string; name: string } | null | 'root'>(null);
+  const [movingCategoryDialog, setMovingCategoryDialog] = useState<Category | null>(null);
+
+  // Background Context Menu State
+  const [backgroundContextMenu, setBackgroundContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+  }>({ visible: false, x: 0, y: 0 });
 
   // Bulk Selection State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -728,14 +765,159 @@ export default function ProductsClient({
       try {
           const res = await deleteCategory(deletingCategory.id);
           if (res.success) {
+              // Remove deleted category and all its descendants from state
+              const removeCategoryAndDescendants = (categoryId: string, cats: Category[]): Category[] => {
+                  const toRemove = new Set<string>();
+                  
+                  // Find all descendants
+                  const findDescendants = (id: string) => {
+                      toRemove.add(id);
+                      cats.forEach(cat => {
+                          if (cat.parentId === id) {
+                              findDescendants(cat.id);
+                          }
+                      });
+                  };
+                  
+                  findDescendants(categoryId);
+                  
+                  // Return categories that are not being removed
+                  return cats.filter(cat => !toRemove.has(cat.id));
+              };
+              
+              // Get all category IDs that will be deleted (including descendants)
+              const getCategoryIdsToRemove = (categoryId: string): Set<string> => {
+                  const toRemove = new Set<string>();
+                  const findDescendants = (id: string) => {
+                      toRemove.add(id);
+                      allCategories.forEach(cat => {
+                          if (cat.parentId === id) {
+                              findDescendants(cat.id);
+                          }
+                      });
+                  };
+                  findDescendants(categoryId);
+                  return toRemove;
+              };
+              
+              const categoryIdsToRemove = getCategoryIdsToRemove(deletingCategory.id);
+              
+              // Update categories state
+              setAllCategories(prev => prev.filter(cat => !categoryIdsToRemove.has(cat.id)));
+              
+              // Remove master items that belong to deleted categories
+              setAllMasterItems(prev => prev.filter(mi => !categoryIdsToRemove.has(mi.categoryId)));
+              
+              // Remove from expanded sets if present
+              setExpandedCategories(prev => {
+                  const next = new Set(prev);
+                  categoryIdsToRemove.forEach(id => next.delete(id));
+                  return next;
+              });
+              
+              setExpandedSubCategories(prev => {
+                  const next = new Set(prev);
+                  categoryIdsToRemove.forEach(id => next.delete(id));
+                  return next;
+              });
+              
               setDeletingCategory(null);
               setDeleteImpact(null);
-              window.location.reload();
           } else {
               alert('Failed to delete: ' + res.message);
           }
       } catch (error) {
           console.error('Delete failed:', error);
+      }
+  };
+
+  const handleCategoryAdd = (category: Category) => {
+      setAddingCategoryDialog({ id: category.id, name: category.name });
+      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleCategoryMove = (category: Category) => {
+      setMovingCategoryDialog(category);
+      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleSaveNewCategory = async (data: { name: string; description: string; icon: string; parentId: string | null }) => {
+      try {
+          const res = await createCategory(data.name, data.parentId, data.description, data.icon);
+          if (res.success && res.data) {
+              // Add new category to state
+              setAllCategories(prev => [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name)));
+              
+              // If it's a subcategory, ensure parent category stays expanded
+              if (data.parentId) {
+                  setExpandedCategories(prev => new Set(prev).add(data.parentId!));
+              }
+              
+              setAddingCategoryDialog(null);
+          } else {
+              alert('Failed to create category: ' + res.message);
+          }
+      } catch (error) {
+          console.error('Create category failed:', error);
+          throw error;
+      }
+  };
+
+  const handleSaveMoveCategory = async (categoryId: string, newParentId: string | null) => {
+      try {
+          const res = await updateCategory(categoryId, { parent_id: newParentId || undefined });
+          if (res.success) {
+              setMovingCategoryDialog(null);
+              window.location.reload();
+          } else {
+              alert('Failed to move category: ' + res.message);
+          }
+      } catch (error) {
+          console.error('Move category failed:', error);
+          throw error;
+      }
+  };
+
+  const handleAddMasterItem = (category: Category) => {
+      setTargetCategoryForMasterItem(category);
+      setEditingMasterItem(null);
+      setIsMasterItemModalOpen(true);
+      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleAddProductFromMasterItem = (masterItem: MasterItem) => {
+      // Pre-populate category, subcategory, and master item
+      const cat = categories.find(c => c.id === masterItem.categoryId);
+      if (cat) {
+          if (cat.parentId) {
+              // Subcategory
+              setPreSelectedCategory(cat.parentId);
+              setPreSelectedSubCategory(cat.id);
+          } else {
+              // Root category
+              setPreSelectedCategory(cat.id);
+              setPreSelectedSubCategory("");
+          }
+      }
+      setPreSelectedMasterItem(masterItem.id);
+      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+      setIsChoiceModalOpen(true);
+  };
+
+  const handleBackgroundContextMenu = (e: React.MouseEvent) => {
+      // Only show menu if clicking on the product list container itself
+      if (e.target === e.currentTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Close other menus
+          setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+          setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+          setContextMenu(null);
+          setBackgroundContextMenu({
+              visible: true,
+              x: e.pageX,
+              y: e.pageY
+          });
       }
   };
 
@@ -769,6 +951,9 @@ export default function ProductsClient({
           if (masterItemContextMenu.visible) {
               setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
           }
+          if (backgroundContextMenu.visible) {
+              setBackgroundContextMenu(prev => ({ ...prev, visible: false }));
+          }
       };
 
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -779,10 +964,13 @@ export default function ProductsClient({
               if (masterItemContextMenu.visible) {
                   setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
               }
+              if (backgroundContextMenu.visible) {
+                  setBackgroundContextMenu(prev => ({ ...prev, visible: false }));
+              }
           }
       };
 
-      if (categoryContextMenu.visible || masterItemContextMenu.visible) {
+      if (categoryContextMenu.visible || masterItemContextMenu.visible || backgroundContextMenu.visible) {
           const timer = setTimeout(() => {
               window.addEventListener('click', handleClick);
               window.addEventListener('keydown', handleKeyDown);
@@ -794,7 +982,7 @@ export default function ProductsClient({
               window.removeEventListener('keydown', handleKeyDown);
           };
       }
-  }, [categoryContextMenu.visible, masterItemContextMenu.visible]);
+  }, [categoryContextMenu.visible, masterItemContextMenu.visible, backgroundContextMenu.visible]);
 
   const handleCopyTags = (masterItem: MasterItem) => {
       setCopiedTags({
@@ -907,8 +1095,8 @@ export default function ProductsClient({
   // Derived lists for category modal
   const categoryModalSubCategories = useMemo(() => {
       if (!categoryModalCategory) return [];
-      return categories.filter(c => c.parentId === categoryModalCategory);
-  }, [categories, categoryModalCategory]);
+      return allCategories.filter(c => c.parentId === categoryModalCategory);
+  }, [allCategories, categoryModalCategory]);
 
   const categoryModalFilteredMasterItems = useMemo(() => {
       if (categoryModalSubCategory) {
@@ -961,7 +1149,7 @@ export default function ProductsClient({
   };
 
   // Derived Lists
-  const rootCategories = useMemo(() => categories.filter(c => !c.parentId), [categories]);
+  const rootCategories = useMemo(() => allCategories.filter(c => !c.parentId), [allCategories]);
 
   // New Modal State
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
@@ -992,7 +1180,7 @@ export default function ProductsClient({
       
       // Priority 2: Active Category/SubCategory Selection
       if (activeCategoryId && activeCategoryId !== 'uncategorized') {
-          const cat = categories.find(c => c.id === activeCategoryId);
+          const cat = allCategories.find(c => c.id === activeCategoryId);
           if (cat) {
               if (cat.parentId) {
                   setPreSelectedCategory(cat.parentId);
@@ -1015,7 +1203,10 @@ export default function ProductsClient({
   const handleManualSelect = () => {
       setIsChoiceModalOpen(false);
       setEditingProduct(null);
-      resolvePreSelectedCategories();
+      // Only resolve categories if not already pre-selected (e.g., from context menu)
+      if (!preSelectedMasterItem && !preSelectedCategory) {
+          resolvePreSelectedCategories();
+      }
       setIsModalOpen(true);
   };
 
@@ -1026,7 +1217,7 @@ export default function ProductsClient({
 
   const handleAmazonProductSelected = (product: any) => {
       setIsAmazonSearchModalOpen(false);
-      
+
       // Map Amazon product to partial Product
       const mappedProduct: Partial<Product> = {
           name: product.name,
@@ -1043,9 +1234,12 @@ export default function ProductsClient({
               weight_unit: product.weight_unit
           }
       };
-      
-      setEditingProduct(mappedProduct as Product); 
-      resolvePreSelectedCategories();
+
+      setEditingProduct(mappedProduct as Product);
+      // Only resolve categories if not already pre-selected (e.g., from context menu)
+      if (!preSelectedMasterItem && !preSelectedCategory) {
+          resolvePreSelectedCategories();
+      }
       setIsModalOpen(true);
   };
   
@@ -1176,9 +1370,9 @@ export default function ProductsClient({
       type MasterGroup = { masterItem: MasterItem | null, products: Product[] };
       type SubGroup = { subCategory: Category | null, masterItems: Record<string, MasterGroup> };
       type CategoryGroup = { category: Category, subGroups: Record<string, SubGroup> };
-      
+
       const groups: Record<string, CategoryGroup> = {};
-      
+
       const ensureGroup = (catId: string, subCatId: string | null) => {
           if (!groups[catId]) {
               if (catId === 'uncategorized') {
@@ -1187,7 +1381,7 @@ export default function ProductsClient({
                       subGroups: {}
                   };
               } else {
-                  const cat = categories.find(c => c.id === catId);
+                  const cat = allCategories.find(c => c.id === catId);
                   if (!cat) return null;
                   groups[catId] = { category: cat, subGroups: {} };
               }
@@ -1195,19 +1389,50 @@ export default function ProductsClient({
           
           const subKey = subCatId || 'root';
           if (!groups[catId].subGroups[subKey]) {
-              const subCat = subCatId ? categories.find(c => c.id === subCatId) || null : null;
+              const subCat = subCatId ? allCategories.find(c => c.id === subCatId) || null : null;
               groups[catId].subGroups[subKey] = { subCategory: subCat, masterItems: {} };
           }
           return groups[catId].subGroups[subKey];
       };
 
+      // First, create groups for all categories (even empty ones)
+      allCategories.forEach(cat => {
+          if (cat.parentId === null) {
+              // Root category
+              ensureGroup(cat.id, null);
+          } else {
+              // Subcategory - ensure parent exists and add subcategory
+              ensureGroup(cat.parentId, cat.id);
+          }
+      });
+
+      // Second, add all master items (even those without products)
+      allMasterItems.forEach(masterItem => {
+          const cat = allCategories.find(c => c.id === masterItem.categoryId);
+          if (cat) {
+              let catId = cat.id;
+              let subCatId = null;
+
+              if (cat.parentId) {
+                  catId = cat.parentId;
+                  subCatId = cat.id;
+              }
+
+              const group = ensureGroup(catId, subCatId);
+              if (group && !group.masterItems[masterItem.id]) {
+                  group.masterItems[masterItem.id] = { masterItem, products: [] };
+              }
+          }
+      });
+
+      // Then add products to their respective groups
       processedProducts.forEach(p => {
           const masterItem = allMasterItems.find(m => m.id === p.masterItemId);
           let catId = 'uncategorized';
           let subCatId = null;
 
           if (masterItem) {
-               const cat = categories.find(c => c.id === masterItem.categoryId); // Fixed: use camelCase
+               const cat = allCategories.find(c => c.id === masterItem.categoryId); // Fixed: use camelCase
                if (cat) {
                    if (cat.parentId) {
                        catId = cat.parentId;
@@ -1229,7 +1454,7 @@ export default function ProductsClient({
       });
 
       return groups;
-  }, [processedProducts, allMasterItems, categories]);
+  }, [processedProducts, allMasterItems, allCategories]);
 
   const visibleProductIds = useMemo(() => {
       const ids: string[] = [];
@@ -1497,13 +1722,6 @@ export default function ProductsClient({
                     <Upload className="w-4 h-4" strokeWidth={2.5} />
                     Import
                 </a>
-                <button
-                    onClick={openNewModal}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap shadow-sm"
-                >
-                    <Plus className="w-4 h-4" strokeWidth={2.5} />
-                    Add Product
-                </button>
             </div>
         </div>
 
@@ -1614,7 +1832,7 @@ export default function ProductsClient({
 
                     {/* Subgroups - Collapsible Content */}
                     {isExpanded && (
-                    <div className="grid gap-6 mt-2 ml-4">
+                    <div className="grid gap-1 mt-1 ml-4">
                         {Object.values(group.subGroups).map(subGroup => {
                             const subCatId = subGroup.subCategory?.id || `root-${group.category.id}`;
                             const isSubExpanded = subGroup.subCategory ? expandedSubCategories.has(subCatId) : true;
@@ -1852,10 +2070,10 @@ export default function ProductsClient({
                                                                 }
                                                             };
                                                             
-                                                            checkField('scenarios', product.scenarios, masterItem.scenarios, Shield, 'text-destructive bg-destructive/10 border-destructive/20', 'Scenarios');
-                                                            checkField('demographics', product.demographics, masterItem.demographics, Users, 'text-success bg-success/10 border-success/20', 'People');
-                                                            checkField('timeframes', product.timeframes, masterItem.timeframes, Clock, 'text-primary bg-primary/10 border-primary/20', 'Times');
-                                                            checkField('locations', product.locations, masterItem.locations, MapPin, 'text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50', 'Locs');
+                                                            checkField('scenarios', product.scenarios ?? null, masterItem.scenarios ?? null, Shield, 'text-destructive bg-destructive/10 border-destructive/20', 'Scenarios');
+                                                            checkField('demographics', product.demographics ?? null, masterItem.demographics ?? null, Users, 'text-success bg-success/10 border-success/20', 'People');
+                                                            checkField('timeframes', product.timeframes ?? null, masterItem.timeframes ?? null, Clock, 'text-primary bg-primary/10 border-primary/20', 'Times');
+                                                            checkField('locations', product.locations ?? null, masterItem.locations ?? null, MapPin, 'text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50', 'Locs');
                                                             
                                                             return differences;
                                                         };
@@ -2027,6 +2245,25 @@ export default function ProductsClient({
         )}
       </div>
 
+      {/* Add Category Footer - Clickable area for adding root categories */}
+      <div
+        className="mt-4 py-8 px-4 border-2 border-dashed border-border/50 rounded-lg text-center text-muted-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-context-menu"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setBackgroundContextMenu({
+            visible: true,
+            x: e.pageX,
+            y: e.pageY
+          });
+        }}
+      >
+        <div className="flex flex-col items-center gap-2">
+          <Plus className="w-6 h-6 opacity-50" strokeWidth={2.5} />
+          <p className="text-sm font-medium">Right-click here to add a new root category</p>
+        </div>
+      </div>
+
       {/* Add Product Choice Modal */}
       <AddProductChoiceModal
           isOpen={isChoiceModalOpen}
@@ -2063,27 +2300,35 @@ export default function ProductsClient({
       />
 
       {/* New Master Item Modal (For Category Change flow & Editing) */}
-      <MasterItemModal 
+      <MasterItemModal
           isOpen={isMasterItemModalOpen}
           onClose={() => {
               setIsMasterItemModalOpen(false);
               setEditingMasterItem(null);
+              setTargetCategoryForMasterItem(null);
           }}
           onCreated={(newItem) => {
              setAllMasterItems(prev => [...prev, newItem].sort((a, b) => a.name.localeCompare(b.name)));
              if (isCategoryModalOpen) {
                 setCategoryModalMasterItem(newItem.id);
              }
+             setTargetCategoryForMasterItem(null);
           }}
           onUpdated={(updatedItem) => {
               setAllMasterItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
           }}
           itemToEdit={editingMasterItem}
-          selectedCategoryId={isCategoryModalOpen ? (categoryModalSubCategory || categoryModalCategory) : null}
+          selectedCategoryId={
+            targetCategoryForMasterItem
+              ? targetCategoryForMasterItem.id
+              : (isCategoryModalOpen ? (categoryModalSubCategory || categoryModalCategory) : null)
+          }
           selectedCategoryName={
-              editingMasterItem 
-                ? categories.find(c => c.id === editingMasterItem.categoryId)?.name || 'Unknown Category' // Fixed: use camelCase
-                : categories.find(c => c.id === (isCategoryModalOpen ? (categoryModalSubCategory || categoryModalCategory) : ''))?.name || 'Unknown Category'
+              editingMasterItem
+                ? allCategories.find(c => c.id === editingMasterItem.categoryId)?.name || 'Unknown Category' // Fixed: use camelCase
+                : targetCategoryForMasterItem
+                  ? targetCategoryForMasterItem.name
+                  : allCategories.find(c => c.id === (isCategoryModalOpen ? (categoryModalSubCategory || categoryModalCategory) : ''))?.name || 'Unknown Category'
           }
       />
 
@@ -2229,6 +2474,13 @@ export default function ProductsClient({
             >
                 <Edit className="w-4 h-4 text-primary" strokeWidth={2.5} />
                 Edit Master Item
+            </button>
+            <button
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                onClick={() => handleAddProductFromMasterItem(masterItemContextMenu.masterItem!)}
+            >
+                <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                Add Product
             </button>
             <div className="h-px bg-border my-1" />
             <button
@@ -2509,7 +2761,7 @@ export default function ProductsClient({
       {categoryContextMenu.visible && categoryContextMenu.category && (
         <div
           id="category-context-menu"
-          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[160px] overflow-hidden backdrop-blur-sm"
+          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[180px] overflow-hidden backdrop-blur-sm"
           style={{
             top: categoryContextMenu.y,
             left: categoryContextMenu.x
@@ -2520,9 +2772,41 @@ export default function ProductsClient({
             onClick={() => handleCategoryEdit(categoryContextMenu.category!)}
             className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
           >
-            <FileText className="w-4 h-4 text-primary" strokeWidth={2.5} />
+            <Edit className="w-4 h-4 text-primary" strokeWidth={2.5} />
             Edit Category
           </button>
+
+          {/* Only show "Add New Category" for root categories (parentId === null) */}
+          {categoryContextMenu.category.parentId === null && (
+            <button
+              onClick={() => handleCategoryAdd(categoryContextMenu.category!)}
+              className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+            >
+              <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
+              Add Subcategory
+            </button>
+          )}
+
+          {/* Only show "Move Category" and "Add Master Item" for subcategories (parentId !== null) */}
+          {categoryContextMenu.category.parentId !== null && (
+            <>
+              <button
+                onClick={() => handleCategoryMove(categoryContextMenu.category!)}
+                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+              >
+                <FolderTree className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                Move Category
+              </button>
+              <button
+                onClick={() => handleAddMasterItem(categoryContextMenu.category!)}
+                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+              >
+                <Layers className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                Add Master Item
+              </button>
+            </>
+          )}
+
           <div className="h-px bg-border my-1" />
           <button
             onClick={() => handleCategoryDelete(categoryContextMenu.category!)}
@@ -2562,6 +2846,53 @@ export default function ProductsClient({
           setDeleteImpact(null);
         }}
         onConfirm={handleConfirmDeleteCategory}
+      />
+
+      {/* Background Context Menu */}
+      {backgroundContextMenu.visible && (
+        <div
+          id="background-context-menu"
+          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[160px] overflow-hidden backdrop-blur-sm"
+          style={{
+            top: backgroundContextMenu.y,
+            left: backgroundContextMenu.x
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              setAddingCategoryDialog('root');
+              setBackgroundContextMenu(prev => ({ ...prev, visible: false }));
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors"
+          >
+            <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
+            Add Root Category
+          </button>
+        </div>
+      )}
+
+      {/* Add Category Dialog */}
+      <AddCategoryDialog
+        isOpen={!!addingCategoryDialog}
+        parentCategory={
+          addingCategoryDialog === 'root'
+            ? null
+            : addingCategoryDialog
+              ? { id: addingCategoryDialog.id, name: addingCategoryDialog.name }
+              : null
+        }
+        onClose={() => setAddingCategoryDialog(null)}
+        onSave={handleSaveNewCategory}
+      />
+
+      {/* Move Category Dialog */}
+      <MoveCategoryDialog
+        isOpen={!!movingCategoryDialog}
+        category={movingCategoryDialog}
+        categories={categories}
+        onClose={() => setMovingCategoryDialog(null)}
+        onSave={handleSaveMoveCategory}
       />
 
     </div>

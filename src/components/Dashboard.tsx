@@ -41,6 +41,7 @@ import { ReadinessSummary } from "./dashboard/ReadinessSummary";
 import { PlanGrid } from "./dashboard/PlanGrid";
 import { EditTitleModal } from "./dashboard/EditTitleModal";
 import { UpgradeModal } from "./dashboard/UpgradeModal";
+import { UpgradeBanner } from "./dashboard/UpgradeBanner";
 
 interface DashboardProps {
   userTier: SubscriptionTier;
@@ -203,6 +204,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userTier, userName }) => {
         planCount={plans.length}
         onCreatePlan={handleCreatePlan}
       />
+
+      {/* Upgrade Banner (FREE tier only) */}
+      {userTier === "FREE" && <UpgradeBanner planCount={plans.length} />}
 
       {/* Readiness Summary Widget (Placeholder for Phase 6) */}
       <ReadinessSummary isPlaceholder={true} />

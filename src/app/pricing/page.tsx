@@ -22,8 +22,8 @@ const tiers = [
       'Basic supply checklists',
       'Community resources',
     ],
-    cta: 'Get Started',
-    ctaLink: '/auth/signup',
+    cta: 'Get Started Free',
+    ctaLink: '/auth/sign-up',
     highlighted: false,
     icon: Shield,
   },
@@ -40,8 +40,8 @@ const tiers = [
       'Founder video calls',
       'Priority email support',
     ],
-    cta: 'Subscribe',
-    ctaLink: '/auth/signup?plan=basic',
+    cta: 'Sign Up to Subscribe',
+    ctaLink: '/auth/sign-up',
     highlighted: true,
     icon: Zap,
   },
@@ -59,8 +59,8 @@ const tiers = [
       'API access',
       'White-glove onboarding',
     ],
-    cta: 'Go Pro',
-    ctaLink: '/auth/signup?plan=pro',
+    cta: 'Sign Up for Pro',
+    ctaLink: '/auth/sign-up',
     highlighted: false,
     icon: Sparkles,
   },
@@ -187,7 +187,7 @@ export default function PricingPage() {
             Join thousands of families who trust beprepared.ai for their emergency planning needs.
           </p>
           <Button asChild size="lg">
-            <Link href="/auth/signup">Start Your Free Plan</Link>
+            <Link href="/auth/sign-up">Start Your Free Plan</Link>
           </Button>
         </div>
       </section>

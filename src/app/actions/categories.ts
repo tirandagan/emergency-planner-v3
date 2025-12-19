@@ -102,36 +102,58 @@ export async function updateCategory(
 
 export async function deleteCategory(id: string): Promise<{ success: boolean; message?: string }> {
   try {
-    // Check for child categories that would become orphaned
-    const [childCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(categories)
-      .where(eq(categories.parentId, id));
+    // Get all descendant categories recursively
+    const allCategories = await db.select().from(categories);
 
-    if (childCount.count > 0) {
-      return {
-        success: false,
-        message: `Cannot delete: ${childCount.count} subcategories must be moved or deleted first`
-      };
-    }
+    const getDescendants = (parentId: string): string[] => {
+      const children = allCategories.filter(c => c.parentId === parentId);
+      let descendants = children.map(c => c.id);
 
-    // Check for master items that would lose their category
-    const [itemCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
+      for (const child of children) {
+        descendants = descendants.concat(getDescendants(child.id));
+      }
+
+      return descendants;
+    };
+
+    const affectedCategoryIds = [id, ...getDescendants(id)];
+
+    // Get all master items in affected categories
+    const affectedMasterItems = await db
+      .select({ id: masterItems.id })
       .from(masterItems)
-      .where(eq(masterItems.categoryId, id));
+      .where(inArray(masterItems.categoryId, affectedCategoryIds));
 
-    if (itemCount.count > 0) {
-      return {
-        success: false,
-        message: `Cannot delete: ${itemCount.count} master items must be moved or deleted first`
-      };
+    const masterItemIds = affectedMasterItems.map(mi => mi.id);
+
+    // CASCADE DELETE:
+    // 1. Delete all specific products under these master items
+    if (masterItemIds.length > 0) {
+      await db
+        .delete(specificProducts)
+        .where(inArray(specificProducts.masterItemId, masterItemIds));
     }
 
-    // Safe to delete - no dependencies exist
+    // 2. Delete all master items in affected categories
+    if (affectedCategoryIds.length > 0) {
+      await db
+        .delete(masterItems)
+        .where(inArray(masterItems.categoryId, affectedCategoryIds));
+    }
+
+    // 3. Delete all subcategories
+    const subcategoryIds = affectedCategoryIds.filter(catId => catId !== id);
+    if (subcategoryIds.length > 0) {
+      await db
+        .delete(categories)
+        .where(inArray(categories.id, subcategoryIds));
+    }
+
+    // 4. Finally delete the target category
     await db.delete(categories).where(eq(categories.id, id));
 
     revalidatePath('/admin/categories');
+    revalidatePath('/admin/products');
     return { success: true };
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
@@ -189,61 +211,136 @@ export async function getCategoryTree(): Promise<Category[]> {
 export async function getCategoryImpact(categoryId: string): Promise<{
   success: boolean;
   data?: {
-    subcategoryCount: number;
-    masterItemCount: number;
-    affectedItems: Array<{ id: string; name: string }>;
+    categoryTree: Array<{
+      id: string;
+      name: string;
+      icon: string | null;
+      subcategories: Array<{
+        id: string;
+        name: string;
+        icon: string | null;
+        masterItems: Array<{
+          id: string;
+          name: string;
+          productCount: number;
+        }>;
+      }>;
+      masterItems: Array<{
+        id: string;
+        name: string;
+        productCount: number;
+      }>;
+    }>;
+    totalMasterItems: number;
+    totalProducts: number;
   };
   message?: string;
 }> {
   try {
-    // Get all descendant categories recursively
+    // Get the target category and all its descendants
     const allCategories = await db.select().from(categories);
-    
+    const targetCategory = allCategories.find(c => c.id === categoryId);
+
+    if (!targetCategory) {
+      throw new Error('Category not found');
+    }
+
     const getDescendants = (parentId: string): string[] => {
       const children = allCategories.filter(c => c.parentId === parentId);
       let descendants = children.map(c => c.id);
-      
+
       for (const child of children) {
         descendants = descendants.concat(getDescendants(child.id));
       }
-      
+
       return descendants;
     };
 
     const affectedCategoryIds = [categoryId, ...getDescendants(categoryId)];
-    
-    // Get affected master items
-    const affectedItems = await db
+
+    // Get all master items with product counts for affected categories
+    const allMasterItems = await db
       .select({
         id: masterItems.id,
         name: masterItems.name,
+        categoryId: masterItems.categoryId,
+        productCount: sql<number>`count(${specificProducts.id})::int`,
       })
       .from(masterItems)
+      .leftJoin(specificProducts, eq(specificProducts.masterItemId, masterItems.id))
       .where(inArray(masterItems.categoryId, affectedCategoryIds))
-      .limit(5);
+      .groupBy(masterItems.id, masterItems.name, masterItems.categoryId)
+      .orderBy(masterItems.name);
 
-    const [itemCountResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(masterItems)
-      .where(inArray(masterItems.categoryId, affectedCategoryIds));
+    // Build tree structure
+    const categoryTree: Array<{
+      id: string;
+      name: string;
+      icon: string | null;
+      subcategories: Array<{
+        id: string;
+        name: string;
+        icon: string | null;
+        masterItems: Array<{ id: string; name: string; productCount: number }>;
+      }>;
+      masterItems: Array<{ id: string; name: string; productCount: number }>;
+    }> = [];
+
+    // If deleting a root category, show it with all subcategories
+    if (!targetCategory.parentId) {
+      const subcats = allCategories.filter(c => c.parentId === categoryId);
+      categoryTree.push({
+        id: targetCategory.id,
+        name: targetCategory.name,
+        icon: targetCategory.icon,
+        subcategories: subcats.map(subcat => ({
+          id: subcat.id,
+          name: subcat.name,
+          icon: subcat.icon,
+          masterItems: allMasterItems
+            .filter(mi => mi.categoryId === subcat.id)
+            .map(mi => ({ id: mi.id, name: mi.name, productCount: mi.productCount })),
+        })),
+        masterItems: allMasterItems
+          .filter(mi => mi.categoryId === categoryId)
+          .map(mi => ({ id: mi.id, name: mi.name, productCount: mi.productCount })),
+      });
+    } else {
+      // Deleting a subcategory - show parent with this subcategory highlighted
+      const parent = allCategories.find(c => c.id === targetCategory.parentId);
+      if (parent) {
+        categoryTree.push({
+          id: parent.id,
+          name: parent.name,
+          icon: parent.icon,
+          subcategories: [{
+            id: targetCategory.id,
+            name: targetCategory.name,
+            icon: targetCategory.icon,
+            masterItems: allMasterItems
+              .filter(mi => mi.categoryId === categoryId)
+              .map(mi => ({ id: mi.id, name: mi.name, productCount: mi.productCount })),
+          }],
+          masterItems: [],
+        });
+      }
+    }
+
+    const totalMasterItems = allMasterItems.length;
+    const totalProducts = allMasterItems.reduce((sum, item) => sum + item.productCount, 0);
 
     return {
       success: true,
       data: {
-        subcategoryCount: affectedCategoryIds.length - 1,
-        masterItemCount: itemCountResult?.count || 0,
-        affectedItems: affectedItems || [],
+        categoryTree,
+        totalMasterItems,
+        totalProducts,
       },
     };
   } catch (error) {
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error',
-      data: {
-        subcategoryCount: 0,
-        masterItemCount: 0,
-        affectedItems: [],
-      },
     };
   }
 }

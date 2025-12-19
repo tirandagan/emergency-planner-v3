@@ -50,12 +50,13 @@ export default function MasterItemModal({
                 setLocations(itemToEdit.locations || []);
                 setScenarios(itemToEdit.scenarios || []);
             } else {
+                // When creating a new master item, pre-select all tags by default
                 setName("");
                 setDescription("");
-                setTimeframes([]);
-                setDemographics([]);
-                setLocations([]);
-                setScenarios([]);
+                setTimeframes([...TIMEFRAMES]);
+                setDemographics([...DEMOGRAPHICS]);
+                setLocations([...LOCATIONS]);
+                setScenarios([...SCENARIOS]);
             }
         }
     }, [isOpen, itemToEdit]);

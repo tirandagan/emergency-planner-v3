@@ -271,7 +271,30 @@ export default function CategoryManager() {
     // Delete Confirmation State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
-    const [deleteImpact, setDeleteImpact] = useState<{ subcategoryCount: number, masterItemCount: number, affectedItems: Array<{ id: string, name: string }> } | null>(null);
+    const [deleteImpact, setDeleteImpact] = useState<{
+        categoryTree: Array<{
+            id: string;
+            name: string;
+            icon: string | null;
+            subcategories: Array<{
+                id: string;
+                name: string;
+                icon: string | null;
+                masterItems: Array<{
+                    id: string;
+                    name: string;
+                    productCount: number;
+                }>;
+            }>;
+            masterItems: Array<{
+                id: string;
+                name: string;
+                productCount: number;
+            }>;
+        }>;
+        totalMasterItems: number;
+        totalProducts: number;
+    } | null>(null);
 
     const fetchTree = async () => {
         setLoading(true);

@@ -9,12 +9,31 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertTriangle, Package } from 'lucide-react';
+import { AlertTriangle, Layers } from 'lucide-react';
 
 interface CategoryImpact {
-  subcategoryCount: number;
-  masterItemCount: number;
-  affectedItems: Array<{ id: string; name: string }>;
+  categoryTree: Array<{
+    id: string;
+    name: string;
+    icon: string | null;
+    subcategories: Array<{
+      id: string;
+      name: string;
+      icon: string | null;
+      masterItems: Array<{
+        id: string;
+        name: string;
+        productCount: number;
+      }>;
+    }>;
+    masterItems: Array<{
+      id: string;
+      name: string;
+      productCount: number;
+    }>;
+  }>;
+  totalMasterItems: number;
+  totalProducts: number;
 }
 
 interface Category {
@@ -73,53 +92,90 @@ export function DeleteCategoryDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Category Info */}
-          <div className="bg-muted/50 rounded-lg p-4 border border-border">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl">{category.icon}</span>
-              <div>
-                <h4 className="font-bold text-lg">{category.name}</h4>
-                {category.description && (
-                  <p className="text-sm text-muted-foreground">{category.description}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* Impact Summary */}
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-            <h4 className="font-semibold text-sm text-destructive mb-3">Impact Summary</h4>
+            <h4 className="font-semibold text-sm text-destructive mb-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              This will permanently delete:
+            </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Subcategories to delete:</span>
-                <span className="font-mono font-bold">{impact.subcategoryCount}</span>
+                <span className="text-muted-foreground">Master items:</span>
+                <span className="font-mono font-bold text-destructive">{impact.totalMasterItems}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Master items affected:</span>
-                <span className="font-mono font-bold">{impact.masterItemCount}</span>
+                <span className="text-muted-foreground">Specific products:</span>
+                <span className="font-mono font-bold text-destructive">{impact.totalProducts}</span>
               </div>
             </div>
           </div>
 
-          {/* Affected Items Preview */}
-          {impact.affectedItems.length > 0 && (
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Affected Items (first 5)</h4>
-              <div className="bg-muted/50 rounded-lg border border-border p-2 space-y-1 max-h-32 overflow-y-auto">
-                {impact.affectedItems.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 text-sm p-1">
-                    <Package className="w-3 h-3 text-muted-foreground" />
-                    <span className="truncate">{item.name}</span>
+          {/* Category Tree Structure */}
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Items to be deleted:</h4>
+            {impact.categoryTree.map((cat) => (
+              <div key={cat.id} className="space-y-2">
+                {/* Root Category - Outside highlighted box */}
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <span className="text-lg">{cat.icon}</span>
+                  <span>{cat.name}</span>
+                </div>
+
+                {/* Highlighted box containing only subcategories and master items */}
+                {(cat.subcategories.length > 0 || cat.masterItems.length > 0) && (
+                  <div className="bg-muted/50 rounded-lg border border-border p-3 max-h-96 overflow-y-auto">
+                    {/* Master Items directly under root category */}
+                    {cat.masterItems.length > 0 && (
+                      <div className="ml-6 space-y-1">
+                        {cat.masterItems.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between gap-2 text-sm py-1">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Layers className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                              <span className="truncate text-muted-foreground">{item.name}</span>
+                            </div>
+                            <span className="text-xs font-mono bg-destructive/10 text-destructive px-2 py-0.5 rounded border border-destructive/20 flex-shrink-0">
+                              {item.productCount}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Subcategories */}
+                    {cat.subcategories.length > 0 && (
+                      <div className="ml-6 space-y-2">
+                        {cat.subcategories.map((subcat) => (
+                          <div key={subcat.id} className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <span className="text-base">{subcat.icon}</span>
+                              <span>{subcat.name}</span>
+                            </div>
+
+                            {/* Master Items under subcategory */}
+                            {subcat.masterItems.length > 0 && (
+                              <div className="ml-8 space-y-1">
+                                {subcat.masterItems.map((item) => (
+                                  <div key={item.id} className="flex items-center justify-between gap-2 text-sm py-1">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <Layers className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                      <span className="truncate text-muted-foreground">{item.name}</span>
+                                    </div>
+                                    <span className="text-xs font-mono bg-destructive/10 text-destructive px-2 py-0.5 rounded border border-destructive/20 flex-shrink-0">
+                                      {item.productCount}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
-                {impact.masterItemCount > 5 && (
-                  <p className="text-xs text-muted-foreground italic px-1">
-                    ...and {impact.masterItemCount - 5} more items
-                  </p>
                 )}
               </div>
-            </div>
-          )}
+            ))}
+          </div>
 
           {/* Confirmation Input */}
           <div>
