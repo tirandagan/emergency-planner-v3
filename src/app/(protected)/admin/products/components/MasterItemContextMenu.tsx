@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Plus, MoveRight, Copy, ClipboardPaste, Trash2 } from 'lucide-react';
+import { Edit, Plus, MoveRight, Copy, ClipboardPaste, Trash2, Files } from 'lucide-react';
 import type { MasterItem } from '@/lib/products-types';
 
 /**
@@ -22,6 +22,8 @@ export interface MasterItemContextMenuProps {
   onMove: (item: MasterItem) => void;
   /** Handler for deleting the master item */
   onDelete: (item: MasterItem) => void;
+  /** Handler for duplicating the master item */
+  onDuplicate: (item: MasterItem) => void;
   /** Handler for copying tags from this master item */
   onCopyTags: (item: MasterItem) => void;
   /** Handler for pasting tags to this master item */
@@ -41,6 +43,7 @@ export interface MasterItemContextMenuProps {
  * - Add a product to the master item
  * - Move the master item to another category
  * - Delete the master item
+ * - Duplicate the master item
  * - Copy tags from the master item
  * - Paste tags to the master item (if tags are copied)
  *
@@ -55,6 +58,7 @@ export interface MasterItemContextMenuProps {
  *   onAddProduct={handleAddProduct}
  *   onMove={handleMove}
  *   onDelete={handleDelete}
+ *   onDuplicate={handleDuplicate}
  *   onCopyTags={handleCopyTags}
  *   onPasteTags={handlePasteTags}
  *   hasCopiedTags={!!copiedTags}
@@ -71,6 +75,7 @@ export function MasterItemContextMenu({
   onAddProduct,
   onMove,
   onDelete,
+  onDuplicate,
   onCopyTags,
   onPasteTags,
   hasCopiedTags,
@@ -91,6 +96,16 @@ export function MasterItemContextMenu({
       >
         <Edit className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
         Edit Master Item
+      </button>
+      <button
+        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
+        onClick={() => {
+          onDuplicate(masterItem);
+          onClose();
+        }}
+      >
+        <Files className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
+        Duplicate Master Item
       </button>
       <button
         className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"

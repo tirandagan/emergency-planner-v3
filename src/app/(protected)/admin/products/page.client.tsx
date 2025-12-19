@@ -16,8 +16,8 @@ import {
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import {
   bulkUpdateProducts, createMasterItem, deleteProduct, deleteMasterItem,
-  getMasterItemProducts, getMasterItems, updateMasterItem, updateProduct,
-  updateProductTags
+  duplicateMasterItem, getMasterItemProducts, getMasterItems, updateMasterItem,
+  updateProduct, updateProductTags
 } from "./actions";
 
 // External Actions

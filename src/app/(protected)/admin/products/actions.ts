@@ -558,6 +558,37 @@ export async function updateMasterItem(formData: FormData) {
     return data;
 }
 
+export async function duplicateMasterItem(masterItemId: string) {
+  await checkAdmin();
+
+  const [source] = await db
+    .select()
+    .from(masterItems)
+    .where(eq(masterItems.id, masterItemId))
+    .limit(1);
+
+  if (!source) {
+    throw new Error('Master item not found');
+  }
+
+  const [duplicate] = await db
+    .insert(masterItems)
+    .values({
+      name: `${source.name} (Copy)`,
+      categoryId: source.categoryId,
+      description: source.description,
+      status: 'active',
+      timeframes: source.timeframes,
+      demographics: source.demographics,
+      locations: source.locations,
+      scenarios: source.scenarios,
+    })
+    .returning();
+
+  revalidatePath('/admin/products');
+  return duplicate;
+}
+
 export async function bulkUpdateProducts(ids: string[], data: { supplierId?: string | null; masterItemId?: string }) {
     await checkAdmin();
 

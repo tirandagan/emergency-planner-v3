@@ -135,6 +135,10 @@ export const SubCategoryTreeItem = React.memo(function SubCategoryTreeItem({
                         <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium transition-colors">
                                 {subGroup.subCategory.name}
+                                {' '}
+                                <span className="text-xs text-muted-foreground/70">
+                                    ({Object.values(subGroup.masterItems).reduce((acc, m) => acc + m.products.length, 0)})
+                                </span>
                             </span>
                             {subGroup.subCategory.description && (
                                 <span className="text-[10px] text-muted-foreground/70 truncate italic block leading-tight">
@@ -144,10 +148,6 @@ export const SubCategoryTreeItem = React.memo(function SubCategoryTreeItem({
                         </div>
                         {isActive && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Selected</span>}
                     </button>
-
-                    <span className="text-xs text-muted-foreground/70">
-                        ({Object.values(subGroup.masterItems).reduce((acc, m) => acc + m.products.length, 0)})
-                    </span>
                 </div>
             )}
 

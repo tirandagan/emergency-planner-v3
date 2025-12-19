@@ -84,18 +84,40 @@ export function MoveMasterItemDialog({ isOpen, masterItem, categories, onClose, 
 
   // Auto-scroll to current subcategory when dialog opens
   useEffect(() => {
-    if (isOpen && currentSubcategoryRef.current) {
-      // Longer delay to ensure dialog animation and full rendering completes
-      const timeoutId = setTimeout(() => {
-        currentSubcategoryRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest'
-        });
-      }, 300);
+    if (!isOpen || !currentSubcategoryRef.current) return;
 
-      return () => clearTimeout(timeoutId);
-    }
+    let timeoutId1: NodeJS.Timeout | undefined;
+    let timeoutId2: NodeJS.Timeout | undefined;
+
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    const rafId = requestAnimationFrame(() => {
+      // Additional timeout to ensure dialog animation completes
+      timeoutId1 = setTimeout(() => {
+        if (currentSubcategoryRef.current) {
+          // First scroll instantly to position
+          currentSubcategoryRef.current.scrollIntoView({
+            behavior: 'instant',
+            block: 'center',
+            inline: 'nearest'
+          });
+
+          // Small delay then smooth scroll to draw attention
+          timeoutId2 = setTimeout(() => {
+            currentSubcategoryRef.current?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }, 50);
+        }
+      }, 350);
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (timeoutId1) clearTimeout(timeoutId1);
+      if (timeoutId2) clearTimeout(timeoutId2);
+    };
   }, [isOpen, masterItem?.categoryId]);
 
   const handleSave = async (): Promise<void> => {

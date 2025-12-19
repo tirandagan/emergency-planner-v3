@@ -140,6 +140,10 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
                      <div className="flex-1 min-w-0">
                          <span className="text-sm font-medium transition-colors">
                             {group.category.name}
+                            {' '}
+                            <span className="text-xs text-muted-foreground/70">
+                                ({itemCount})
+                            </span>
                          </span>
                          {group.category.description && (
                              <span className="text-[10px] text-muted-foreground/70 truncate italic block leading-tight">
@@ -149,10 +153,6 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
                      </div>
                      {isActive && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Selected</span>}
                  </button>
-
-                 <span className="text-xs text-muted-foreground/70">
-                     ({itemCount})
-                 </span>
             </div>
 
             {/* Subgroups - Collapsible Content */}
