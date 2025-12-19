@@ -3,7 +3,7 @@ import { Fragment } from 'react';
 import type { Product, MasterItem, ProductMetadata } from '@/lib/products-types';
 import { AlertCircle, Shield, Users, Clock, MapPin, Unlink } from 'lucide-react';
 import { QuickTagger } from '../modals/QuickTagger';
-import { TagValueDisplay } from '../page.client';
+import { TagValueDisplay, HighlightedText } from '../page.client';
 import { formatTagValue } from '@/lib/products-utils';
 import { DEMOGRAPHICS } from '../constants';
 
@@ -39,6 +39,7 @@ export interface ProductRowProps {
     masterItem: MasterItem | null;
     isSelected: boolean;
     isTagging: boolean;
+    searchTerm?: string;
     onContextMenu: (e: React.MouseEvent, product: Product) => void;
     onClick: (e: React.MouseEvent, productId: string) => void;
     onQuickTagClose: () => void;
@@ -53,6 +54,7 @@ export const ProductRow = React.memo(function ProductRow({
     masterItem,
     isSelected,
     isTagging,
+    searchTerm = '',
     onContextMenu,
     onClick,
     onQuickTagClose
@@ -62,6 +64,10 @@ export const ProductRow = React.memo(function ProductRow({
         product.demographics !== null ||
         product.locations !== null ||
         product.scenarios !== null;
+
+    // Check if search term matches description (for badge display)
+    const matchesDescription = searchTerm && product.description &&
+        product.description.toLowerCase().includes(searchTerm.toLowerCase().trim());
 
     // Calculate tag differences for display
     const getTagDifferences = (): TagDifference[] => {
@@ -171,7 +177,16 @@ export const ProductRow = React.memo(function ProductRow({
                             <img src={product.imageUrl} alt="" className="w-24 h-24 rounded bg-muted object-cover border border-border shrink-0" />
                         )}
                         <div className="min-w-0 flex-1">
-                            <div className="font-medium text-foreground">{product.name}</div>
+                            <div className="font-medium text-foreground flex items-center gap-2 flex-wrap">
+                                <span style={{ display: 'inline', wordBreak: 'normal', hyphens: 'manual' }}>
+                                    <HighlightedText text={product.name || ''} searchTerm={searchTerm} />
+                                </span>
+                                {matchesDescription && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-info/10 text-info border border-info/30 rounded">
+                                        Match in description
+                                    </span>
+                                )}
+                            </div>
                             <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-2 mt-0.5">
                                 {product.sku || product.asin || 'No ID'}
                             </div>

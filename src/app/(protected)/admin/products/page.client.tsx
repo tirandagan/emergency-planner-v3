@@ -108,6 +108,52 @@ export const TagValueDisplay = ({ value, field, title }: { value: FormattedTagVa
     return <span title={title || (typeof value === 'string' ? value : '')}>{typeof value === 'string' ? value : ''}</span>;
 };
 
+/**
+ * HighlightedText - Highlights matching search terms in text
+ * @param text - The text to highlight
+ * @param searchTerm - The search term to highlight (case-insensitive)
+ */
+export const HighlightedText = ({ text, searchTerm }: { text: string; searchTerm: string }) => {
+    if (!searchTerm.trim() || !text) return <>{text}</>;
+
+    const parts: { text: string; isMatch: boolean }[] = [];
+    const lowerText = text.toLowerCase();
+    const lowerTerm = searchTerm.toLowerCase().trim();
+
+    let lastIndex = 0;
+    let index = lowerText.indexOf(lowerTerm);
+
+    while (index !== -1) {
+        // Add text before match
+        if (index > lastIndex) {
+            parts.push({ text: text.slice(lastIndex, index), isMatch: false });
+        }
+        // Add matched text
+        parts.push({ text: text.slice(index, index + lowerTerm.length), isMatch: true });
+        lastIndex = index + lowerTerm.length;
+        index = lowerText.indexOf(lowerTerm, lastIndex);
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+        parts.push({ text: text.slice(lastIndex), isMatch: false });
+    }
+
+    return (
+        <>
+            {parts.map((part, i) =>
+                part.isMatch ? (
+                    <mark key={i} className="bg-warning/30 text-foreground" style={{ textDecoration: 'underline', textDecorationColor: 'rgb(239, 68, 68)', textDecorationThickness: '4px', textUnderlineOffset: '2px' }}>
+                        {part.text}
+                    </mark>
+                ) : (
+                    <Fragment key={i}>{part.text}</Fragment>
+                )
+            )}
+        </>
+    );
+};
+
 export const TagBadge = ({
     icon: Icon,
     items,
@@ -285,7 +331,7 @@ export default function ProductsClient({
       setAllMasterItems(masterItems);
       setAllCategories(categories);
   }, [masterItems, categories]);
-  
+
   const openEditMasterItemModal = (masterItemId: string) => {
       const item = allMasterItems.find(m => m.id === masterItemId);
       if (item) {
@@ -922,6 +968,7 @@ export default function ProductsClient({
       type CategoryGroup = { category: Category, subGroups: Record<string, SubGroup> };
 
       const groups: Record<string, CategoryGroup> = {};
+      const hasActiveSearch = filters.searchTerm.trim() !== "";
 
       const ensureGroup = (catId: string, subCatId: string | null) => {
           if (!groups[catId]) {
@@ -945,67 +992,70 @@ export default function ProductsClient({
           return groups[catId].subGroups[subKey];
       };
 
-      // First, create groups for ALL root categories (so empty categories appear)
-      allCategories
-          .filter(c => c.parentId === null) // Only root categories
-          .forEach(cat => {
-              if (!groups[cat.id]) {
-                  groups[cat.id] = {
-                      category: cat,
-                      subGroups: { root: { subCategory: null, masterItems: {} } }
-                  };
-              }
-          });
-
-      // Second, add ALL subcategories under their parent categories (so empty subcategories appear)
-      allCategories
-          .filter(c => c.parentId !== null) // Only subcategories
-          .forEach(subCat => {
-              const parentId = subCat.parentId!;
-              // Ensure parent group exists
-              if (!groups[parentId]) {
-                  const parentCat = allCategories.find(c => c.id === parentId);
-                  if (parentCat) {
-                      groups[parentId] = {
-                          category: parentCat,
-                          subGroups: {}
+      // When no active search, create groups for ALL categories and master items
+      if (!hasActiveSearch) {
+          // First, create groups for ALL root categories (so empty categories appear)
+          allCategories
+              .filter(c => c.parentId === null) // Only root categories
+              .forEach(cat => {
+                  if (!groups[cat.id]) {
+                      groups[cat.id] = {
+                          category: cat,
+                          subGroups: { root: { subCategory: null, masterItems: {} } }
                       };
                   }
+              });
+
+          // Second, add ALL subcategories under their parent categories (so empty subcategories appear)
+          allCategories
+              .filter(c => c.parentId !== null) // Only subcategories
+              .forEach(subCat => {
+                  const parentId = subCat.parentId!;
+                  // Ensure parent group exists
+                  if (!groups[parentId]) {
+                      const parentCat = allCategories.find(c => c.id === parentId);
+                      if (parentCat) {
+                          groups[parentId] = {
+                              category: parentCat,
+                              subGroups: {}
+                          };
+                      }
+                  }
+                  // Add subcategory to parent
+                  if (groups[parentId]) {
+                      groups[parentId].subGroups[subCat.id] = {
+                          subCategory: subCat,
+                          masterItems: {}
+                      };
+                  }
+              });
+
+          // Third, add ALL master items to their categories (so empty master items appear)
+          allMasterItems.forEach(masterItem => {
+              let catId = 'uncategorized';
+              let subCatId = null;
+
+              const cat = allCategories.find(c => c.id === masterItem.categoryId);
+              if (cat) {
+                  if (cat.parentId) {
+                      catId = cat.parentId;
+                      subCatId = cat.id;
+                  } else {
+                      catId = cat.id;
+                  }
               }
-              // Add subcategory to parent
-              if (groups[parentId]) {
-                  groups[parentId].subGroups[subCat.id] = {
-                      subCategory: subCat,
-                      masterItems: {}
-                  };
+
+              const group = ensureGroup(catId, subCatId);
+              if (group) {
+                  if (!group.masterItems[masterItem.id]) {
+                      group.masterItems[masterItem.id] = { masterItem: masterItem, products: [] };
+                  }
               }
           });
+      }
 
-      // Third, add ALL master items to their categories (so empty master items appear)
-      allMasterItems.forEach(masterItem => {
-          let catId = 'uncategorized';
-          let subCatId = null;
-
-          const cat = allCategories.find(c => c.id === masterItem.categoryId);
-          if (cat) {
-              if (cat.parentId) {
-                  catId = cat.parentId;
-                  subCatId = cat.id;
-              } else {
-                  catId = cat.id;
-              }
-          }
-
-          const group = ensureGroup(catId, subCatId);
-          if (group) {
-              if (!group.masterItems[masterItem.id]) {
-                  group.masterItems[masterItem.id] = { masterItem: masterItem, products: [] };
-              }
-          }
-      });
-
-      // Finally, build product hierarchy (bottom-up approach)
-      // This adds products to existing master items
+      // Build product hierarchy (adds products to master items)
+      // When searching, this will create ONLY the necessary master items/categories
       filters.processedProducts.forEach(p => {
           const masterItem = allMasterItems.find(m => m.id === p.masterItemId);
           let catId = 'uncategorized';
@@ -1026,7 +1076,7 @@ export default function ProductsClient({
           const group = ensureGroup(catId, subCatId);
           if (group) {
               const masterId = p.masterItemId || 'nomaster';
-              // Master item should already exist from Phase 3, just add the product
+              // Create master item entry if it doesn't exist
               if (!group.masterItems[masterId]) {
                   group.masterItems[masterId] = { masterItem: masterItem || null, products: [] };
               }
@@ -1034,8 +1084,72 @@ export default function ProductsClient({
           }
       });
 
+      // When searching, remove empty master items and categories
+      if (hasActiveSearch) {
+          // Remove empty master items
+          Object.values(groups).forEach(categoryGroup => {
+              Object.values(categoryGroup.subGroups).forEach(subGroup => {
+                  Object.keys(subGroup.masterItems).forEach(masterItemId => {
+                      if (subGroup.masterItems[masterItemId].products.length === 0) {
+                          delete subGroup.masterItems[masterItemId];
+                      }
+                  });
+              });
+          });
+
+          // Remove empty subgroups
+          Object.values(groups).forEach(categoryGroup => {
+              Object.keys(categoryGroup.subGroups).forEach(subGroupKey => {
+                  const subGroup = categoryGroup.subGroups[subGroupKey];
+                  if (Object.keys(subGroup.masterItems).length === 0) {
+                      delete categoryGroup.subGroups[subGroupKey];
+                  }
+              });
+          });
+
+          // Remove empty categories
+          Object.keys(groups).forEach(categoryId => {
+              if (Object.keys(groups[categoryId].subGroups).length === 0) {
+                  delete groups[categoryId];
+              }
+          });
+      }
+
       return groups;
-  }, [filters.processedProducts, allMasterItems, allCategories]);
+  }, [filters.processedProducts, filters.searchTerm, allMasterItems, allCategories]);
+
+  // Auto-expand all matching nodes when search is active
+  useEffect(() => {
+      const hasActiveSearch = filters.searchTerm.trim() !== "";
+
+      if (hasActiveSearch) {
+          // Extract all category, subcategory, and master item IDs from grouped products
+          const categoryIds: string[] = [];
+          const subCategoryIds: string[] = [];
+          const masterItemIds: string[] = [];
+
+          Object.values(groupedProducts).forEach(categoryGroup => {
+              categoryIds.push(categoryGroup.category.id);
+
+              Object.values(categoryGroup.subGroups).forEach(subGroup => {
+                  if (subGroup.subCategory) {
+                      subCategoryIds.push(subGroup.subCategory.id);
+                  }
+
+                  Object.keys(subGroup.masterItems).forEach(masterItemId => {
+                      if (masterItemId !== 'nomaster') {
+                          masterItemIds.push(masterItemId);
+                      }
+                  });
+              });
+          });
+
+          // Expand all matching nodes
+          navigation.expandAll(categoryIds, subCategoryIds, masterItemIds);
+      }
+      // Note: We don't collapse when search is cleared - this preserves user's exploration state
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.searchTerm]);
 
   // Build flat navigation list for keyboard navigation
   const navigationItems = useMemo(() => {
@@ -1449,6 +1563,7 @@ export default function ProductsClient({
                         isFocused={keyboard.focusedItemId === group.category.id}
                         selectedProductIds={selectedIds}
                         taggingProductId={taggingProductId}
+                        searchTerm={filters.searchTerm}
                         activeMasterItemId={navigation.activeMasterItemId}
                         expandedSubCategories={navigation.expandedSubCategories}
                         expandedMasterItems={navigation.expandedMasterItems}

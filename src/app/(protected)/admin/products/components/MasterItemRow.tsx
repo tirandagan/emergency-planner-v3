@@ -2,7 +2,7 @@ import React from 'react';
 import type { Product, MasterItem, MasterItemGroup } from '@/lib/products-types';
 import { Shield, Users, Clock, MapPin, ChevronDown, ChevronRight } from 'lucide-react';
 import { ProductRow } from './ProductRow';
-import { TagBadge } from '../page.client';
+import { TagBadge, HighlightedText } from '../page.client';
 import { SCENARIOS } from '../constants';
 
 /**
@@ -34,6 +34,7 @@ export interface MasterItemRowProps {
     isExpanded: boolean;
     selectedProductIds: Set<string>;
     taggingProductId: string | null;
+    searchTerm?: string;
     onSelectMasterItem: (id: string) => void;
     onToggleMasterItem: (id: string) => void;
     onMasterItemContextMenu: (e: React.MouseEvent, masterItem: MasterItem) => void;
@@ -55,6 +56,7 @@ export const MasterItemRow = React.memo(function MasterItemRow({
     isExpanded,
     selectedProductIds,
     taggingProductId,
+    searchTerm = '',
     onSelectMasterItem,
     onToggleMasterItem,
     onMasterItemContextMenu,
@@ -117,7 +119,7 @@ export const MasterItemRow = React.memo(function MasterItemRow({
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3">
                                 <h4 className={`text-sm font-semibold truncate ${isActive ? 'text-success' : 'text-foreground'}`}>
-                                    {masterGroup.masterItem.name}
+                                    <HighlightedText text={masterGroup.masterItem.name} searchTerm={searchTerm} />
                                 </h4>
                                 {/* Product Count Badge (when collapsed) */}
                                 {!isExpanded && masterGroup.products.length > 0 && (
@@ -134,7 +136,7 @@ export const MasterItemRow = React.memo(function MasterItemRow({
 
                             {masterGroup.masterItem.description && (
                                 <p className="text-[10px] text-muted-foreground/70 truncate italic block leading-tight max-w-4xl">
-                                    {masterGroup.masterItem.description}
+                                    <HighlightedText text={masterGroup.masterItem.description} searchTerm={searchTerm} />
                                 </p>
                             )}
 
@@ -203,6 +205,7 @@ export const MasterItemRow = React.memo(function MasterItemRow({
                                 masterItem={masterGroup.masterItem}
                                 isSelected={selectedProductIds.has(product.id)}
                                 isTagging={taggingProductId === product.id}
+                                searchTerm={searchTerm}
                                 onContextMenu={onProductContextMenu}
                                 onClick={onProductClick}
                                 onQuickTagClose={onQuickTagClose}

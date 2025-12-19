@@ -43,6 +43,7 @@ export interface CategoryTreeItemProps {
     isFocused: boolean;
     selectedProductIds: Set<string>;
     taggingProductId: string | null;
+    searchTerm?: string;
     activeMasterItemId: string | null;
     expandedSubCategories: Set<string>;
     expandedMasterItems: Set<string>;
@@ -76,6 +77,7 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
     isFocused,
     selectedProductIds,
     taggingProductId,
+    searchTerm = '',
     activeMasterItemId,
     expandedSubCategories,
     expandedMasterItems,
@@ -171,6 +173,7 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
                             isFocused={focusedItemId === subGroup.subCategory?.id}
                             selectedProductIds={selectedProductIds}
                             taggingProductId={taggingProductId}
+                            searchTerm={searchTerm}
                             activeMasterItemId={activeMasterItemId}
                             expandedMasterItems={expandedMasterItems}
                             onToggle={onToggleSubCategory}
