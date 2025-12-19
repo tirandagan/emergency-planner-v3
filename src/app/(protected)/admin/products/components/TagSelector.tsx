@@ -1,5 +1,6 @@
 import { Check, X, RefreshCw, Unlink, Shield, Users, Clock, MapPin } from "lucide-react";
-import { formatTagValue, TagValueDisplay } from "../page.client";
+import { formatTagValue } from "@/lib/products-utils";
+import { TagValueDisplay } from "../page.client";
 
 interface TagSelectorProps {
     label: string;

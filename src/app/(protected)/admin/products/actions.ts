@@ -12,7 +12,9 @@ import { checkAdmin } from '@/lib/adminAuth';
 import { getModel } from '@/lib/openrouter';
 import { buildChangeEntry, addChangeEntry } from '@/lib/change-tracking';
 
-export async function getProducts() {
+import type { Product } from '@/lib/products-types';
+
+export async function getProducts(): Promise<Product[]> {
   const data = await db
     .select({
       id: specificProducts.id,
@@ -49,7 +51,7 @@ export async function getProducts() {
     .leftJoin(suppliers, eq(specificProducts.supplierId, suppliers.id))
     .orderBy(desc(specificProducts.createdAt));
 
-  return data;
+  return data as Product[];
 }
 
 export async function getMasterItems() {

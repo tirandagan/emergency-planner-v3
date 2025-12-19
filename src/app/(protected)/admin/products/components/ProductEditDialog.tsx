@@ -20,52 +20,9 @@ import ProductErrorModal from "../modals/ProductErrorModal";
 import { SectionTitle, InputGroup, TextInput, SelectInput, TextArea } from "./ProductFormElements";
 import TagSelector from "./TagSelector";
 import { TIMEFRAMES, DEMOGRAPHICS, LOCATIONS, SCENARIOS } from "../constants";
+import type { Category, MasterItem, Supplier, Product } from "@/lib/products-types";
 
 // Types
-interface Category {
-    id: string;
-    name: string;
-    parentId: string | null;
-}
-
-interface MasterItem {
-    id: string;
-    name: string;
-    categoryId: string;
-    timeframes?: string[] | null;
-    demographics?: string[] | null;
-    locations?: string[] | null;
-    scenarios?: string[] | null;
-}
-
-interface Supplier {
-    id: string;
-    name: string;
-}
-
-interface Product {
-    id: string;
-    name: string;
-    description?: string;
-    sku?: string;
-    asin?: string;
-    price?: number;
-    type?: string;
-    productUrl?: string;
-    imageUrl?: string;
-    masterItemId: string;
-    supplierId: string;
-    metadata?: any;
-    timeframes?: string[] | null;
-    demographics?: string[] | null;
-    locations?: string[] | null;
-    scenarios?: string[] | null;
-    variations?: {
-        config: VariationConfig;
-        values: Record<string, any>;
-    } | null;
-    changeHistory?: ChangeHistory;
-}
 
 interface ProductEditDialogProps {
     isOpen: boolean;
