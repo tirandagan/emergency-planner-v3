@@ -11,6 +11,7 @@ import {
 } from "@/lib/email";
 import { eq } from "drizzle-orm";
 import { logSystemError } from "@/lib/system-logger";
+import { getAdminEmail } from "@/db/queries/system-settings";
 
 // --- Type Definitions ---
 
@@ -610,7 +611,7 @@ export async function submitManualVerificationRequest(
     });
 
     // Notify admin (optional, non-blocking)
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@emergency-planner.com";
+    const adminEmail = await getAdminEmail();
     await sendManualVerificationNotification(adminEmail, {
       userId: user.id,
       userEmail: user.email!,

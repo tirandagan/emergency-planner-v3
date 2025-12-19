@@ -11,8 +11,8 @@ interface UserListTableProps {
     email: string;
     subscriptionTier: string;
     isHighValue: boolean;
-    lastActiveAt: Date | null;
-    createdAt: Date;
+    lastActiveAt: Date | string | null;
+    createdAt: Date | string;
     plansCreated: number;
   }>;
   onUserClick: (userId: string) => void;

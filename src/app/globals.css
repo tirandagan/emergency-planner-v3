@@ -299,3 +299,83 @@ html {
 .category-icon::before {
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
 }
+
+/* ============================
+   TEXT SELECTION - HIGH CONTRAST
+   ============================ */
+
+/* Global text selection - Light Mode */
+*::selection {
+  background-color: hsl(220 85% 55%) !important; /* Trust Blue */
+  color: hsl(0 0% 100%) !important; /* Pure white for maximum contrast */
+}
+
+*::-moz-selection {
+  background-color: hsl(220 85% 55%) !important;
+  color: hsl(0 0% 100%) !important;
+}
+
+/* Input and textarea selection - Light Mode (extra specificity) */
+input::selection,
+textarea::selection,
+[type="text"]::selection,
+[type="email"]::selection,
+[type="password"]::selection,
+[type="number"]::selection,
+[type="tel"]::selection,
+[type="url"]::selection,
+[contenteditable]::selection {
+  background-color: hsl(220 85% 55%) !important; /* Trust Blue */
+  color: hsl(0 0% 100%) !important; /* Pure white */
+}
+
+input::-moz-selection,
+textarea::-moz-selection,
+[type="text"]::-moz-selection,
+[type="email"]::-moz-selection,
+[type="password"]::-moz-selection,
+[type="number"]::-moz-selection,
+[type="tel"]::-moz-selection,
+[type="url"]::-moz-selection,
+[contenteditable]::-moz-selection {
+  background-color: hsl(220 85% 55%) !important;
+  color: hsl(0 0% 100%) !important;
+}
+
+/* Dark Mode text selection */
+.dark *::selection {
+  background-color: hsl(220 75% 65%) !important; /* Lighter Trust Blue for dark mode */
+  color: hsl(220 15% 8%) !important; /* Dark background color for contrast */
+}
+
+.dark *::-moz-selection {
+  background-color: hsl(220 75% 65%) !important;
+  color: hsl(220 15% 8%) !important;
+}
+
+/* Dark Mode input and textarea selection */
+.dark input::selection,
+.dark textarea::selection,
+.dark [type="text"]::selection,
+.dark [type="email"]::selection,
+.dark [type="password"]::selection,
+.dark [type="number"]::selection,
+.dark [type="tel"]::selection,
+.dark [type="url"]::selection,
+.dark [contenteditable]::selection {
+  background-color: hsl(220 75% 65%) !important; /* Lighter Trust Blue */
+  color: hsl(220 15% 8%) !important; /* Dark background */
+}
+
+.dark input::-moz-selection,
+.dark textarea::-moz-selection,
+.dark [type="text"]::-moz-selection,
+.dark [type="email"]::-moz-selection,
+.dark [type="password"]::-moz-selection,
+.dark [type="number"]::-moz-selection,
+.dark [type="tel"]::-moz-selection,
+.dark [type="url"]::-moz-selection,
+.dark [contenteditable]::-moz-selection {
+  background-color: hsl(220 75% 65%) !important;
+  color: hsl(220 15% 8%) !important;
+}

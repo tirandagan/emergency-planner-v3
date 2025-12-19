@@ -563,30 +563,31 @@ function checkEnvironment(): ServiceHealth {
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
-    
+
     // Payment
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
     'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
-    
+
     // Email
     'RESEND_API_KEY',
     'RESEND_FROM_EMAIL',
-    
+    // Note: ADMIN_EMAIL moved to system_settings table
+
     // AI Services
     'OPENROUTER_API_KEY',
     'LLM_SERVICE_URL',
     'LLM_WEBHOOK_SECRET',
-    
+
     // External APIs
     'NEXT_PUBLIC_WEATHERAPI_API_KEY',
     'NEXT_PUBLIC_GOOGLE_SERVICES_API_KEY',
-    
+
     // Amazon Product API
     'AMAZON_ACCESS_KEY',
     'AMAZON_SECRET_KEY',
     'AMAZON_ASSOCIATE_TAG',
-    
+
     // Web Scraping
     'DECODO_USER',
     'DECODO_PASS',
@@ -673,7 +674,7 @@ export async function checkSystemHealth(): Promise<SystemHealth> {
         status: 'unhealthy',
         message: 'Health check timed out'
       }, 'Supabase Auth'),
-      withTimeout(checkStripe(), 5000, {
+      withTimeout(checkStripe(), 7000, {
         name: 'Stripe',
         status: 'unhealthy',
         message: 'Health check timed out'
@@ -1175,11 +1176,152 @@ export async function updateSystemSettingAction(
 }
 
 /**
- * Fetches the LLM service URL from system settings
- * Falls back to default production URL if setting not found
+ * Fetches the LLM service URL from environment variable or system settings
+ * Priority: 1) LLM_SERVICE_URL env var, 2) system_settings table, 3) fallback URL
  */
 export async function getLLMServiceURL(): Promise<string> {
+  // First check environment variable (recommended)
+  const envUrl = process.env.LLM_SERVICE_URL
+  if (envUrl) {
+    return envUrl
+  }
+
+  // Fall back to system setting
   const { getSystemSetting } = await import('@/db/queries/system-settings')
   const url = await getSystemSetting<string>('llm_service_url')
   return url ?? 'https://llm-service-api.onrender.com'
+}
+
+// ==================== LLM SERVICE PROXY ====================
+
+/**
+ * Fetch LLM service health status (server-side proxy)
+ */
+export async function fetchLLMHealth(): Promise<any> {
+  await checkAdmin()
+
+  try {
+    const llmServiceUrl = await getLLMServiceURL()
+    const response = await fetch(`${llmServiceUrl}/health`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(7000), // 7 second timeout
+    })
+
+    if (!response.ok) {
+      throw new Error(`Health check failed: ${response.status}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('[LLM Service] Health check failed:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch LLM service jobs (server-side proxy)
+ * Enriches jobs with user email from profiles table
+ */
+export async function fetchLLMJobs(status: string = 'all'): Promise<any> {
+  await checkAdmin()
+
+  try {
+    const llmServiceUrl = await getLLMServiceURL()
+    const webhookSecret = process.env.LLM_WEBHOOK_SECRET || ''
+
+    const response = await fetch(
+      `${llmServiceUrl}/api/v1/jobs?status=${status}&limit=100`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Secret': webhookSecret,
+        },
+        signal: AbortSignal.timeout(7000), // 7 second timeout
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // Enrich jobs with user emails from profiles table
+    if (data.jobs && Array.isArray(data.jobs)) {
+      // Extract unique non-null user IDs
+      const userIds = [...new Set(
+        data.jobs
+          .map((job: any) => job.user_id)
+          .filter((id: any) => id != null)
+      )]
+
+      if (userIds.length > 0) {
+        // Fetch user profiles in a single query
+        const { profiles } = await import('@/db/schema/profiles')
+        const { inArray } = await import('drizzle-orm')
+
+        const userProfiles = await db
+          .select({
+            id: profiles.id,
+            email: profiles.email,
+          })
+          .from(profiles)
+          .where(inArray(profiles.id, userIds as string[]))
+
+        // Create a map of user_id -> email
+        const userEmailMap = new Map(
+          userProfiles.map(p => [p.id, p.email])
+        )
+
+        // Enrich each job with user_email
+        data.jobs = data.jobs.map((job: any) => ({
+          ...job,
+          user_email: job.user_id ? userEmailMap.get(job.user_id) : null,
+        }))
+      }
+    }
+
+    return data
+  } catch (error) {
+    console.error('[LLM Service] Fetch jobs failed:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch single LLM job details (server-side proxy)
+ */
+export async function fetchLLMJobDetails(jobId: string): Promise<any> {
+  await checkAdmin()
+
+  try {
+    const llmServiceUrl = await getLLMServiceURL()
+    const webhookSecret = process.env.LLM_WEBHOOK_SECRET || ''
+
+    const response = await fetch(
+      `${llmServiceUrl}/api/v1/status/${jobId}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Secret': webhookSecret,
+        },
+        signal: AbortSignal.timeout(7000), // 7 second timeout
+      }
+    )
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Job not found')
+      }
+      throw new Error(`API returned ${response.status}: ${response.statusText}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('[LLM Service] Fetch job details failed:', error)
+    throw error
+  }
 }

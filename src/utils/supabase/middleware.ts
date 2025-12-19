@@ -1,5 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { db } from '@/db'
+import { profiles } from '@/db/schema/profiles'
+import { eq } from 'drizzle-orm'
 
 /**
  * Protected route paths that require authentication
@@ -16,6 +19,43 @@ const PROTECTED_ROUTES = [
   '/profile',
   '/wizard-test', // Mission plan wizard (testing)
 ]
+
+/**
+ * Track when users were last active (throttled to once per 5 minutes)
+ * This is a Map of userId -> lastUpdateTimestamp to prevent excessive DB writes
+ */
+const lastActivityUpdateMap = new Map<string, number>()
+const ACTIVITY_UPDATE_THROTTLE_MS = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Update user's lastActiveAt timestamp (throttled and non-blocking)
+ * Only updates if the last update was more than 5 minutes ago
+ */
+async function updateUserActivity(userId: string): Promise<void> {
+  const now = Date.now()
+  const lastUpdate = lastActivityUpdateMap.get(userId)
+
+  // Skip if we updated within the last 5 minutes
+  if (lastUpdate && now - lastUpdate < ACTIVITY_UPDATE_THROTTLE_MS) {
+    return
+  }
+
+  // Update the map first to prevent concurrent updates
+  lastActivityUpdateMap.set(userId, now)
+
+  // Update database asynchronously (non-blocking)
+  db.update(profiles)
+    .set({ lastActiveAt: new Date() })
+    .where(eq(profiles.id, userId))
+    .then(() => {
+      // Success - no action needed
+    })
+    .catch((error) => {
+      console.error('[Middleware] Failed to update lastActiveAt:', error)
+      // Remove from map so we can retry on next request
+      lastActivityUpdateMap.delete(userId)
+    })
+}
 
 /**
  * Check if a URL path is a protected route
@@ -89,6 +129,11 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // Keep warning for slow auth checks (performance monitoring)
   if (authDuration > 100) {
     console.warn(`[Middleware] Slow auth check for ${pathname}: ${authDuration}ms`);
+  }
+
+  // Update user activity timestamp (throttled, non-blocking)
+  if (user) {
+    updateUserActivity(user.id);
   }
 
   // Redirect authenticated users away from auth pages

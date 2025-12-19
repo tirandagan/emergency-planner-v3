@@ -17,6 +17,7 @@ export const masterItems = pgTable(
     demographics: text('demographics').array(),
     locations: text('locations').array(),
     scenarios: text('scenarios').array(),
+    changeHistory: jsonb('change_history').default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
@@ -54,6 +55,7 @@ export const specificProducts = pgTable(
     demographics: text('demographics').array(),
     locations: text('locations').array(),
     scenarios: text('scenarios').array(),
+    changeHistory: jsonb('change_history').default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { 
-    Pencil, Plus, X, Save, Package, Layers, ImageIcon, DollarSign, 
+import {
+    Pencil, Plus, X, Save, Package, Layers, ImageIcon, DollarSign,
     Tags, ExternalLink, Loader2, Sparkles, Check, AlertCircle, Target,
-    Settings2, TableProperties
+    Settings2, TableProperties, History
 } from "lucide-react";
 import VariationsModal, { VariationConfig } from "./VariationsModal";
 import VariationsTableModal from "./VariationsTableModal";
@@ -64,6 +64,7 @@ interface Product {
         config: VariationConfig;
         values: Record<string, any>;
     } | null;
+    changeHistory?: ChangeHistory;
 }
 
 interface ProductEditDialogProps {
@@ -80,6 +81,8 @@ interface ProductEditDialogProps {
 }
 
 import InheritanceWarningModal from "./InheritanceWarningModal";
+import { ChangeHistoryModal } from "@/components/admin/ChangeHistoryModal";
+import type { ChangeHistory } from "@/types/change-history";
 
 export default function ProductEditDialog({
     isOpen,
@@ -98,6 +101,9 @@ export default function ProductEditDialog({
     
     // Local Lists (to support adding new items)
     const [localMasterItems, setLocalMasterItems] = useState(initialMasterItems);
+
+    // Change History Modal State
+    const [isChangeHistoryModalOpen, setIsChangeHistoryModalOpen] = useState(false);
     const [localSuppliers, setLocalSuppliers] = useState(initialSuppliers);
 
     // Sub-Modals State
@@ -872,9 +878,21 @@ export default function ProductEditDialog({
                     </h2>
                     <p className="text-muted-foreground text-sm mt-1">Configure product details, pricing, and inventory settings.</p>
                 </div>
-                <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-2 hover:bg-muted rounded-lg transition-colors">
-                    <X className="w-6 h-6" strokeWidth={2.5} />
-                </button>
+                <div className="flex items-center gap-2">
+                    {product?.id && (
+                        <button
+                            onClick={() => setIsChangeHistoryModalOpen(true)}
+                            className="text-muted-foreground hover:text-foreground px-3 py-2 hover:bg-muted rounded-lg transition-colors flex items-center gap-2 text-sm"
+                            title="View change history"
+                        >
+                            <History className="w-4 h-4" strokeWidth={2.5} />
+                            <span>Log</span>
+                        </button>
+                    )}
+                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-2 hover:bg-muted rounded-lg transition-colors">
+                        <X className="w-6 h-6" strokeWidth={2.5} />
+                    </button>
+                </div>
             </div>
 
             {/* Scrollable Form Content */}
@@ -1560,6 +1578,14 @@ export default function ProductEditDialog({
                     baseQuantity={undefined}
                 />
             )}
+
+            <ChangeHistoryModal
+                isOpen={isChangeHistoryModalOpen}
+                onClose={() => setIsChangeHistoryModalOpen(false)}
+                entityType="product"
+                entityName={product?.name || 'Product'}
+                changeHistory={product?.changeHistory as ChangeHistory || []}
+            />
         </div>
     );
 }

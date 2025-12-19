@@ -23,8 +23,8 @@ interface User {
   subscriptionTier: string;
   subscriptionStatus: string | null;
   isHighValue: boolean;
-  lastActiveAt: Date | null;
-  createdAt: Date;
+  lastActiveAt: Date | string | null;
+  createdAt: Date | string;
   plansCreated: number;
 }
 

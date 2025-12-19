@@ -12,6 +12,7 @@ import {
 } from './actions'
 import { SystemLogsTab } from './SystemLogsTab'
 import { SystemSettingsTab } from './SystemSettingsTab'
+import { LLMQueueTab } from './LLMQueueTab'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -93,7 +94,7 @@ export default function DebugPage() {
   const [testEmail, setTestEmail] = useState('')
   const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null)
   const [cacheResult, setCacheResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [activeTab, setActiveTab] = useState('health')
+  const [activeTab, setActiveTab] = useState('settings')
 
   const runHealthCheck = useCallback(async () => {
     setIsCheckingHealth(true)
@@ -185,30 +186,34 @@ export default function DebugPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-3xl grid-cols-6">
-          <TabsTrigger value="health" className="gap-2">
-            <Activity className="w-4 h-4" />
-            Health
-          </TabsTrigger>
-          <TabsTrigger value="logs" className="gap-2">
-            <Bug className="w-4 h-4" />
-            Logs
+        <TabsList className="grid w-full max-w-3xl grid-cols-7">
+          <TabsTrigger value="settings" className="gap-2">
+            <Settings className="w-4 h-4" />
+            Settings
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-2">
             <Clock className="w-4 h-4" />
             Activity
           </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2">
-            <Settings className="w-4 h-4" />
-            Settings
+          <TabsTrigger value="logs" className="gap-2">
+            <Bug className="w-4 h-4" />
+            Logs
           </TabsTrigger>
-          <TabsTrigger value="cache" className="gap-2">
-            <Trash2 className="w-4 h-4" />
-            Cache
+          <TabsTrigger value="llm-queue" className="gap-2">
+            <Cpu className="w-4 h-4" />
+            LLM Queue
+          </TabsTrigger>
+          <TabsTrigger value="health" className="gap-2">
+            <Activity className="w-4 h-4" />
+            Health
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="w-4 h-4" />
             Email
+          </TabsTrigger>
+          <TabsTrigger value="cache" className="gap-2">
+            <Trash2 className="w-4 h-4" />
+            Cache
           </TabsTrigger>
         </TabsList>
 
@@ -1100,6 +1105,11 @@ export default function DebugPage() {
               </p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* LLM Queue Tab */}
+        <TabsContent value="llm-queue" className="mt-6">
+          <LLMQueueTab />
         </TabsContent>
       </Tabs>
     </div>

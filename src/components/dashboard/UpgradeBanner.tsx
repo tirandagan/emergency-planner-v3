@@ -42,11 +42,8 @@ export function UpgradeBanner({ planCount }: UpgradeBannerProps) {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/pricing">View All Plans</Link>
-            </Button>
             <Button asChild size="sm">
-              <Link href="/profile?tab=subscription">Upgrade Now</Link>
+              <Link href="/pricing">Upgrade Now</Link>
             </Button>
           </div>
         </div>

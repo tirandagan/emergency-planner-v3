@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 
 export const categories = pgTable(
   'categories',
@@ -9,6 +9,7 @@ export const categories = pgTable(
     slug: text('slug').notNull().unique(),
     description: text('description'),
     icon: text('icon').default('🗂️'),
+    changeHistory: jsonb('change_history').default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({

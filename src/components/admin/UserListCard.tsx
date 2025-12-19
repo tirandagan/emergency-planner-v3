@@ -11,7 +11,7 @@ interface UserListCardProps {
     email: string;
     subscriptionTier: string;
     isHighValue: boolean;
-    lastActiveAt: Date | null;
+    lastActiveAt: Date | string | null;
     plansCreated: number;
   };
   onClick: (userId: string) => void;
@@ -37,8 +37,14 @@ export default function UserListCard({ user, onClick }: UserListCardProps) {
     }[user.subscriptionTier] || 'bg-gray-500';
 
   // Format last active
+  // Handle both Date objects and ISO string serialization from server components
   const lastActive = user.lastActiveAt
-    ? formatDistanceToNow(new Date(user.lastActiveAt), { addSuffix: true })
+    ? formatDistanceToNow(
+        typeof user.lastActiveAt === 'string'
+          ? new Date(user.lastActiveAt)
+          : user.lastActiveAt,
+        { addSuffix: true }
+      )
     : 'Never';
 
   return (

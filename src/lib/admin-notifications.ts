@@ -2,10 +2,10 @@ import { Resend } from 'resend';
 import { db } from '@/db';
 import { profiles } from '@/db/schema/profiles';
 import { eq } from 'drizzle-orm';
+import { getAdminEmail } from '@/db/queries/system-settings';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = `BePrepared.AI System Alert <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://beprepared.ai';
 
 /**
@@ -294,7 +294,7 @@ function generateErrorEmailHtml(data: ErrorNotificationData, user: { email?: str
                   <td align="center">
                     <a href="${SITE_URL}/admin/debug?tab=logs&logId=${data.logId}"
                        style="display: inline-block; background-color: #1e40af; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; margin-right: 12px;">
-                      View in Debug Console
+                      View in System Console
                     </a>
                     <a href="${SITE_URL}/admin/debug"
                        style="display: inline-block; background-color: #6b7280; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
@@ -377,7 +377,7 @@ ${data.stackTrace.slice(0, 2000)}${data.stackTrace.length > 2000 ? '\n... (trunc
 
   text += `
 ----------------------------------------------------
-View in Debug Console: ${SITE_URL}/admin/debug?tab=logs&logId=${data.logId}
+View in System Console: ${SITE_URL}/admin/debug?tab=logs&logId=${data.logId}
 System Health: ${SITE_URL}/admin/debug
 
 This is an automated notification from Emergency Planner.
@@ -390,12 +390,6 @@ This is an automated notification from Emergency Planner.
  * Send error notification email to admin
  */
 export async function sendAdminErrorNotification(data: ErrorNotificationData): Promise<{ success: boolean; error?: string }> {
-  // Check if admin email is configured
-  if (!ADMIN_EMAIL) {
-    console.warn('[AdminNotifications] ADMIN_EMAIL not configured, skipping notification');
-    return { success: false, error: 'ADMIN_EMAIL not configured' };
-  }
-
   // Check if Resend API key is configured
   if (!process.env.RESEND_API_KEY) {
     console.warn('[AdminNotifications] RESEND_API_KEY not configured, skipping notification');
@@ -403,6 +397,14 @@ export async function sendAdminErrorNotification(data: ErrorNotificationData): P
   }
 
   try {
+    // Get admin email from system settings
+    const adminEmail = await getAdminEmail();
+
+    if (!adminEmail) {
+      console.warn('[AdminNotifications] admin_email not configured in system settings, skipping notification');
+      return { success: false, error: 'admin_email not configured' };
+    }
+
     // Fetch user details if userId is provided
     const user = await getUserDetails(data.userId);
 
@@ -417,7 +419,7 @@ export async function sendAdminErrorNotification(data: ErrorNotificationData): P
     // Send email
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: adminEmail,
       subject,
       html,
       text,
@@ -428,7 +430,7 @@ export async function sendAdminErrorNotification(data: ErrorNotificationData): P
       return { success: false, error: error.message };
     }
 
-    console.log(`[AdminNotifications] Error notification sent to ${ADMIN_EMAIL}`);
+    console.log(`[AdminNotifications] Error notification sent to ${adminEmail}`);
     return { success: true };
   } catch (error) {
     console.error('[AdminNotifications] Exception sending notification:', error);

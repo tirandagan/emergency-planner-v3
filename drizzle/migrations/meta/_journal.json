@@ -92,6 +92,20 @@
       "when": 1765830760676,
       "tag": "0012_left_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1766118577313,
+      "tag": "0013_vengeful_vance_astro",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1766123707045,
+      "tag": "0014_special_switch",
+      "breakpoints": true
     }
   ]
 }

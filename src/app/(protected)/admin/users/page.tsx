@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { profiles } from '@/db/schema/profiles';
 import { missionReports } from '@/db/schema/mission-reports';
-import { eq, desc, and, or, ilike, gte, lte, count, inArray } from 'drizzle-orm';
+import { eq, desc, and, or, ilike, gte, lte, count, inArray, isNull } from 'drizzle-orm';
 import UserListView from '@/components/admin/UserListView';
 import UserFilters from '@/components/admin/UserFilters';
 import { Button } from '@/components/ui/button';
@@ -97,7 +97,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     ? countQueryBuilder.where(whereClause)
     : countQueryBuilder);
 
-  // Get plans created for each user
+  // Get plans created for each user (excluding soft-deleted plans)
   const userIds = users.map((u) => u.id);
   const plansCreated =
     userIds.length > 0
@@ -107,14 +107,20 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
             count: count(),
           })
           .from(missionReports)
-          .where(inArray(missionReports.userId, userIds))
+          .where(
+            and(
+              inArray(missionReports.userId, userIds),
+              isNull(missionReports.deletedAt)
+            )
+          )
           .groupBy(missionReports.userId)
       : [];
 
   // Merge plans count with user data
+  // Note: Drizzle count() returns bigint, convert to number for display
   const usersWithPlans = users.map((user) => ({
     ...user,
-    plansCreated: plansCreated.find((p) => p.userId === user.id)?.count || 0,
+    plansCreated: Number(plansCreated.find((p) => p.userId === user.id)?.count || 0),
   }));
 
   return (

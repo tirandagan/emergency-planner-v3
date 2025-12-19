@@ -93,7 +93,7 @@ const adminNavigationLinks = [
   { href: '/admin/bundles', label: 'Bundles', icon: Boxes },
   { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
   { href: '/admin/import', label: 'Import', icon: Upload },
-  { href: '/admin/debug', label: 'Debug', icon: Wrench },
+  { href: '/admin/debug', label: 'System', icon: Wrench },
 ]
 
 function SidebarContent({

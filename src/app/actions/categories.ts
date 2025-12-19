@@ -5,6 +5,8 @@ import { categories } from '@/db/schema/categories';
 import { masterItems, specificProducts } from '@/db/schema/products';
 import { eq, sql, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { checkAdmin } from '@/lib/adminAuth';
+import { buildChangeEntry, addChangeEntry } from '@/lib/change-tracking';
 
 // Type definitions
 export interface Category {
@@ -64,6 +66,15 @@ export async function updateCategory(
   }
 ): Promise<{ success: boolean; data?: Category; message?: string }> {
   try {
+    const user = await checkAdmin();
+
+    // Fetch existing category data for change tracking
+    const [existingCategory] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, id))
+      .limit(1);
+
     const updateData: {
       name?: string;
       slug?: string;
@@ -86,9 +97,21 @@ export async function updateCategory(
       updateData.parentId = updates.parent_id;
     }
 
+    // Build change history entry
+    const changeEntry = buildChangeEntry(existingCategory, updateData, user);
+
+    // Add change entry to history if changes were detected
+    let updatedChangeHistory = existingCategory?.changeHistory as any;
+    if (changeEntry) {
+      updatedChangeHistory = addChangeEntry(existingCategory?.changeHistory as any, changeEntry);
+    }
+
     const [updatedCategory] = await db
       .update(categories)
-      .set(updateData)
+      .set({
+        ...updateData,
+        changeHistory: updatedChangeHistory,
+      })
       .where(eq(categories.id, id))
       .returning();
 

@@ -79,4 +79,12 @@ export const DEFAULT_SYSTEM_SETTINGS = [
     description: 'Base URL for LLM Workflow Microservice API endpoints',
     category: 'integrations',
   },
+  {
+    key: 'admin_email',
+    value: 'admin@beprepared.ai',
+    valueType: 'string' as const,
+    description: 'Email address for system error notifications and admin alerts',
+    category: 'notifications',
+    isEditable: true,
+  },
 ];

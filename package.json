@@ -60,6 +60,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.68.0",
+    "react-json-view-lite": "^2.5.0",
     "react-leaflet": "^5.0.0",
     "react-markdown": "^10.1.0",
     "react-rnd": "^10.5.2",

@@ -129,3 +129,11 @@ export async function getDeletedPlansRetentionDays(): Promise<number> {
   const days = await getSystemSetting<number>('deleted_plans_retention_days');
   return days ?? 30;
 }
+
+/**
+ * Get admin email for system notifications
+ */
+export async function getAdminEmail(): Promise<string> {
+  const email = await getSystemSetting<string>('admin_email');
+  return email ?? 'admin@beprepared.ai';
+}

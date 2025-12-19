@@ -10,6 +10,7 @@ import { suppliers } from '@/db/schema/suppliers';
 import { eq, desc, ilike, or, and, inArray, sql } from 'drizzle-orm';
 import { checkAdmin } from '@/lib/adminAuth';
 import { getModel } from '@/lib/openrouter';
+import { buildChangeEntry, addChangeEntry } from '@/lib/change-tracking';
 
 export async function getProducts() {
   const data = await db
@@ -32,6 +33,7 @@ export async function getProducts() {
       demographics: specificProducts.demographics,
       locations: specificProducts.locations,
       scenarios: specificProducts.scenarios,
+      changeHistory: specificProducts.changeHistory,
       createdAt: specificProducts.createdAt,
       updatedAt: specificProducts.updatedAt,
       masterItem: {
@@ -46,7 +48,7 @@ export async function getProducts() {
     .leftJoin(masterItems, eq(specificProducts.masterItemId, masterItems.id))
     .leftJoin(suppliers, eq(specificProducts.supplierId, suppliers.id))
     .orderBy(desc(specificProducts.createdAt));
-  
+
   return data;
 }
 
@@ -248,7 +250,7 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(formData: FormData) {
-    await checkAdmin();
+    const user = await checkAdmin();
 
     const id = formData.get('id') as string;
     const name = formData.get('name') as string;
@@ -262,6 +264,13 @@ export async function updateProduct(formData: FormData) {
     const description = formData.get('description') as string;
     const asinRaw = formData.get('asin') as string;
     const asin = asinRaw && asinRaw.trim() !== '' ? asinRaw.trim() : null;
+
+    // Fetch existing product data for change tracking
+    const [existingProduct] = await db
+      .select()
+      .from(specificProducts)
+      .where(eq(specificProducts.id, id))
+      .limit(1);
 
     // Validation (return early with error instead of throwing)
     if (!name || name.trim() === '') {
@@ -337,26 +346,41 @@ export async function updateProduct(formData: FormData) {
     // Variations handling
     const variationsRaw = formData.get('variations') as string;
     const variations = variationsRaw ? JSON.parse(variationsRaw) : null;
-  
+
+    // Prepare update data
+    const updateData = {
+      name,
+      masterItemId,
+      supplierId,
+      price: price.toString(),
+      type,
+      productUrl,
+      imageUrl,
+      description,
+      asin,
+      metadata,
+      status: 'verified' as const,
+      timeframes: timeframes === null ? null : (timeframes as string[]),
+      demographics: demographics === null ? null : (demographics as string[]),
+      locations: locations === null ? null : (locations as string[]),
+      scenarios: scenarios === null ? null : (scenarios as string[]),
+      variations,
+    };
+
+    // Build change history entry
+    const changeEntry = buildChangeEntry(existingProduct, updateData, user);
+
+    // Add change entry to history if changes were detected
+    let updatedChangeHistory = existingProduct?.changeHistory as any;
+    if (changeEntry) {
+      updatedChangeHistory = addChangeEntry(existingProduct?.changeHistory as any, changeEntry);
+    }
+
     try {
       await db.update(specificProducts)
         .set({
-          name,
-          masterItemId,
-          supplierId,
-          price: price.toString(),
-          type,
-          productUrl,
-          imageUrl,
-          description,
-          asin,
-          metadata,
-          status: 'verified',
-          timeframes: timeframes === null ? null : (timeframes as string[]),
-          demographics: demographics === null ? null : (demographics as string[]),
-          locations: locations === null ? null : (locations as string[]),
-          scenarios: scenarios === null ? null : (scenarios as string[]),
-          variations,
+          ...updateData,
+          changeHistory: updatedChangeHistory,
         })
         .where(eq(specificProducts.id, id));
     } catch (error: any) {
@@ -444,7 +468,7 @@ export async function createMasterItem(formData: FormData) {
 }
 
 export async function updateMasterItem(formData: FormData) {
-    await checkAdmin();
+    const user = await checkAdmin();
 
     const id = formData.get('id') as string;
     const name = formData.get('name') as string;
@@ -457,15 +481,37 @@ export async function updateMasterItem(formData: FormData) {
 
     if (!id || !name) throw new Error('ID and Name are required');
 
+    // Fetch existing master item data for change tracking
+    const [existingMasterItem] = await db
+      .select()
+      .from(masterItems)
+      .where(eq(masterItems.id, id))
+      .limit(1);
+
+    // Prepare update data
+    const updateData = {
+      name,
+      description,
+      timeframes,
+      demographics,
+      locations,
+      scenarios,
+    };
+
+    // Build change history entry
+    const changeEntry = buildChangeEntry(existingMasterItem, updateData, user);
+
+    // Add change entry to history if changes were detected
+    let updatedChangeHistory = existingMasterItem?.changeHistory as any;
+    if (changeEntry) {
+      updatedChangeHistory = addChangeEntry(existingMasterItem?.changeHistory as any, changeEntry);
+    }
+
     const [data] = await db
         .update(masterItems)
         .set({
-            name,
-            description,
-            timeframes,
-            demographics,
-            locations,
-            scenarios
+            ...updateData,
+            changeHistory: updatedChangeHistory,
         })
         .where(eq(masterItems.id, id))
         .returning();

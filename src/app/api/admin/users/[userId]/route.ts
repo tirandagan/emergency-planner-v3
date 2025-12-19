@@ -4,7 +4,7 @@ import { profiles } from '@/db/schema/profiles';
 import { missionReports } from '@/db/schema/mission-reports';
 import { userActivityLog } from '@/db/schema/analytics';
 import { billingTransactions } from '@/db/schema/billing';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, isNull, and } from 'drizzle-orm';
 import { createClient } from '@/lib/supabase/server';
 import { logApiError } from '@/lib/system-logger';
 
@@ -65,7 +65,7 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Fetch mission reports and calculate favorite scenarios
+    // Fetch mission reports and calculate favorite scenarios (excluding soft-deleted plans)
     const plans = await db
       .select({
         id: missionReports.id,
@@ -73,7 +73,12 @@ export async function GET(
         createdAt: missionReports.createdAt,
       })
       .from(missionReports)
-      .where(eq(missionReports.userId, userId))
+      .where(
+        and(
+          eq(missionReports.userId, userId),
+          isNull(missionReports.deletedAt)
+        )
+      )
       .orderBy(desc(missionReports.createdAt));
 
     // Calculate favorite scenarios (most common)
