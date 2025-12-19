@@ -14,54 +14,8 @@ import AmazonSearchDialog from "./components/AmazonSearchDialog";
 import AddToBundleModal from "./components/AddToBundleModal";
 import ProductCatalogFilter from "./components/ProductCatalogFilter";
 import CompactCategoryTreeSelector from "./components/CompactCategoryTreeSelector";
-
-// --- Types ---
-interface Category {
-    id: string;
-    name: string;
-    parentId: string | null;
-    description: string | null;
-    icon: string | null;
-    createdAt?: Date;
-}
-
-interface MasterItem {
-    id: string;
-    name: string;
-    categoryId: string; // Drizzle returns camelCase
-    description: string | null;
-    timeframes: string[] | null;
-    demographics?: string[] | null;
-    locations?: string[] | null;
-    scenarios?: string[] | null;
-}
-
-interface Supplier {
-    id: string;
-    name: string;
-}
-
-interface Product {
-    id: string;
-    name: string;
-    description?: string;
-    sku?: string;
-    asin?: string;
-    price?: string | number; // Drizzle returns decimal as string
-    type?: string;
-    productUrl?: string; // Fixed: camelCase to match Drizzle schema
-    imageUrl?: string; // Fixed: camelCase to match Drizzle schema
-    masterItemId: string; // Drizzle returns camelCase
-    supplierId: string; // Fixed: camelCase to match Drizzle schema
-    supplier?: { name: string };
-    masterItem?: { name: string }; // Fixed: camelCase consistency
-    metadata?: any;
-    timeframes?: string[] | null;
-    demographics?: string[] | null;
-    locations?: string[] | null;
-    scenarios?: string[] | null;
-    variations?: any;
-}
+import type { Category, MasterItem, Supplier, Product, ProductsClientProps, FormattedTagValue } from "@/lib/products-types";
+import { formatTagValue, getIconDisplayName } from "@/lib/products-utils";
 
 // Gender symbol components (Venus ♀ and Mars ♂)
 const VenusIcon = ({ className, color = "currentColor", title }: { className?: string; color?: string; title?: string }) => (
@@ -84,53 +38,8 @@ const MarsIcon = ({ className, color = "currentColor", title }: { className?: st
 );
 
 // --- Helper Components ---
-// Condense timeframe labels for display
-export const formatTagValue = (value: string, field?: string): string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' | 'baby' | 'userCheck' | 'venus' | 'mars' } => {
-    const lower = value.toLowerCase();
-    
-    // Scenarios - use icons everywhere
-    if (lower === 'emp') return { icon: 'zap' };
-    if (lower === 'cbrn') return { icon: 'radiation' };
-    if (lower === 'domestic terrorism') return { icon: 'alertTriangle' };
-    if (lower === 'civil unrest') return { icon: 'users' };
-    if (lower === 'storms') return { icon: 'cloud' };
-    
-    // Timeframes
-    if (lower === '1 year') return '1Y';
-    if (lower === '>1 year') return '>1Y';
-    if (lower === '1 month') return '1MO';
-    if (lower === '1 week') return '1W';
-    // Demographics - use icons for all
-    if (lower === 'man') return { icon: 'mars' };
-    if (lower === 'woman') return { icon: 'venus' };
-    if (lower === 'adult') return { icon: 'userCheck' };
-    if (lower === 'child') return { icon: 'baby' };
-    if (lower === 'individual') return { icon: 'user' };
-    if (lower === 'family') return { icon: 'users' };
-    return value;
-};
 
-// Helper function to get display name for icon values
-const getIconDisplayName = (icon: string, originalValue?: string): string => {
-    if (originalValue) return originalValue;
-    
-    const iconMap: Record<string, string> = {
-        'mars': 'Male',
-        'venus': 'Female',
-        'userCheck': 'Adult',
-        'baby': 'Child',
-        'user': 'Individual',
-        'users': 'Family',
-        'zap': 'EMP',
-        'radiation': 'CBRN',
-        'alertTriangle': 'Domestic Terrorism',
-        'cloud': 'Storms',
-    };
-    
-    return iconMap[icon] || icon;
-};
-
-export const TagValueDisplay = ({ value, field, title }: { value: string | { icon: 'user' | 'users' | 'zap' | 'radiation' | 'alertTriangle' | 'users' | 'cloud' | 'baby' | 'userCheck' | 'venus' | 'mars' }, field?: string, title?: string }) => {
+export const TagValueDisplay = ({ value, field, title }: { value: FormattedTagValue, field?: string, title?: string }) => {
     if (typeof value === 'object' && value.icon) {
         const displayTitle = title || getIconDisplayName(value.icon);
         const commonProps = { className: "w-3.5 h-3.5", title: displayTitle };
@@ -453,19 +362,14 @@ const QuickTagger = ({
 };
 
 // --- Main Component ---
-export default function ProductsClient({ 
-    products, 
-    masterItems, 
-    suppliers,
-    categories 
-}: { 
-    products: any[], 
-    masterItems: MasterItem[], 
-    suppliers: any[],
-    categories: Category[] 
-}) {
+export default function ProductsClient({
+  products,
+  masterItems,
+  suppliers,
+  categories
+}: ProductsClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   // Filtering State
