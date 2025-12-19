@@ -430,11 +430,46 @@ export async function updateProductTags(
 
 export async function deleteProduct(id: string) {
     await checkAdmin();
-    
+
     await db.delete(specificProducts).where(eq(specificProducts.id, id));
-    
+
     revalidatePath('/admin/products');
     revalidatePath('/admin/bundles');
+}
+
+export async function getMasterItemProducts(id: string): Promise<Array<{ id: string; name: string; asin: string | null }>> {
+    await checkAdmin();
+
+    const products = await db
+        .select({
+            id: specificProducts.id,
+            name: specificProducts.name,
+            asin: specificProducts.asin,
+        })
+        .from(specificProducts)
+        .where(eq(specificProducts.masterItemId, id));
+
+    return products;
+}
+
+export async function deleteMasterItem(id: string): Promise<{ success: boolean; error?: string }> {
+    await checkAdmin();
+
+    try {
+        await db.delete(masterItems).where(eq(masterItems.id, id));
+
+        revalidatePath('/admin/products');
+        revalidatePath('/admin/bundles');
+
+        return { success: true };
+    } catch (error: unknown) {
+        console.error('Error deleting master item:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete master item. Please try again.';
+        return {
+            success: false,
+            error: errorMessage
+        };
+    }
 }
 
 export async function createMasterItem(formData: FormData) {

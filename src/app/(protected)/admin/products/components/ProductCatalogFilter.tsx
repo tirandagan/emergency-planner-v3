@@ -168,7 +168,7 @@ export default function ProductCatalogFilter({
                                 className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border whitespace-nowrap ${
                                     isNegated
                                         ? 'bg-destructive/30 text-destructive border-destructive/30'
-                                        : 'bg-secondary/30 text-secondary border-secondary/30'
+                                        : 'bg-amber-500/20 text-foreground border-amber-500/40'
                                 }`}
                             >
                                 <Truck className="w-3 h-3" strokeWidth={2.5} />

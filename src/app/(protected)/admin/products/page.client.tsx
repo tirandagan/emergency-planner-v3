@@ -15,8 +15,9 @@ import {
 // Local Constants & Actions
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import {
-  bulkUpdateProducts, createMasterItem, deleteProduct, getMasterItems,
-  updateMasterItem, updateProduct, updateProductTags
+  bulkUpdateProducts, createMasterItem, deleteProduct, deleteMasterItem,
+  getMasterItemProducts, getMasterItems, updateMasterItem, updateProduct,
+  updateProductTags
 } from "./actions";
 
 // External Actions
@@ -26,6 +27,7 @@ import {
 
 // Admin Components
 import { DeleteCategoryDialog } from "@/components/admin/DeleteCategoryDialog";
+import { DeleteMasterItemDialog } from "@/components/admin/DeleteMasterItemDialog";
 import {
   AddCategoryDialog, EditCategoryDialog, MoveCategoryDialog, MoveMasterItemDialog
 } from "@/components/admin/category-dialogs";
@@ -302,6 +304,18 @@ export default function ProductsClient({
   // Data state (synced from server)
   const [allCategories, setAllCategories] = useState(categories);
   const [allMasterItems, setAllMasterItems] = useState(masterItems);
+
+  // Delete master item modal state
+  const [deleteMasterItemModal, setDeleteMasterItemModal] = useState<{
+    isOpen: boolean;
+    masterItem: MasterItem | null;
+    products: Array<{ id: string; name: string; asin: string | null }>;
+  }>({
+    isOpen: false,
+    masterItem: null,
+    products: [],
+  });
+  const [isDeletingMasterItem, setIsDeletingMasterItem] = useState(false);
 
   // Build category tree from flat array (like /admin/categories does)
   const categoryTree = useMemo(() => {
@@ -680,6 +694,50 @@ export default function ProductsClient({
       }
   };
 
+  const handleDeleteMasterItem = useCallback(async (masterItem: MasterItem) => {
+      try {
+          const products = await getMasterItemProducts(masterItem.id);
+
+          setDeleteMasterItemModal({
+              isOpen: true,
+              masterItem,
+              products,
+          });
+
+          masterItemContextMenu.closeMenu();
+      } catch (error) {
+          console.error('Error fetching master item products:', error);
+      }
+  }, [masterItemContextMenu]);
+
+  const handleConfirmDeleteMasterItem = async (): Promise<void> => {
+      if (!deleteMasterItemModal.masterItem) return;
+
+      setIsDeletingMasterItem(true);
+
+      try {
+          const result = await deleteMasterItem(deleteMasterItemModal.masterItem.id);
+
+          if (result.success) {
+              setDeleteMasterItemModal({
+                  isOpen: false,
+                  masterItem: null,
+                  products: [],
+              });
+
+              const updatedMasterItems = await getMasterItems();
+              setAllMasterItems(updatedMasterItems);
+          } else {
+              alert(result.error || 'Failed to delete master item');
+          }
+      } catch (error) {
+          console.error('Error deleting master item:', error);
+          alert('An error occurred while deleting the master item');
+      } finally {
+          setIsDeletingMasterItem(false);
+      }
+  };
+
   // Context menu close handlers (now handled by useContextMenu hook automatically)
 
   const handleCopyTags = (masterItem: MasterItem) => {
@@ -968,7 +1026,7 @@ export default function ProductsClient({
       type CategoryGroup = { category: Category, subGroups: Record<string, SubGroup> };
 
       const groups: Record<string, CategoryGroup> = {};
-      const hasActiveSearch = filters.searchTerm.trim() !== "";
+      const hasActiveFilters = filters.hasActiveFilters;
 
       const ensureGroup = (catId: string, subCatId: string | null) => {
           if (!groups[catId]) {
@@ -992,8 +1050,8 @@ export default function ProductsClient({
           return groups[catId].subGroups[subKey];
       };
 
-      // When no active search, create groups for ALL categories and master items
-      if (!hasActiveSearch) {
+      // When no active filters, create groups for ALL categories and master items
+      if (!hasActiveFilters) {
           // First, create groups for ALL root categories (so empty categories appear)
           allCategories
               .filter(c => c.parentId === null) // Only root categories
@@ -1084,8 +1142,8 @@ export default function ProductsClient({
           }
       });
 
-      // When searching, remove empty master items and categories
-      if (hasActiveSearch) {
+      // When filtering, remove empty master items and categories
+      if (hasActiveFilters) {
           // Remove empty master items
           Object.values(groups).forEach(categoryGroup => {
               Object.values(categoryGroup.subGroups).forEach(subGroup => {
@@ -1116,40 +1174,47 @@ export default function ProductsClient({
       }
 
       return groups;
-  }, [filters.processedProducts, filters.searchTerm, allMasterItems, allCategories]);
+  }, [filters.processedProducts, filters.hasActiveFilters, allMasterItems, allCategories]);
 
-  // Auto-expand all matching nodes when search is active
+  // Auto-expand all matching nodes when filters are active
+  const { expandAll } = navigation;
   useEffect(() => {
-      const hasActiveSearch = filters.searchTerm.trim() !== "";
+      if (!filters.hasActiveFilters) return;
+      
+      // Extract all category, subcategory, and master item IDs from filtered products
+      const categoryIds = new Set<string>();
+      const subCategoryIds = new Set<string>();
+      const masterItemIds = new Set<string>();
 
-      if (hasActiveSearch) {
-          // Extract all category, subcategory, and master item IDs from grouped products
-          const categoryIds: string[] = [];
-          const subCategoryIds: string[] = [];
-          const masterItemIds: string[] = [];
-
-          Object.values(groupedProducts).forEach(categoryGroup => {
-              categoryIds.push(categoryGroup.category.id);
-
-              Object.values(categoryGroup.subGroups).forEach(subGroup => {
-                  if (subGroup.subCategory) {
-                      subCategoryIds.push(subGroup.subCategory.id);
+      filters.processedProducts.forEach(product => {
+          const masterItem = allMasterItems.find(m => m.id === product.masterItemId);
+          if (masterItem) {
+              masterItemIds.add(masterItem.id);
+              
+              const cat = allCategories.find(c => c.id === masterItem.categoryId);
+              if (cat) {
+                  if (cat.parentId) {
+                      // Subcategory
+                      categoryIds.add(cat.parentId);
+                      subCategoryIds.add(cat.id);
+                  } else {
+                      // Root category
+                      categoryIds.add(cat.id);
                   }
+              }
+          }
+      });
 
-                  Object.keys(subGroup.masterItems).forEach(masterItemId => {
-                      if (masterItemId !== 'nomaster') {
-                          masterItemIds.push(masterItemId);
-                      }
-                  });
-              });
-          });
-
-          // Expand all matching nodes
-          navigation.expandAll(categoryIds, subCategoryIds, masterItemIds);
-      }
-      // Note: We don't collapse when search is cleared - this preserves user's exploration state
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.searchTerm]);
+      // Expand all matching nodes
+      expandAll(Array.from(categoryIds), Array.from(subCategoryIds), Array.from(masterItemIds));
+      // Note: We don't collapse when filters are cleared - this preserves user's exploration state
+  }, [
+      filters.searchTerm,
+      filters.selectedTags.join(','),
+      filters.selectedSuppliers.join(','),
+      filters.filterPriceRange,
+      expandAll
+  ]);
 
   // Build flat navigation list for keyboard navigation
   const navigationItems = useMemo(() => {
@@ -1827,6 +1892,7 @@ export default function ProductsClient({
             onEdit={handleMasterItemEdit}
             onAddProduct={handleAddProductFromMasterItem}
             onMove={handleMoveMasterItem}
+            onDelete={handleDeleteMasterItem}
             onCopyTags={handleCopyTags}
             onPasteTags={handlePasteTags}
             hasCopiedTags={!!copiedTags}
@@ -2167,6 +2233,16 @@ export default function ProductsClient({
         categories={categories}
         onClose={handleMoveMasterItemClose}
         onSave={handleMoveMasterItemSave}
+      />
+
+      {/* Delete Master Item Dialog */}
+      <DeleteMasterItemDialog
+        isOpen={deleteMasterItemModal.isOpen}
+        masterItem={deleteMasterItemModal.masterItem}
+        products={deleteMasterItemModal.products}
+        onClose={() => setDeleteMasterItemModal({ isOpen: false, masterItem: null, products: [] })}
+        onConfirm={handleConfirmDeleteMasterItem}
+        isDeleting={isDeletingMasterItem}
       />
 
     </div>

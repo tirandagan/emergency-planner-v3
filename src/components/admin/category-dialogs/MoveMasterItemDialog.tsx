@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { MoveRight, FolderTree } from 'lucide-react';
+import { MoveRight, FolderTree, ArrowRight } from 'lucide-react';
 
 type Category = {
   id: string;
@@ -31,6 +31,7 @@ interface MoveMasterItemDialogProps {
 export function MoveMasterItemDialog({ isOpen, masterItem, categories, onClose, onSave }: MoveMasterItemDialogProps): React.JSX.Element {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const currentSubcategoryRef = useRef<HTMLDivElement>(null);
 
   // Get current category details
   const currentCategory = useMemo(() => {
@@ -81,6 +82,22 @@ export function MoveMasterItemDialog({ isOpen, masterItem, categories, onClose, 
     }
   }, [masterItem]);
 
+  // Auto-scroll to current subcategory when dialog opens
+  useEffect(() => {
+    if (isOpen && currentSubcategoryRef.current) {
+      // Longer delay to ensure dialog animation and full rendering completes
+      const timeoutId = setTimeout(() => {
+        currentSubcategoryRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen, masterItem?.categoryId]);
+
   const handleSave = async (): Promise<void> => {
     if (!masterItem || !selectedCategoryId) return;
 
@@ -112,7 +129,7 @@ export function MoveMasterItemDialog({ isOpen, masterItem, categories, onClose, 
             Move Master Item
           </DialogTitle>
           <DialogDescription>
-            Move "{masterItem.name}" to a different category. All associated products will move automatically.
+            Move &quot;{masterItem.name}&quot; to a different category. All associated products will move automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +155,7 @@ export function MoveMasterItemDialog({ isOpen, masterItem, categories, onClose, 
               New Location
             </label>
             <RadioGroup value={selectedCategoryId || ''} onValueChange={setSelectedCategoryId}>
-              <div className="space-y-4">
+              <div className="space-y-4 pl-8 -ml-8">
                 {parentCategories.map((parentCat) => {
                   const subcategories = groupedSubcategories.get(parentCat.id) || [];
                   return (
@@ -156,12 +173,20 @@ export function MoveMasterItemDialog({ isOpen, masterItem, categories, onClose, 
                           return (
                             <div
                               key={subCat.id}
-                              className={`flex items-center space-x-2 p-3 rounded-lg border border-border transition-colors ${
+                              ref={isCurrentLocation ? currentSubcategoryRef : null}
+                              className={`relative flex items-center space-x-2 p-3 rounded-lg border border-border transition-colors ${
                                 isCurrentLocation
                                   ? 'bg-muted/50 opacity-60 cursor-not-allowed'
                                   : 'hover:bg-muted/50'
                               }`}
                             >
+                              {/* Arrow indicator for current location */}
+                              {isCurrentLocation && (
+                                <div className="absolute -left-8 top-1/2 -translate-y-1/2 flex items-center">
+                                  <ArrowRight className="w-5 h-5 text-primary animate-pulse" />
+                                </div>
+                              )}
+
                               <RadioGroupItem
                                 value={subCat.id}
                                 id={subCat.id}

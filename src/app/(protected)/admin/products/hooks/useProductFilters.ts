@@ -68,31 +68,30 @@ export function useProductFilters(
   const processedProducts = useMemo(() => {
     let result = products.filter(p => {
       // Text Search (includes master item name and description)
+      let matchesSearch = true;
       const term = searchTerm.toLowerCase();
-      if (!term) {
-        // No search term - include all products
-        return true;
+      
+      if (term) {
+        // Find associated master item
+        const master = masterItems.find(m => m.id === p.masterItemId);
+
+        // Check product fields
+        const productMatches = (
+          (p.name && p.name.toLowerCase().includes(term)) ||
+          (p.sku && p.sku.toLowerCase().includes(term)) ||
+          (p.asin && p.asin.toLowerCase().includes(term)) ||
+          (p.description && p.description.toLowerCase().includes(term)) ||
+          (p.supplier?.name && p.supplier.name.toLowerCase().includes(term))
+        );
+
+        // Check master item fields (OR relationship)
+        const masterItemMatches = master && (
+          (master.name && master.name.toLowerCase().includes(term)) ||
+          (master.description && master.description.toLowerCase().includes(term))
+        );
+
+        matchesSearch = productMatches || masterItemMatches;
       }
-
-      // Find associated master item
-      const master = masterItems.find(m => m.id === p.masterItemId);
-
-      // Check product fields
-      const productMatches = (
-        (p.name && p.name.toLowerCase().includes(term)) ||
-        (p.sku && p.sku.toLowerCase().includes(term)) ||
-        (p.asin && p.asin.toLowerCase().includes(term)) ||
-        (p.description && p.description.toLowerCase().includes(term)) ||
-        (p.supplier?.name && p.supplier.name.toLowerCase().includes(term))
-      );
-
-      // Check master item fields (OR relationship)
-      const masterItemMatches = master && (
-        (master.name && master.name.toLowerCase().includes(term)) ||
-        (master.description && master.description.toLowerCase().includes(term))
-      );
-
-      const matchesSearch = productMatches || masterItemMatches;
 
       // Tag Filter (with include/exclude support)
       let matchesTags = true;

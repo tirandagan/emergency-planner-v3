@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Plus, MoveRight, Copy, ClipboardPaste } from 'lucide-react';
+import { Edit, Plus, MoveRight, Copy, ClipboardPaste, Trash2 } from 'lucide-react';
 import type { MasterItem } from '@/lib/products-types';
 
 /**
@@ -20,6 +20,8 @@ export interface MasterItemContextMenuProps {
   onAddProduct: (item: MasterItem) => void;
   /** Handler for moving the master item to another category */
   onMove: (item: MasterItem) => void;
+  /** Handler for deleting the master item */
+  onDelete: (item: MasterItem) => void;
   /** Handler for copying tags from this master item */
   onCopyTags: (item: MasterItem) => void;
   /** Handler for pasting tags to this master item */
@@ -38,6 +40,7 @@ export interface MasterItemContextMenuProps {
  * - Edit the master item
  * - Add a product to the master item
  * - Move the master item to another category
+ * - Delete the master item
  * - Copy tags from the master item
  * - Paste tags to the master item (if tags are copied)
  *
@@ -51,6 +54,7 @@ export interface MasterItemContextMenuProps {
  *   onEdit={handleEdit}
  *   onAddProduct={handleAddProduct}
  *   onMove={handleMove}
+ *   onDelete={handleDelete}
  *   onCopyTags={handleCopyTags}
  *   onPasteTags={handlePasteTags}
  *   hasCopiedTags={!!copiedTags}
@@ -66,6 +70,7 @@ export function MasterItemContextMenu({
   onEdit,
   onAddProduct,
   onMove,
+  onDelete,
   onCopyTags,
   onPasteTags,
   hasCopiedTags,
@@ -106,6 +111,16 @@ export function MasterItemContextMenu({
       >
         <MoveRight className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
         Move Master Item
+      </button>
+      <button
+        className="w-full text-left px-4 py-2.5 hover:bg-destructive/10 text-sm text-destructive flex items-center gap-3 transition-colors whitespace-nowrap"
+        onClick={() => {
+          onDelete(masterItem);
+          onClose();
+        }}
+      >
+        <Trash2 className="w-4 h-4 text-destructive flex-shrink-0" strokeWidth={2.5} />
+        Delete Master Item
       </button>
       <div className="h-px bg-border my-1" />
       <button
