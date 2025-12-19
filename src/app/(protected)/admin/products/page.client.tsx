@@ -14,6 +14,11 @@ import AmazonSearchDialog from "./components/AmazonSearchDialog";
 import AddToBundleModal from "./components/AddToBundleModal";
 import ProductCatalogFilter from "./components/ProductCatalogFilter";
 import CompactCategoryTreeSelector from "./components/CompactCategoryTreeSelector";
+import { FilterActiveIndicator } from "./components/FilterActiveIndicator";
+import { BulkActionBar } from "./components/BulkActionBar";
+import { CategoryContextMenu } from "./components/CategoryContextMenu";
+import { MasterItemContextMenu } from "./components/MasterItemContextMenu";
+import { ProductContextMenu } from "./components/ProductContextMenu";
 import type { Category, MasterItem, Supplier, Product, ProductsClientProps, FormattedTagValue } from "@/lib/products-types";
 import { formatTagValue, getIconDisplayName } from "@/lib/products-utils";
 import { useProductFilters } from "./hooks/useProductFilters";
@@ -1465,13 +1470,11 @@ export default function ProductsClient({
 
       {/* Filter Active Indicator */}
       {filters.hasActiveFilters && (
-        <div className="mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
-          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={2.5} />
-          <span className="text-blue-900 dark:text-blue-100">
-            Showing <strong>{categoryCounts.visible}</strong> of <strong>{categoryCounts.total}</strong> categories
-            {filters.searchTerm && <span className="ml-1 text-blue-700 dark:text-blue-300">matching "{filters.searchTerm}"</span>}
-          </span>
-        </div>
+        <FilterActiveIndicator
+          visibleCount={categoryCounts.visible}
+          totalCount={categoryCounts.total}
+          searchTerm={filters.searchTerm}
+        />
       )}
 
       {/* Product List (Grouped) */}
@@ -2186,58 +2189,19 @@ export default function ProductsClient({
         const masterItem = masterItemContextMenu.menu.item;
         if (!masterItem) return null;
         return (
-        <div
-            className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden animate-in fade-in zoom-in-95"
-            style={{ top: masterItemContextMenu.menu.y, left: masterItemContextMenu.menu.x }}
-            onClick={(e) => e.stopPropagation()}
-        >
-            <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleMasterItemEdit(masterItem)}
-            >
-                <Edit className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-                Edit Master Item
-            </button>
-            <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleAddProductFromMasterItem(masterItem)}
-            >
-                <Plus className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-                Add Product
-            </button>
-            <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleMoveMasterItem(masterItem)}
-            >
-                <MoveRight className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-                Move Master Item
-            </button>
-            <div className="h-px bg-border my-1" />
-            <button
-                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleCopyTags(masterItem)}
-            >
-                <Copy className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-                Copy Tags
-            </button>
-            <button
-                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors whitespace-nowrap ${
-                    copiedTags
-                        ? 'hover:bg-muted text-foreground'
-                        : 'text-muted-foreground cursor-not-allowed'
-                }`}
-                onClick={() => copiedTags && handlePasteTags(masterItem)}
-                disabled={!copiedTags}
-            >
-                <ClipboardPaste className={`w-4 h-4 flex-shrink-0 ${copiedTags ? 'text-success' : 'text-muted-foreground'}`} strokeWidth={2.5} />
-                Paste Tags
-                {copiedTags && (
-                    <span className="ml-auto text-[10px] text-muted-foreground truncate max-w-[80px]">
-                        from {copiedTags.sourceName}
-                    </span>
-                )}
-            </button>
-        </div>
+          <MasterItemContextMenu
+            x={masterItemContextMenu.menu.x}
+            y={masterItemContextMenu.menu.y}
+            masterItem={masterItem}
+            onClose={masterItemContextMenu.closeMenu}
+            onEdit={handleMasterItemEdit}
+            onAddProduct={handleAddProductFromMasterItem}
+            onMove={handleMoveMasterItem}
+            onCopyTags={handleCopyTags}
+            onPasteTags={handlePasteTags}
+            hasCopiedTags={!!copiedTags}
+            copiedTagsSourceName={copiedTags?.sourceName}
+          />
         );
       })()}
 
@@ -2452,29 +2416,12 @@ export default function ProductsClient({
       )}
       
       {selectedIds.size >= 2 && (
-            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full shadow-2xl px-6 py-3 flex items-center gap-4 z-[50] animate-in slide-in-from-bottom-4 fade-in duration-200">
-                <div className="text-sm text-foreground font-medium border-r border-border pr-4 flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">{selectedIds.size}</span>
-                    Selected
-                </div>
-                <button
-                    onClick={() => modals.openCategoryModal(null)}
-                    className="text-muted-foreground hover:text-foreground text-sm font-medium flex items-center gap-2 transition-colors"
-                >
-                    <FolderTree className="w-4 h-4" strokeWidth={2.5} /> Assign Category
-                </button>
-                <div className="w-px h-4 bg-border" />
-                <button
-                    onClick={() => modals.openBulkSupplierModal()}
-                    className="text-muted-foreground hover:text-foreground text-sm font-medium flex items-center gap-2 transition-colors"
-                >
-                    <Truck className="w-4 h-4" strokeWidth={2.5} /> Assign Supplier
-                </button>
-                <div className="w-px h-4 bg-border" />
-                <button onClick={() => setSelectedIds(new Set())} className="text-muted-foreground hover:text-foreground p-1" title="Clear Selection">
-                    <X className="w-4 h-4" strokeWidth={2.5} />
-                </button>
-            </div>
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onAssignCategory={() => modals.openCategoryModal(null)}
+          onAssignSupplier={() => modals.openBulkSupplierModal()}
+          onClearSelection={() => setSelectedIds(new Set())}
+        />
       )}
 
       {/* Category Context Menu */}
@@ -2482,63 +2429,17 @@ export default function ProductsClient({
         const category = categoryContextMenu.menu.item;
         if (!category) return null;
         return (
-        <div
-          id="category-context-menu"
-          className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden backdrop-blur-sm"
-          style={{
-            top: categoryContextMenu.menu.y,
-            left: categoryContextMenu.menu.x
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => handleCategoryEdit(category)}
-            className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
-          >
-            <Edit className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-            Edit Category
-          </button>
-
-          {/* Only show "Add New Category" for root categories (parentId === null) */}
-          {category.parentId === null && (
-            <button
-              onClick={() => handleCategoryAdd(category)}
-              className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-              Add Subcategory
-            </button>
-          )}
-
-          {/* Only show "Move Category" and "Add Master Item" for subcategories (parentId !== null) */}
-          {category.parentId !== null && (
-            <>
-              <button
-                onClick={() => handleCategoryMove(category)}
-                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
-              >
-                <FolderTree className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-                Move Category
-              </button>
-              <button
-                onClick={() => handleAddMasterItem(category)}
-                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
-              >
-                <Layers className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-                Add Master Item
-              </button>
-            </>
-          )}
-
-          <div className="h-px bg-border my-1" />
-          <button
-            onClick={() => handleCategoryDelete(category)}
-            className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-3 transition-colors whitespace-nowrap"
-          >
-            <Trash2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-            Delete
-          </button>
-        </div>
+          <CategoryContextMenu
+            x={categoryContextMenu.menu.x}
+            y={categoryContextMenu.menu.y}
+            category={category}
+            onClose={categoryContextMenu.closeMenu}
+            onEdit={handleCategoryEdit}
+            onAddSubcategory={handleCategoryAdd}
+            onMove={handleCategoryMove}
+            onAddMasterItem={handleAddMasterItem}
+            onDelete={handleCategoryDelete}
+          />
         );
       })()}
 

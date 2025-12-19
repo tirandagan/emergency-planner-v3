@@ -104,3 +104,34 @@ export type IconType =
   | 'mars';
 
 export type FormattedTagValue = string | { icon: IconType };
+
+// --- Grouped Product Structure Types ---
+
+/**
+ * Master item group containing the master item and its products
+ */
+export interface MasterItemGroup {
+  masterItem: MasterItem | null;
+  products: Product[];
+}
+
+/**
+ * Subcategory group containing subcategory info and its master items
+ */
+export interface SubCategoryGroup {
+  subCategory: Category | null;
+  masterItems: Record<string, MasterItemGroup>;
+}
+
+/**
+ * Category group containing category info and its subcategory groups
+ */
+export interface CategoryGroup {
+  category: Category;
+  subGroups: Record<string, SubCategoryGroup>;
+}
+
+/**
+ * Complete grouped products structure indexed by category ID
+ */
+export type GroupedProducts = Record<string, CategoryGroup>;
