@@ -63,6 +63,18 @@ class JobSummary(BaseModel):
         examples=["123e4567-e89b-12d3-a456-426614174000"]
     )
 
+    username: Optional[str] = Field(
+        None,
+        description="Username of person who triggered workflow (if provided)",
+        examples=["john.doe@example.com", "jane_smith"]
+    )
+
+    action: Optional[str] = Field(
+        None,
+        description="User activity that required the workflow (if provided)",
+        examples=["generate mission report", "add driving directions", "generate contacts"]
+    )
+
     created_at: str = Field(
         ...,
         description="Job creation timestamp (ISO 8601)",

@@ -50,6 +50,7 @@ export function LLMQueueTab() {
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<JobStatusFilter>('all');
+  const [limitResults, setLimitResults] = useState<string>('25');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export function LLMQueueTab() {
   const fetchJobs = useCallback(async () => {
     setIsLoadingJobs(true);
     try {
-      const data: LLMJobsResponse = await fetchLLMJobs(statusFilter);
+      const data: LLMJobsResponse = await fetchLLMJobs(statusFilter, limitResults);
       setJobs(data.jobs);
       setError(null);
     } catch (err) {
@@ -99,7 +100,7 @@ export function LLMQueueTab() {
     } finally {
       setIsLoadingJobs(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, limitResults]);
 
   // Fetch data when filter changes or on mount
   useEffect(() => {
@@ -186,6 +187,20 @@ export function LLMQueueTab() {
                   <SelectItem value="running">Running</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={limitResults} onValueChange={setLimitResults}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Limit results" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="25">25 records</SelectItem>
+                  <SelectItem value="50">50 records</SelectItem>
+                  <SelectItem value="100">100 records</SelectItem>
+                  <SelectItem value="200">200 records</SelectItem>
+                  <SelectItem value="Today">Today</SelectItem>
+                  <SelectItem value="7 Days">Last 7 Days</SelectItem>
+                  <SelectItem value="30 Days">Last 30 Days</SelectItem>
                 </SelectContent>
               </Select>
               <Button

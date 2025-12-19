@@ -76,6 +76,20 @@ class WorkflowSubmitRequest(BaseModel):
         examples=[False, True]
     )
 
+    username: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Username of person who triggered the workflow (informational)",
+        examples=["john.doe@example.com", "jane_smith"]
+    )
+
+    action: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="User activity requiring the workflow (e.g., 'generate mission report', 'add driving directions')",
+        examples=["generate mission report", "add driving directions", "generate contacts"]
+    )
+
     @field_validator('workflow_name')
     @classmethod
     def validate_workflow_name(cls, v: str) -> str:

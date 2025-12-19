@@ -243,6 +243,8 @@ LLM_WEBHOOK_SECRET=your-shared-secret-key-here  # Must match server
 | `webhook_secret` | string | No | Job-specific HMAC secret (uses global default if omitted) |
 | `priority` | integer (0-10) | No | Job priority (higher = more urgent, default: 0) |
 | `debug_mode` | boolean | No | Include debug info in webhook payloads (default: false) |
+| `username` | string (max 255) | No | Username of person who triggered the workflow (informational) |
+| `action` | string (max 255) | No | User activity requiring the workflow (e.g., "generate mission report") |
 
 **Response (Success - 202 Accepted)**:
 ```json
@@ -526,12 +528,19 @@ curl -X POST https://llm-service-api.onrender.com/api/v1/workflow \
 | `user_id` | string (UUID) | No | Filter by user ID |
 | `limit` | integer (1-200) | No | Max jobs to return (default: 50) |
 | `offset` | integer | No | Pagination offset (default: 0) |
+| `limit_results` | string | No | Filter by count (1-500) or time period: `Today`, `7 Days`, `30 Days` |
 
 **Status Filter Values**:
 - `running`: Jobs in `queued` or `processing` state
 - `completed`: Jobs in `completed` state
 - `failed`: Jobs in `failed` state
 - `all` (or omit): All jobs regardless of status
+
+**Limit Results Filter Values**:
+- Numeric value (e.g., `25`, `100`, `500`): Return up to N jobs (overrides `limit` parameter, range: 1-500)
+- `Today`: Jobs created today (UTC timezone)
+- `7 Days`: Jobs created in the last 7 days
+- `30 Days`: Jobs created in the last 30 days
 
 **Response (200 OK)**:
 ```json
@@ -543,6 +552,8 @@ curl -X POST https://llm-service-api.onrender.com/api/v1/workflow \
       "status": "completed",
       "priority": 0,
       "user_id": "user-123",
+      "username": "john.doe@example.com",
+      "action": "generate mission report",
       "created_at": "2025-12-18T10:00:00Z",
       "started_at": "2025-12-18T10:00:05Z",
       "completed_at": "2025-12-18T10:00:25Z",
@@ -555,6 +566,8 @@ curl -X POST https://llm-service-api.onrender.com/api/v1/workflow \
       "status": "processing",
       "priority": 5,
       "user_id": "user-456",
+      "username": "jane_smith",
+      "action": "add driving directions",
       "created_at": "2025-12-18T10:05:00Z",
       "started_at": "2025-12-18T10:05:02Z",
       "completed_at": null,
@@ -611,6 +624,18 @@ curl "https://llm-service-api.onrender.com/api/v1/jobs?status=completed&user_id=
 
 # Paginated query (page 2, 100 jobs per page)
 curl "https://llm-service-api.onrender.com/api/v1/jobs?limit=100&offset=100" \
+  -H "X-API-Secret: your-secret-key"
+
+# Get only 25 most recent jobs
+curl "https://llm-service-api.onrender.com/api/v1/jobs?limit_results=25" \
+  -H "X-API-Secret: your-secret-key"
+
+# Get jobs created today
+curl "https://llm-service-api.onrender.com/api/v1/jobs?limit_results=Today" \
+  -H "X-API-Secret: your-secret-key"
+
+# Get failed jobs from last 7 days
+curl "https://llm-service-api.onrender.com/api/v1/jobs?status=failed&limit_results=7%20Days" \
   -H "X-API-Secret: your-secret-key"
 
 # Get all failed jobs

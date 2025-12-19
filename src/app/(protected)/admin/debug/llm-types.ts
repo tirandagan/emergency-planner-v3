@@ -11,6 +11,8 @@ export interface LLMJob {
   priority: number;
   user_id: string | null;
   user_email?: string; // Fetched separately from profiles table
+  username?: string; // Username who triggered the workflow
+  action?: string; // User activity requiring the workflow
   created_at: string; // ISO 8601
   started_at: string | null;
   completed_at: string | null;

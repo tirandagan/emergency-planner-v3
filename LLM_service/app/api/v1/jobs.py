@@ -75,6 +75,14 @@ def list_jobs(
         description="Number of jobs to skip (pagination)",
         examples=[0, 50, 100]
     ),
+    limit_results: Optional[str] = Query(
+        None,
+        description=(
+            "Filter by result count or time period. "
+            "Accepts: numeric value (1-500), 'Today', '7 Days', or '30 Days'"
+        ),
+        examples=["25", "100", "Today", "7 Days", "30 Days"]
+    ),
     db: Session = Depends(get_db)
 ) -> JobsListResponse:
     """
@@ -156,6 +164,67 @@ def list_jobs(
                 }
             )
 
+    # Apply limit_results filter (time-based or numeric)
+    if limit_results:
+        from datetime import timedelta
+
+        # Check if it's a time period filter
+        if limit_results in ["Today", "7 Days", "30 Days"]:
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+
+            if limit_results == "Today":
+                # Jobs created today (UTC)
+                start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                query = query.filter(WorkflowJob.created_at >= start_of_day)
+                logger.debug(f"Applied 'Today' filter (since {start_of_day.isoformat()})")
+
+            elif limit_results == "7 Days":
+                # Jobs created in last 7 days
+                seven_days_ago = now - timedelta(days=7)
+                query = query.filter(WorkflowJob.created_at >= seven_days_ago)
+                logger.debug(f"Applied '7 Days' filter (since {seven_days_ago.isoformat()})")
+
+            elif limit_results == "30 Days":
+                # Jobs created in last 30 days
+                thirty_days_ago = now - timedelta(days=30)
+                query = query.filter(WorkflowJob.created_at >= thirty_days_ago)
+                logger.debug(f"Applied '30 Days' filter (since {thirty_days_ago.isoformat()})")
+
+        else:
+            # Assume it's a numeric limit (validate and override default limit)
+            try:
+                numeric_limit = int(limit_results)
+                if 1 <= numeric_limit <= 500:
+                    limit = numeric_limit  # Override default limit parameter
+                    logger.debug(f"Applied numeric limit: {numeric_limit}")
+                else:
+                    # Invalid range
+                    logger.warning(f"Invalid limit_results value (out of range): {limit_results}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "error": "InvalidLimitResults",
+                            "message": f"Numeric limit must be between 1-500 (got: {limit_results})",
+                            "limit_results": limit_results
+                        }
+                    )
+            except ValueError:
+                # Not a valid number or time period
+                logger.warning(f"Invalid limit_results value: {limit_results}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "error": "InvalidLimitResults",
+                        "message": (
+                            f"Invalid limit_results value: '{limit_results}'. "
+                            "Expected: numeric value (1-500), 'Today', '7 Days', or '30 Days'"
+                        ),
+                        "limit_results": limit_results,
+                        "valid_values": ["1-500", "Today", "7 Days", "30 Days"]
+                    }
+                )
+
     # Get total count (before pagination)
     try:
         total = query.count()
@@ -200,6 +269,8 @@ def list_jobs(
                 status=job.status,
                 priority=job.priority,
                 user_id=str(job.user_id) if job.user_id else None,
+                username=job.username,
+                action=job.action,
                 created_at=job.created_at.isoformat() if job.created_at else None,
                 started_at=job.started_at.isoformat() if job.started_at else None,
                 completed_at=job.completed_at.isoformat() if job.completed_at else None,

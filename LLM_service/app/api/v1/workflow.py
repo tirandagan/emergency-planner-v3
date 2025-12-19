@@ -154,6 +154,8 @@ def submit_workflow(
             webhook_secret=request.webhook_secret,
             debug_mode=request.debug_mode,
             user_id=uuid.UUID(request.user_id) if request.user_id else None,
+            username=request.username,
+            action=request.action,
             status=JobStatus.PENDING.value,
             input_data=request.input_data,
             queued_at=datetime.now(timezone.utc),

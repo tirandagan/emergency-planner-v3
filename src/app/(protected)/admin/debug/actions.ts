@@ -1225,15 +1225,24 @@ export async function fetchLLMHealth(): Promise<any> {
  * Fetch LLM service jobs (server-side proxy)
  * Enriches jobs with user email from profiles table
  */
-export async function fetchLLMJobs(status: string = 'all'): Promise<any> {
+export async function fetchLLMJobs(
+  status: string = 'all',
+  limitResults?: string
+): Promise<any> {
   await checkAdmin()
 
   try {
     const llmServiceUrl = await getLLMServiceURL()
     const webhookSecret = process.env.LLM_WEBHOOK_SECRET || ''
 
+    // Build query parameters
+    const params = new URLSearchParams({ status, limit: '100' })
+    if (limitResults) {
+      params.set('limit_results', limitResults)
+    }
+
     const response = await fetch(
-      `${llmServiceUrl}/api/v1/jobs?status=${status}&limit=100`,
+      `${llmServiceUrl}/api/v1/jobs?${params.toString()}`,
       {
         headers: {
           'Content-Type': 'application/json',
