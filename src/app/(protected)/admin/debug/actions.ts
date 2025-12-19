@@ -403,7 +403,6 @@ export async function clearAllAdminCache(): Promise<{ success: boolean; message:
       '/admin/bundles',
       '/admin/products',
       '/admin/suppliers',
-      '/admin/categories',
       '/admin/import',
     ]
 

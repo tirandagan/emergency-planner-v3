@@ -48,7 +48,6 @@ export async function createCategory(
       icon,
     }).returning();
 
-    revalidatePath('/admin/categories');
     return { success: true, data: newCategory as Category };
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
@@ -93,7 +92,6 @@ export async function updateCategory(
       .where(eq(categories.id, id))
       .returning();
 
-    revalidatePath('/admin/categories');
     return { success: true, data: updatedCategory as Category };
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
@@ -152,7 +150,6 @@ export async function deleteCategory(id: string): Promise<{ success: boolean; me
     // 4. Finally delete the target category
     await db.delete(categories).where(eq(categories.id, id));
 
-    revalidatePath('/admin/categories');
     revalidatePath('/admin/products');
     return { success: true };
   } catch (error) {
@@ -444,7 +441,6 @@ export async function upsertMasterItem(item: {
       });
     }
 
-    revalidatePath('/admin/categories');
     return { success: true };
   } catch (error) {
     return {
@@ -464,7 +460,6 @@ export async function moveMasterItem(
       .set({ categoryId: targetCategoryId })
       .where(eq(masterItems.id, masterItemId));
 
-    revalidatePath('/admin/categories');
     return { success: true };
   } catch (error) {
     return {
