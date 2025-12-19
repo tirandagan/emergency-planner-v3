@@ -36,7 +36,7 @@ export interface MasterItemData {
 export async function createCategory(
   name: string,
   parentId: string | null,
-  description: string,
+  description: string | null,
   icon: string = '🗂️'
 ): Promise<{ success: boolean; data?: Category; message?: string }> {
   try {
@@ -46,9 +46,11 @@ export async function createCategory(
       name,
       parentId,
       slug,
-      description,
+      description: description || null, // Convert empty string to null
       icon,
     }).returning();
+
+    revalidatePath('/admin/products', 'page');
 
     return { success: true, data: newCategory as Category };
   } catch (error) {

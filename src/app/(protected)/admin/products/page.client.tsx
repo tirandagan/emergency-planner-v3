@@ -19,6 +19,10 @@ import { BulkActionBar } from "./components/BulkActionBar";
 import { CategoryContextMenu } from "./components/CategoryContextMenu";
 import { MasterItemContextMenu } from "./components/MasterItemContextMenu";
 import { ProductContextMenu } from "./components/ProductContextMenu";
+import { ProductRow } from "./components/ProductRow";
+import { MasterItemRow } from "./components/MasterItemRow";
+import { SubCategoryTreeItem } from "./components/SubCategoryTreeItem";
+import { CategoryTreeItem } from "./components/CategoryTreeItem";
 import type { Category, MasterItem, Supplier, Product, ProductsClientProps, FormattedTagValue } from "@/lib/products-types";
 import { formatTagValue, getIconDisplayName } from "@/lib/products-utils";
 import { useProductFilters } from "./hooks/useProductFilters";
@@ -393,6 +397,7 @@ export default function ProductsClient({
   const productContextMenu = useContextMenu<Product>();
   const categoryContextMenu = useContextMenu<Category>();
   const masterItemContextMenu = useContextMenu<MasterItem>();
+  const backgroundContextMenu = useContextMenu<null>();
 
   // === LOCAL STATE === //
   // State for cascading dropdowns (Used for Category Change Modal)
@@ -496,13 +501,6 @@ export default function ProductsClient({
     isOpen: false,
     masterItem: null,
   });
-
-  // Background Context Menu State
-  const [backgroundContextMenu, setBackgroundContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-  }>({ visible: false, x: 0, y: 0 });
 
   // Bulk Selection State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -643,10 +641,17 @@ export default function ProductsClient({
   const handleSaveNewCategory = async (data: { name: string; description: string; icon: string; parentId: string | null }) => {
       try {
           const res = await createCategory(data.name, data.parentId, data.description, data.icon);
+          console.log('Create category response:', res);
+
           if (res.success && res.data) {
+              console.log('Adding category to state:', res.data);
               // Add new category to state
-              setAllCategories(prev => [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name)));
-              
+              setAllCategories(prev => {
+                  const updated = [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name));
+                  console.log('Updated categories:', updated.length);
+                  return updated;
+              });
+
               setAddingCategoryDialog(null);
           } else {
               alert('Failed to create category: ' + res.message);
@@ -705,11 +710,8 @@ export default function ProductsClient({
           categoryContextMenu.closeMenu();
           masterItemContextMenu.closeMenu();
           productContextMenu.closeMenu();
-          setBackgroundContextMenu({
-              visible: true,
-              x: e.pageX,
-              y: e.pageY
-          });
+          // Open background context menu (null item since it's not associated with any entity)
+          backgroundContextMenu.openMenu(e, null);
       }
   };
 
@@ -1051,7 +1053,7 @@ export default function ProductsClient({
                   groups[catId] = { category: cat, subGroups: {} };
               }
           }
-          
+
           const subKey = subCatId || 'root';
           if (!groups[catId].subGroups[subKey]) {
               const subCat = subCatId ? allCategories.find(c => c.id === subCatId) || null : null;
@@ -1060,15 +1062,74 @@ export default function ProductsClient({
           return groups[catId].subGroups[subKey];
       };
 
-      // Build hierarchy from filtered products only (bottom-up approach)
-      // This ensures only categories/subcategories/master items with matching products appear
+      // First, create groups for ALL root categories (so empty categories appear)
+      allCategories
+          .filter(c => c.parentId === null) // Only root categories
+          .forEach(cat => {
+              if (!groups[cat.id]) {
+                  groups[cat.id] = {
+                      category: cat,
+                      subGroups: { root: { subCategory: null, masterItems: {} } }
+                  };
+              }
+          });
+
+      // Second, add ALL subcategories under their parent categories (so empty subcategories appear)
+      allCategories
+          .filter(c => c.parentId !== null) // Only subcategories
+          .forEach(subCat => {
+              const parentId = subCat.parentId!;
+              // Ensure parent group exists
+              if (!groups[parentId]) {
+                  const parentCat = allCategories.find(c => c.id === parentId);
+                  if (parentCat) {
+                      groups[parentId] = {
+                          category: parentCat,
+                          subGroups: {}
+                      };
+                  }
+              }
+              // Add subcategory to parent
+              if (groups[parentId]) {
+                  groups[parentId].subGroups[subCat.id] = {
+                      subCategory: subCat,
+                      masterItems: {}
+                  };
+              }
+          });
+
+      // Third, add ALL master items to their categories (so empty master items appear)
+      allMasterItems.forEach(masterItem => {
+          let catId = 'uncategorized';
+          let subCatId = null;
+
+          const cat = allCategories.find(c => c.id === masterItem.categoryId);
+          if (cat) {
+              if (cat.parentId) {
+                  catId = cat.parentId;
+                  subCatId = cat.id;
+              } else {
+                  catId = cat.id;
+              }
+          }
+
+          const group = ensureGroup(catId, subCatId);
+          if (group) {
+              if (!group.masterItems[masterItem.id]) {
+                  group.masterItems[masterItem.id] = { masterItem: masterItem, products: [] };
+              }
+          }
+      });
+
+      // Finally, build product hierarchy (bottom-up approach)
+      // This adds products to existing master items
       filters.processedProducts.forEach(p => {
           const masterItem = allMasterItems.find(m => m.id === p.masterItemId);
           let catId = 'uncategorized';
           let subCatId = null;
 
           if (masterItem) {
-               const cat = allCategories.find(c => c.id === masterItem.categoryId); // Fixed: use camelCase
+               const cat = allCategories.find(c => c.id === masterItem.categoryId);
                if (cat) {
                    if (cat.parentId) {
                        catId = cat.parentId;
@@ -1082,6 +1143,7 @@ export default function ProductsClient({
           const group = ensureGroup(catId, subCatId);
           if (group) {
               const masterId = p.masterItemId || 'nomaster';
+              // Master item should already exist from Phase 3, just add the product
               if (!group.masterItems[masterId]) {
                   group.masterItems[masterId] = { masterItem: masterItem || null, products: [] };
               }
@@ -1491,482 +1553,35 @@ export default function ProductsClient({
                     if (b.category.id === 'uncategorized') return -1;
                     return a.category.name.localeCompare(b.category.name);
                 })
-                .map(group => {
-                const isExpanded = navigation.expandedCategories.has(group.category.id);
-                const isCategoryActive = navigation.activeCategoryId === group.category.id;
-                const itemCount = Object.values(group.subGroups).reduce((acc, g) =>
-                    acc + Object.values(g.masterItems).reduce((acc2, m) => acc2 + m.products.length, 0)
-                , 0);
-
-                return (
-                <div key={group.category.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {/* Main Category Header - Collapsible */}
-                    <div
-                        data-nav-id={group.category.id}
-                        className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/cat ${
-                            isCategoryActive || keyboard.focusedItemId === group.category.id
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                        }`}
-                        onClick={() => {
-                            navigation.toggleCategory(group.category.id);
-                            keyboard.setFocusedItemId(group.category.id);
-                            keyboard.setFocusedItemType('category');
-                            navigation.handleCategorySelect(group.category.id);
-                        }}
-                        onContextMenu={(e) => handleCategoryContextMenu(e, group.category)}
-                    >
-                         {isExpanded ? (
-                             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground group-hover/cat:text-foreground" strokeWidth={2.5} />
-                         ) : (
-                             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover/cat:text-foreground" strokeWidth={2.5} />
-                         )}
-                         
-                         <span className="category-icon" title={group.category.icon || '🗂️'}>
-                            {group.category.icon || '🗂️'}
-                         </span>
-                         
-                         <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); navigation.handleCategorySelect(group.category.id); }}
-                            className="flex items-center gap-2 flex-1 text-left"
-                         >
-                             <div className="flex-1 min-w-0">
-                                 <span className={`text-sm font-medium transition-colors ${isCategoryActive ? 'text-primary' : ''}`}>
-                                    {group.category.name}
-                                 </span>
-                                 {group.category.description && (
-                                     <span className="text-[10px] text-muted-foreground/70 truncate italic block leading-tight">
-                                         {group.category.description}
-                                     </span>
-                                 )}
-                             </div>
-                             {isCategoryActive && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Selected</span>}
-                         </button>
-
-                         <span className="text-xs text-muted-foreground/70">
-                             ({itemCount})
-                         </span>
-                    </div>
-
-                    {/* Subgroups - Collapsible Content */}
-                    {isExpanded && (
-                    <div className="grid gap-1 mt-1 ml-4">
-                        {Object.values(group.subGroups).map(subGroup => {
-                            const subCatId = subGroup.subCategory?.id || `root-${group.category.id}`;
-                            const isSubExpanded = subGroup.subCategory ? navigation.expandedSubCategories.has(subCatId) : true;
-                            const isSubActive = subGroup.subCategory ? navigation.activeCategoryId === subGroup.subCategory.id : false;
-
-                            // Sort Master Items by Name (or keep original order?)
-                            // Using sort by name for consistency as previously products were sorted but now we have groups.
-                            const sortedMasterGroups = Object.values(subGroup.masterItems).sort((a, b) => {
-                                const nameA = a.masterItem?.name || 'Uncategorized';
-                                const nameB = b.masterItem?.name || 'Uncategorized';
-                                return nameA.localeCompare(nameB);
-                            });
-
-                            return (
-                            <div key={subCatId} className="transition-colors">
-                                {/* Subcategory Header (if exists) */}
-                                {subGroup.subCategory && (
-                                    <div
-                                        data-nav-id={subGroup.subCategory.id}
-                                        className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/subcat ${
-                                            isSubActive || keyboard.focusedItemId === subGroup.subCategory.id
-                                                ? 'bg-primary/10 text-primary'
-                                                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                                        }`}
-                                        onClick={() => {
-                                            navigation.toggleSubCategory(subCatId);
-                                            keyboard.setFocusedItemId(subGroup.subCategory!.id);
-                                            keyboard.setFocusedItemType('subcategory');
-                                            navigation.handleCategorySelect(subGroup.subCategory!.id);
-                                        }}
-                                        onContextMenu={(e) => handleCategoryContextMenu(e, subGroup.subCategory!)}
-                                    >
-                                        {isSubExpanded ? (
-                                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground group-hover/subcat:text-foreground" strokeWidth={2.5} />
-                                        ) : (
-                                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover/subcat:text-foreground" strokeWidth={2.5} />
-                                        )}
-                                        
-                                        <span className="category-icon" title={subGroup.subCategory.icon || '📁'}>
-                                            {subGroup.subCategory.icon || '📁'}
-                                        </span>
-                                        
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); navigation.handleCategorySelect(subGroup.subCategory!.id); }}
-                                            className="flex items-center gap-2 flex-1 text-left"
-                                        >
-                                            <div className="flex-1 min-w-0">
-                                                <span className={`text-sm font-medium transition-colors ${isSubActive ? 'text-primary' : ''}`}>
-                                                    {subGroup.subCategory.name}
-                                                </span>
-                                                {subGroup.subCategory.description && (
-                                                    <span className="text-[10px] text-muted-foreground/70 truncate italic block leading-tight">
-                                                        {subGroup.subCategory.description}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {isSubActive && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Selected</span>}
-                                        </button>
-                                        
-                                        <span className="text-xs text-muted-foreground/70">
-                                            ({Object.values(subGroup.masterItems).reduce((acc, m) => acc + m.products.length, 0)})
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {/* Master Items Groups */}
-                                {(isSubExpanded || !subGroup.subCategory) && (
-                                <div className="space-y-4 mt-2 ml-4">
-                                    {sortedMasterGroups.map(masterGroup => {
-                                        const isMasterActive = masterGroup.masterItem?.id === navigation.activeMasterItemId;
-                                        return (
-                                        <div key={masterGroup.masterItem?.id || 'nomaster'} className="bg-card border rounded-xl overflow-hidden shadow-sm transition-colors">
-                                            {/* Master Item Header */}
-                                            {masterGroup.masterItem && (
-                                                <div
-                                                    className={`px-6 py-3 cursor-pointer transition-colors ${
-                                                        isMasterActive
-                                                            ? 'bg-success/10'
-                                                            : 'bg-muted/40 hover:bg-muted/60'
-                                                    }`}
-                                                    onClick={() => navigation.handleMasterItemSelect(masterGroup.masterItem!.id)}
-                                                    onContextMenu={(e) => handleMasterItemContextMenu(e, masterGroup.masterItem!)}
-                                                >
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-3 mb-1.5">
-                                                                <h4 className={`text-sm font-semibold truncate ${isMasterActive ? 'text-success' : 'text-foreground'}`}>
-                                                                    {masterGroup.masterItem.name}
-                                                                </h4>
-                                                                {isMasterActive && (
-                                                                    <span className="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded border border-success/20">
-                                                                        Selected
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            
-                                                            {masterGroup.masterItem.description && (
-                                                                <p className="text-xs text-muted-foreground mb-2 max-w-4xl line-clamp-2">
-                                                                    {masterGroup.masterItem.description}
-                                                                </p>
-                                                            )}
-                                                            
-                                                            {/* Visual Tags Display */}
-                                                            <div className="flex flex-wrap gap-2 items-center">
-                                                                <TagBadge
-                                                                    icon={Shield}
-                                                                    items={
-                                                                        masterGroup.masterItem.scenarios?.length === SCENARIOS.length
-                                                                            ? ['ALL Scenarios']
-                                                                            : masterGroup.masterItem.scenarios
-                                                                    }
-                                                                    className="text-destructive bg-destructive/10 border-destructive/20"
-                                                                    label="Scenarios"
-                                                                    alwaysExpanded
-                                                                />
-                                                                <TagBadge
-                                                                    icon={Users}
-                                                                    items={masterGroup.masterItem.demographics}
-                                                                    className="text-success bg-success/10 border-success/20"
-                                                                    label="People"
-                                                                    alwaysExpanded
-                                                                />
-                                                                <TagBadge
-                                                                    icon={Clock}
-                                                                    items={masterGroup.masterItem.timeframes}
-                                                                    className="text-primary bg-primary/10 border-primary/20"
-                                                                    label="Times"
-                                                                    alwaysExpanded
-                                                                />
-                                                                <TagBadge
-                                                                    icon={MapPin}
-                                                                    items={masterGroup.masterItem.locations}
-                                                                    className="text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50"
-                                                                    label="Locs"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Products Table */}
-                                            <table className="w-full text-left text-sm text-muted-foreground table-fixed">
-                                                <thead className="bg-background/50 text-muted-foreground text-[10px] uppercase font-medium border-b border-border/50">
-                                                    <tr>
-                                                        <th className="px-6 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => filters.handleSort('name')}>
-                                                            <div className="flex items-center gap-2">Product <SortIcon field="name" /></div>
-                                                        </th>
-                                                        <th className="px-6 py-2 w-[180px] cursor-pointer hover:text-foreground group/th" onClick={() => filters.handleSort('supplier')}>
-                                                            <div className="flex items-center gap-2">Supplier <SortIcon field="supplier" /></div>
-                                                        </th>
-                                                        <th className="px-6 py-2 w-[120px] cursor-pointer hover:text-foreground group/th" onClick={() => filters.handleSort('price')}>
-                                                            <div className="flex items-center gap-2">Price <SortIcon field="price" /></div>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-border/50">
-                                                    {masterGroup.products.map((product) => {
-                                                        // Check if product has overridden tags (non-null means inheritance is broken)
-                                                        const hasOverriddenTags = product.timeframes !== null || 
-                                                            product.demographics !== null || 
-                                                            product.locations !== null || 
-                                                            product.scenarios !== null;
-                                                        
-                                                        // Calculate tag differences for display
-                                                        const getTagDifferences = () => {
-                                                            const masterItem = masterGroup.masterItem;
-                                                            if (!masterItem || !hasOverriddenTags) return [];
-                                                            
-                                                            const differences: Array<{
-                                                                field: 'scenarios' | 'demographics' | 'timeframes' | 'locations';
-                                                                icon: any;
-                                                                className: string;
-                                                                label: string;
-                                                                differentTags: string[];
-                                                            }> = [];
-                                                            
-                                                            const checkField = (
-                                                                field: 'scenarios' | 'demographics' | 'timeframes' | 'locations',
-                                                                productTags: string[] | null,
-                                                                masterTags: string[] | null,
-                                                                icon: any,
-                                                                className: string,
-                                                                label: string
-                                                            ) => {
-                                                                if (productTags === null) return; // Inheriting, no difference
-                                                                
-                                                                const productSet = new Set(productTags || []);
-                                                                const masterSet = new Set(masterTags || []);
-                                                                
-                                                                // For demographics, compare all options to show state differences
-                                                                if (field === 'demographics') {
-                                                                    const allOptions = DEMOGRAPHICS;
-                                                                    const differentTags: string[] = [];
-                                                                    
-                                                                    allOptions.forEach(option => {
-                                                                        const inProduct = productSet.has(option);
-                                                                        const inMaster = masterSet.has(option);
-                                                                        if (inProduct !== inMaster) {
-                                                                            differentTags.push(option);
-                                                                        }
-                                                                    });
-                                                                    
-                                                                    if (differentTags.length > 0) {
-                                                                        differences.push({
-                                                                            field,
-                                                                            icon,
-                                                                            className,
-                                                                            label,
-                                                                            differentTags
-                                                                        });
-                                                                    }
-                                                                } else {
-                                                                    // For other fields, find tags that are different
-                                                                    const differentTags: string[] = [];
-                                                                    
-                                                                    // Tags added in product
-                                                                    productSet.forEach(tag => {
-                                                                        if (!masterSet.has(tag)) {
-                                                                            differentTags.push(tag);
-                                                                        }
-                                                                    });
-                                                                    
-                                                                    // Tags removed in product (present in master but not in product)
-                                                                    masterSet.forEach(tag => {
-                                                                        if (!productSet.has(tag)) {
-                                                                            differentTags.push(tag);
-                                                                        }
-                                                                    });
-                                                                    
-                                                                    if (differentTags.length > 0) {
-                                                                        differences.push({
-                                                                            field,
-                                                                            icon,
-                                                                            className,
-                                                                            label,
-                                                                            differentTags
-                                                                        });
-                                                                    }
-                                                                }
-                                                            };
-                                                            
-                                                            checkField('scenarios', product.scenarios ?? null, masterItem.scenarios ?? null, Shield, 'text-destructive bg-destructive/10 border-destructive/20', 'Scenarios');
-                                                            checkField('demographics', product.demographics ?? null, masterItem.demographics ?? null, Users, 'text-success bg-success/10 border-success/20', 'People');
-                                                            checkField('timeframes', product.timeframes ?? null, masterItem.timeframes ?? null, Clock, 'text-primary bg-primary/10 border-primary/20', 'Times');
-                                                            checkField('locations', product.locations ?? null, masterItem.locations ?? null, MapPin, 'text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50', 'Locs');
-                                                            
-                                                            return differences;
-                                                        };
-                                                        
-                                                        const tagDifferences = getTagDifferences();
-                                                        const isTagging = taggingProductId === product.id;
-
-                                                        return (
-                                                        <Fragment key={product.id}>
-                                                        <tr
-                                                            className={`transition-colors group cursor-pointer ${
-                                                                selectedIds.has(product.id)
-                                                                    ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-primary'
-                                                                    : isTagging
-                                                                        ? 'bg-muted/60 border-l-2 border-primary'
-                                                                        : 'hover:bg-muted/50 border-l-2 border-transparent'
-                                                            }`}
-                                                            onContextMenu={(e) => handleContextMenu(e, product)}
-                                                            onClick={(e) => handleProductClick(e, product.id)}
-                                                        >
-                                                            <td className="px-6 py-3 min-w-0">
-                                                                <div className="flex gap-3 items-start">
-                                                                    {/* Broken link indicator */}
-                                                                    {hasOverriddenTags && (
-                                                                        <div className="w-4 shrink-0 pt-1">
-                                                                            <span title="Tags overridden from master item">
-                                                                                <Unlink className="w-3.5 h-3.5 text-warning/70" strokeWidth={2.5} />
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
-                                                                    {product.imageUrl && (
-                                                                        <img src={product.imageUrl} alt="" className="w-24 h-24 rounded bg-muted object-cover border border-border shrink-0" />
-                                                                    )}
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <div className="font-medium text-foreground">{product.name}</div>
-                                                                        <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-2 mt-0.5">
-                                                                            {product.sku || product.asin || 'No ID'}
-                                                                            {/* Master Item info removed as it is now in the header */}
-                                                                        </div>
-                                                                        {/* Product-specific tag differences */}
-                                                                        {tagDifferences.length > 0 && (
-                                                                            <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                                                                {tagDifferences.map((diff) => {
-                                                                                    const masterSet = new Set(masterGroup.masterItem?.[diff.field] || []);
-                                                                                    const productSet = new Set(product[diff.field] || []);
-                                                                                    
-                                                                                    // For demographics, show only differing options with their product state
-                                                                                    if (diff.field === 'demographics') {
-                                                                                        const formattedOptions = diff.differentTags.map(option => formatTagValue(option, 'demographics'));
-                                                                                        
-                                                                                        return (
-                                                                                            <div key={diff.field} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${diff.className}`}>
-                                                                                                <diff.icon className="w-3 h-3 opacity-70 shrink-0" />
-                                                                                                <div className="flex items-center gap-0">
-                                                                                                    {diff.differentTags.map((option, idx) => {
-                                                                                                        const inProduct = productSet.has(option);
-                                                                                                        const formattedValue = formattedOptions[idx];
-                                                                                                        return (
-                                                                                                            <span key={option} className="flex items-center">
-                                                                                                                {idx > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
-                                                                                                                <span className={`rounded px-1 py-0.5 ${inProduct ? '' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'}`}>
-                                                                                                                    <TagValueDisplay value={formattedValue} field={diff.field} title={option} />
-                                                                                                                </span>
-                                                                                                            </span>
-                                                                                                        );
-                                                                                                    })}
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        );
-                                                                                    }
-                                                                                    
-                                                                                    // For other fields, show only the different tags
-                                                                                    return (
-                                                                                        <div key={diff.field} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${diff.className}`}>
-                                                                                            <diff.icon className="w-3 h-3 opacity-70 shrink-0" />
-                                                                                            <div className="flex items-center gap-1">
-                                                                                                {diff.differentTags.map((tag, idx) => {
-                                                                                                    const isEnabled = productSet.has(tag);
-                                                                                                    const formattedTag = formatTagValue(tag, diff.field);
-                                                                                                    return (
-                                                                                                        <span key={tag} className="flex items-center">
-                                                                                                            {idx > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
-                                                                                                            <TagValueDisplay value={formattedTag} field={diff.field} title={tag} />
-                                                                                                        </span>
-                                                                                                    );
-                                                                                                })}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                        )}
-                                                                        {/* Compact metadata tags */}
-                                                                        {product.metadata && Object.keys(product.metadata).length > 0 && (
-                                                                            <div className="flex flex-wrap gap-1 mt-1.5">
-                                                                                {product.metadata.brand && (
-                                                                                    <span className="text-[10px] px-1.5 py-0.5 bg-warning/10 text-warning rounded border border-warning/20">{product.metadata.brand}</span>
-                                                                                )}
-                                                                                {product.metadata.quantity && (
-                                                                                    <span className="text-[10px] px-1.5 py-0.5 bg-info/10 text-info rounded border border-info/20">×{product.metadata.quantity}</span>
-                                                                                )}
-                                                                                {product.metadata.weight && (
-                                                                                    <span className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border">{product.metadata.weight}{product.metadata.weight_unit || 'g'}</span>
-                                                                                )}
-                                                                                {product.metadata.volume && (
-                                                                                    <span className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border">{product.metadata.volume}{product.metadata.volume_unit || 'ml'}</span>
-                                                                                )}
-                                                                                {product.metadata.size && (
-                                                                                    <span className="text-[10px] px-1.5 py-0.5 bg-accent/10 text-accent rounded border border-accent/20">{product.metadata.size}</span>
-                                                                                )}
-                                                                                {product.metadata.color && (
-                                                                                    <span className="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded border border-secondary/20">{product.metadata.color}</span>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-3 w-[180px]">
-                                                                <div className="flex flex-col gap-0.5">
-                                                                    <div className="text-foreground text-xs flex items-center gap-1.5 min-w-0">
-                                                                        {!product.supplierId && (
-                                                                            <span title="Missing Supplier" className="shrink-0">
-                                                                                <AlertCircle className="w-3.5 h-3.5 text-destructive" strokeWidth={2.5} />
-                                                                            </span>
-                                                                        )}
-                                                                        <span className="truncate min-w-0">{product.supplier?.name || <span className="text-destructive italic">No Supplier</span>}</span>
-                                                                    </div>
-                                                                    <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase ${
-                                                                        product.type === 'DROP_SHIP'
-                                                                        ? 'text-secondary'
-                                                                        : 'text-primary'
-                                                                    }`}>
-                                                                        {product.type}
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-3 w-[120px]">
-                                                                <div className="text-foreground font-mono">
-                                                                    ${product.price ? Number(product.price).toFixed(2) : '0.00'}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        {isTagging && (
-                                                            <tr>
-                                                                <td colSpan={3} className="p-0 relative z-10 overflow-hidden">
-                                                                    <QuickTagger 
-                                                                        product={product} 
-                                                                        masterItem={masterGroup.masterItem || undefined}
-                                                                        onClose={() => setTaggingProductId(null)}
-                                                                    />
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                        </Fragment>
-                                                    )})}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    );})}
-                                </div>
-                                )}
-                            </div>
-                        )})}
-                    </div>
-                    )}
-                </div>
-            )})
+                .map(group => (
+                    <CategoryTreeItem
+                        key={group.category.id}
+                        group={group}
+                        isExpanded={navigation.expandedCategories.has(group.category.id)}
+                        isActive={navigation.activeCategoryId === group.category.id}
+                        isFocused={keyboard.focusedItemId === group.category.id}
+                        selectedProductIds={selectedIds}
+                        taggingProductId={taggingProductId}
+                        activeMasterItemId={navigation.activeMasterItemId}
+                        expandedSubCategories={navigation.expandedSubCategories}
+                        activeCategoryId={navigation.activeCategoryId}
+                        focusedItemId={keyboard.focusedItemId}
+                        onToggle={navigation.toggleCategory}
+                        onSelect={navigation.handleCategorySelect}
+                        onCategoryContextMenu={handleCategoryContextMenu}
+                        onMasterItemSelect={navigation.handleMasterItemSelect}
+                        onMasterItemContextMenu={handleMasterItemContextMenu}
+                        onProductContextMenu={handleContextMenu}
+                        onProductClick={handleProductClick}
+                        onQuickTagClose={() => setTaggingProductId(null)}
+                        setFocusedItemId={keyboard.setFocusedItemId}
+                        setFocusedItemType={keyboard.setFocusedItemType}
+                        onSort={filters.handleSort}
+                        sortField={filters.sortField}
+                        sortDirection={filters.sortDirection}
+                        onToggleSubCategory={navigation.toggleSubCategory}
+                    />
+                ))
         )}
       </div>
 
@@ -1974,13 +1589,7 @@ export default function ProductsClient({
       <div
         className="mt-4 py-8 px-4 border-2 border-dashed border-border/50 rounded-lg text-center text-muted-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-context-menu"
         onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setBackgroundContextMenu({
-            visible: true,
-            x: e.pageX,
-            y: e.pageY
-          });
+          backgroundContextMenu.openMenu(e, null);
         }}
       >
         <div className="flex flex-col items-center gap-2">
@@ -2484,20 +2093,20 @@ export default function ProductsClient({
       />
 
       {/* Background Context Menu */}
-      {backgroundContextMenu.visible && (
+      {backgroundContextMenu.menu && (
         <div
           id="background-context-menu"
           className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden backdrop-blur-sm"
           style={{
-            top: backgroundContextMenu.y,
-            left: backgroundContextMenu.x
+            top: backgroundContextMenu.menu.y,
+            left: backgroundContextMenu.menu.x
           }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => {
               setAddingCategoryDialog('root');
-              setBackgroundContextMenu(prev => ({ ...prev, visible: false }));
+              backgroundContextMenu.closeMenu();
             }}
             className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
           >
