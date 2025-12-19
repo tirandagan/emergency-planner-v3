@@ -16,6 +16,12 @@ import ProductCatalogFilter from "./components/ProductCatalogFilter";
 import CompactCategoryTreeSelector from "./components/CompactCategoryTreeSelector";
 import type { Category, MasterItem, Supplier, Product, ProductsClientProps, FormattedTagValue } from "@/lib/products-types";
 import { formatTagValue, getIconDisplayName } from "@/lib/products-utils";
+import { useProductFilters } from "./hooks/useProductFilters";
+import { useCategoryNavigation } from "./hooks/useCategoryNavigation";
+import { useModalState } from "./hooks/useModalState";
+import { useContextMenu } from "./hooks/useContextMenu";
+import { useKeyboardNavigation } from "./hooks/useKeyboardNavigation";
+import type { NavigationItem } from "./hooks/useKeyboardNavigation";
 
 // Gender symbol components (Venus ♀ and Mars ♂)
 const VenusIcon = ({ className, color = "currentColor", title }: { className?: string; color?: string; title?: string }) => (
@@ -368,31 +374,29 @@ export default function ProductsClient({
   suppliers,
   categories
 }: ProductsClientProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  // Filtering State
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // Tags can be "Tag" or "!Tag"
-  const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]); // Supplier IDs, can be "id" or "!id"
-  const [filterPriceRange, setFilterPriceRange] = useState<string>(""); // "0-50", "50-100", "100+"
-  
-  // Sorting State
-  const [sortField, setSortField] = useState<string>("name");
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>("asc");
+  // === CUSTOM HOOKS === //
+  // Product filtering and sorting (replaces 6 useState + filtering logic)
+  const filters = useProductFilters(products, masterItems);
 
-  // State for cascading dropdowns (Used for Category Change Modal mainly now)
+  // Category tree navigation (replaces 4 useState + navigation logic)
+  const navigation = useCategoryNavigation(categories);
+
+  // All modal states (replaces 12+ useState + modal management)
+  const modals = useModalState();
+
+  // Context menus (replaces 3 complex useState objects)
+  const productContextMenu = useContextMenu<Product>();
+  const categoryContextMenu = useContextMenu<Category>();
+  const masterItemContextMenu = useContextMenu<MasterItem>();
+
+  // === LOCAL STATE === //
+  // State for cascading dropdowns (Used for Category Change Modal)
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
-  
-  // Categories State
-  const [allCategories, setAllCategories] = useState(categories);
 
-  // Master Items State
+  // Data state (synced from server)
+  const [allCategories, setAllCategories] = useState(categories);
   const [allMasterItems, setAllMasterItems] = useState(masterItems);
-  const [isMasterItemModalOpen, setIsMasterItemModalOpen] = useState(false);
-  const [editingMasterItem, setEditingMasterItem] = useState<MasterItem | null>(null);
-  const [targetCategoryForMasterItem, setTargetCategoryForMasterItem] = useState<Category | null>(null);
 
   // Build category tree from flat array (like /admin/categories does)
   const categoryTree = useMemo(() => {
