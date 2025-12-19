@@ -508,8 +508,8 @@ async function checkWeatherAPI(): Promise<ServiceHealth> {
 async function checkLLMService(): Promise<ServiceHealth> {
   const start = Date.now()
 
-  const llmServiceUrl = process.env.LLM_SERVICE_URL || process.env.NEXT_PUBLIC_LLM_SERVICE_URL || 'http://localhost:8000'
-  
+  const llmServiceUrl = await getLLMServiceURL()
+
   try {
     const response = await fetch(`${llmServiceUrl}/health`, {
       method: 'GET',
@@ -576,7 +576,7 @@ function checkEnvironment(): ServiceHealth {
 
     // AI Services
     'OPENROUTER_API_KEY',
-    'LLM_SERVICE_URL',
+    // Note: LLM_SERVICE_URL moved to system_settings table
     'LLM_WEBHOOK_SECRET',
 
     // External APIs

@@ -1,8 +1,19 @@
 #!/bin/bash
 
+# Load environment variables from .env.local
+set -a
+source "$(dirname "$0")/.env.local"
+set +a
+
+# Check if LLM_WEBHOOK_SECRET is set
+if [ -z "$LLM_WEBHOOK_SECRET" ]; then
+  echo "Error: LLM_WEBHOOK_SECRET not found in .env.local"
+  exit 1
+fi
+
 curl -X POST "https://llm-service-api-6vrk.onrender.com/api/v1/workflow" \
   -H "Content-Type: application/json" \
-  -H "X-API-Secret: xAZd/X36nt1+U813leiiboWFgbm7+CsWxQYl8RON6r0=" \
+  -H "X-API-Secret: $LLM_WEBHOOK_SECRET" \
   -d '{
     "workflow_name": "emergency_contacts",
     "user_id": "5b7c7916-2ebc-44d4-a8d1-4c958657a150",
