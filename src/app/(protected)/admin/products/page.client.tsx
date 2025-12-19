@@ -1,36 +1,70 @@
 "use client";
 
+// React Core
 import { useState, useMemo, useEffect, Fragment, useRef } from "react";
-import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield, Baby, UserCheck, User, MoveRight } from "lucide-react";
+
+// Icons
+import {
+  AlertCircle, AlertTriangle, Baby, ChevronDown, ChevronRight, ChevronUp,
+  Clock, Cloud, ClipboardPaste, Copy, Download, Edit, FileText, FolderTree,
+  Layers, MapPin, MoveRight, Package, Pencil, PersonStanding, Plus, Radiation,
+  Search, Shield, Tag, Tags, Trash2, Truck, Unlink, Upload, User, UserCheck,
+  Users, X, Zap
+} from "lucide-react";
+
+// Local Constants & Actions
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
-import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags, getMasterItems } from "./actions";
-import { getCategoryImpact, updateCategory, deleteCategory, createCategory, moveMasterItem } from "@/app/actions/categories";
-import { EditCategoryDialog, AddCategoryDialog, MoveCategoryDialog, MoveMasterItemDialog } from "@/components/admin/category-dialogs";
+import {
+  bulkUpdateProducts, createMasterItem, deleteProduct, getMasterItems,
+  updateMasterItem, updateProduct, updateProductTags
+} from "./actions";
+
+// External Actions
+import {
+  createCategory, deleteCategory, getCategoryImpact, moveMasterItem, updateCategory
+} from "@/app/actions/categories";
+
+// Admin Components
 import { DeleteCategoryDialog } from "@/components/admin/DeleteCategoryDialog";
-import ProductEditDialog from "./components/ProductEditDialog";
-import MasterItemModal from "./components/MasterItemModal";
+import {
+  AddCategoryDialog, EditCategoryDialog, MoveCategoryDialog, MoveMasterItemDialog
+} from "@/components/admin/category-dialogs";
+
+// Modal Components
 import AddProductChoiceModal from "./components/AddProductChoiceModal";
-import AmazonSearchDialog from "./components/AmazonSearchDialog";
 import AddToBundleModal from "./components/AddToBundleModal";
-import ProductCatalogFilter from "./components/ProductCatalogFilter";
+import AmazonSearchDialog from "./components/AmazonSearchDialog";
+import MasterItemModal from "./components/MasterItemModal";
+import ProductEditDialog from "./components/ProductEditDialog";
+import { QuickTagger } from "./modals/QuickTagger";
+
+// Feature Components
+import { BulkActionBar } from "./components/BulkActionBar";
 import CompactCategoryTreeSelector from "./components/CompactCategoryTreeSelector";
 import { FilterActiveIndicator } from "./components/FilterActiveIndicator";
-import { BulkActionBar } from "./components/BulkActionBar";
+import ProductCatalogFilter from "./components/ProductCatalogFilter";
+
+// Context Menu Components
 import { CategoryContextMenu } from "./components/CategoryContextMenu";
 import { MasterItemContextMenu } from "./components/MasterItemContextMenu";
-import { QuickTagger } from "./modals/QuickTagger";
 import { ProductContextMenu } from "./components/ProductContextMenu";
-import { ProductRow } from "./components/ProductRow";
-import { MasterItemRow } from "./components/MasterItemRow";
-import { SubCategoryTreeItem } from "./components/SubCategoryTreeItem";
+
+// Tree Components
 import { CategoryTreeItem } from "./components/CategoryTreeItem";
-import type { Category, MasterItem, Supplier, Product, ProductsClientProps, FormattedTagValue } from "@/lib/products-types";
-import { formatTagValue, getIconDisplayName } from "@/lib/products-utils";
-import { useProductFilters } from "./hooks/useProductFilters";
+import { MasterItemRow } from "./components/MasterItemRow";
+import { ProductRow } from "./components/ProductRow";
+import { SubCategoryTreeItem } from "./components/SubCategoryTreeItem";
+
+// Custom Hooks
 import { useCategoryNavigation } from "./hooks/useCategoryNavigation";
-import { useModalState } from "./hooks/useModalState";
 import { useContextMenu } from "./hooks/useContextMenu";
 import { useKeyboardNavigation } from "./hooks/useKeyboardNavigation";
+import { useModalState } from "./hooks/useModalState";
+import { useProductFilters } from "./hooks/useProductFilters";
+
+// Types & Utils
+import type { Category, FormattedTagValue, MasterItem, Product, ProductsClientProps, Supplier } from "@/lib/products-types";
+import { formatTagValue, getIconDisplayName } from "@/lib/products-utils";
 import type { NavigationItem } from "./hooks/useKeyboardNavigation";
 
 // Gender symbol components (Venus ♀ and Mars ♂)
@@ -197,7 +231,7 @@ export default function ProductsClient({
   masterItems,
   suppliers,
   categories
-}: ProductsClientProps) {
+}: ProductsClientProps): React.JSX.Element {
   // === CUSTOM HOOKS === //
   // Product filtering and sorting (replaces 6 useState + filtering logic)
   const filters = useProductFilters(products, masterItems);
