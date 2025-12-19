@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect, Fragment, useRef } from "react";
-import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield, Baby, UserCheck, User } from "lucide-react";
+import { Plus, Trash2, Tags, Upload, Package, Layers, AlertCircle, X, Search, Truck, FolderTree, ChevronDown, ChevronRight, ChevronUp, Clock, Users, MapPin, Zap, Unlink, PersonStanding, Copy, ClipboardPaste, Tag, Download, FileText, Edit, Pencil, Radiation, AlertTriangle, Cloud, Shield, Baby, UserCheck, User, MoveRight } from "lucide-react";
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import { deleteProduct, createMasterItem, bulkUpdateProducts, updateProduct, updateMasterItem, updateProductTags } from "./actions";
-import { getCategoryImpact, updateCategory, deleteCategory, createCategory } from "@/app/actions/categories";
-import { EditCategoryDialog, AddCategoryDialog, MoveCategoryDialog } from "@/components/admin/category-dialogs";
+import { getCategoryImpact, updateCategory, deleteCategory, createCategory, moveMasterItem } from "@/app/actions/categories";
+import { EditCategoryDialog, AddCategoryDialog, MoveCategoryDialog, MoveMasterItemDialog } from "@/components/admin/category-dialogs";
 import { DeleteCategoryDialog } from "@/components/admin/DeleteCategoryDialog";
 import ProductEditDialog from "./components/ProductEditDialog";
 import MasterItemModal from "./components/MasterItemModal";
@@ -535,6 +535,10 @@ export default function ProductsClient({
   const [expandedSubCategories, setExpandedSubCategories] = useState<Set<string>>(new Set());
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [activeMasterItemId, setActiveMasterItemId] = useState<string | null>(null);
+  
+  // Keyboard Navigation State
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+  const [focusedItemType, setFocusedItemType] = useState<'category' | 'subcategory' | null>(null);
 
   const toggleCategory = (catId: string) => {
       setExpandedCategories(prev => {
@@ -661,6 +665,15 @@ export default function ProductsClient({
   // Category Add/Move Dialog State
   const [addingCategoryDialog, setAddingCategoryDialog] = useState<{ id: string; name: string } | null | 'root'>(null);
   const [movingCategoryDialog, setMovingCategoryDialog] = useState<Category | null>(null);
+
+  // Move Master Item Dialog State
+  const [moveMasterItemDialog, setMoveMasterItemDialog] = useState<{
+    isOpen: boolean;
+    masterItem: MasterItem | null;
+  }>({
+    isOpen: false,
+    masterItem: null,
+  });
 
   // Background Context Menu State
   const [backgroundContextMenu, setBackgroundContextMenu] = useState<{
@@ -942,6 +955,27 @@ export default function ProductsClient({
       setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
   };
 
+  const handleMoveMasterItem = (masterItem: MasterItem): void => {
+      setMoveMasterItemDialog({ isOpen: true, masterItem });
+      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleMoveMasterItemClose = (): void => {
+      setMoveMasterItemDialog({ isOpen: false, masterItem: null });
+  };
+
+  const handleMoveMasterItemSave = async (
+      masterItemId: string,
+      targetCategoryId: string
+  ): Promise<void> => {
+      const result = await moveMasterItem(masterItemId, targetCategoryId);
+
+      if (!result.success) {
+          alert(result.message || 'Failed to move master item');
+          throw new Error(result.message);
+      }
+  };
+
   // Close context menus on global click or Escape
   useEffect(() => {
       const handleClick = () => {
@@ -1218,14 +1252,29 @@ export default function ProductsClient({
   const handleAmazonProductSelected = (product: any) => {
       setIsAmazonSearchModalOpen(false);
 
+      // Find Amazon supplier
+      const amazonSupplier = suppliers.find(s => s.name?.toLowerCase() === 'amazon');
+      
+      // Fix URL - ensure it's a full URL
+      let productUrl = product.url;
+      if (productUrl && !productUrl.startsWith('http')) {
+          // If it's a relative URL, make it absolute
+          if (productUrl.startsWith('/')) {
+              productUrl = `https://www.amazon.com${productUrl}`;
+          } else {
+              productUrl = `https://www.amazon.com/${productUrl}`;
+          }
+      }
+
       // Map Amazon product to partial Product
       const mappedProduct: Partial<Product> = {
           name: product.name,
           asin: product.asin,
           imageUrl: product.image_url,
           price: product.price,
-          productUrl: product.url,
+          productUrl: productUrl,
           description: product.description,
+          supplierId: amazonSupplier?.id || '',
           metadata: {
               quantity: product.capacity_value,
               rating: product.rating,
@@ -1395,37 +1444,8 @@ export default function ProductsClient({
           return groups[catId].subGroups[subKey];
       };
 
-      // First, create groups for all categories (even empty ones)
-      allCategories.forEach(cat => {
-          if (cat.parentId === null) {
-              // Root category
-              ensureGroup(cat.id, null);
-          } else {
-              // Subcategory - ensure parent exists and add subcategory
-              ensureGroup(cat.parentId, cat.id);
-          }
-      });
-
-      // Second, add all master items (even those without products)
-      allMasterItems.forEach(masterItem => {
-          const cat = allCategories.find(c => c.id === masterItem.categoryId);
-          if (cat) {
-              let catId = cat.id;
-              let subCatId = null;
-
-              if (cat.parentId) {
-                  catId = cat.parentId;
-                  subCatId = cat.id;
-              }
-
-              const group = ensureGroup(catId, subCatId);
-              if (group && !group.masterItems[masterItem.id]) {
-                  group.masterItems[masterItem.id] = { masterItem, products: [] };
-              }
-          }
-      });
-
-      // Then add products to their respective groups
+      // Build hierarchy from filtered products only (bottom-up approach)
+      // This ensures only categories/subcategories/master items with matching products appear
       processedProducts.forEach(p => {
           const masterItem = allMasterItems.find(m => m.id === p.masterItemId);
           let catId = 'uncategorized';
@@ -1455,6 +1475,154 @@ export default function ProductsClient({
 
       return groups;
   }, [processedProducts, allMasterItems, allCategories]);
+
+  // Build flat navigation list for keyboard navigation
+  const navigationItems = useMemo(() => {
+      const items: Array<{ id: string; type: 'category' | 'subcategory'; parentId?: string }> = [];
+      const sortedGroups = Object.values(groupedProducts).sort((a, b) => {
+          if (a.category.id === 'uncategorized') return 1;
+          if (b.category.id === 'uncategorized') return -1;
+          return a.category.name.localeCompare(b.category.name);
+      });
+
+      sortedGroups.forEach(group => {
+          items.push({ id: group.category.id, type: 'category' });
+          
+          if (expandedCategories.has(group.category.id)) {
+              const sortedSubGroups = Object.values(group.subGroups).sort((a, b) => {
+                  const nameA = a.subCategory?.name || '';
+                  const nameB = b.subCategory?.name || '';
+                  return nameA.localeCompare(nameB);
+              });
+              
+              sortedSubGroups.forEach(subGroup => {
+                  if (subGroup.subCategory) {
+                      items.push({ 
+                          id: subGroup.subCategory.id, 
+                          type: 'subcategory',
+                          parentId: group.category.id 
+                      });
+                  }
+              });
+          }
+      });
+
+      return items;
+  }, [groupedProducts, expandedCategories]);
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+      return searchTerm !== "" ||
+             selectedTags.length > 0 ||
+             selectedSuppliers.length > 0 ||
+             filterPriceRange !== "";
+  }, [searchTerm, selectedTags, selectedSuppliers, filterPriceRange]);
+
+  // Count total categories and visible categories
+  const categoryCounts = useMemo(() => {
+      const totalCategories = allCategories.filter(c => c.parentId === null).length;
+      const visibleCategories = Object.keys(groupedProducts).filter(id => id !== 'uncategorized').length;
+      return { total: totalCategories, visible: visibleCategories };
+  }, [allCategories, groupedProducts]);
+
+  // Keyboard navigation handler
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          // Don't handle if user is typing in an input/textarea
+          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+              return;
+          }
+
+          // Don't handle if a modal is open
+          if (isModalOpen || isMasterItemModalOpen || isChoiceModalOpen || isAmazonSearchModalOpen) {
+              return;
+          }
+
+          const currentIndex = focusedItemId 
+              ? navigationItems.findIndex(item => item.id === focusedItemId)
+              : -1;
+
+          switch (e.key) {
+              case 'ArrowDown':
+                  e.preventDefault();
+                  if (currentIndex === -1 && navigationItems.length > 0) {
+                      // Start navigation from first item
+                      setFocusedItemId(navigationItems[0].id);
+                      setFocusedItemType(navigationItems[0].type);
+                      setActiveCategoryId(navigationItems[0].id);
+                  } else if (currentIndex < navigationItems.length - 1) {
+                      const nextItem = navigationItems[currentIndex + 1];
+                      setFocusedItemId(nextItem.id);
+                      setFocusedItemType(nextItem.type);
+                      setActiveCategoryId(nextItem.id);
+                      
+                      // Scroll into view
+                      const element = document.querySelector(`[data-nav-id="${nextItem.id}"]`);
+                      element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  }
+                  break;
+
+              case 'ArrowUp':
+                  e.preventDefault();
+                  if (currentIndex > 0) {
+                      const prevItem = navigationItems[currentIndex - 1];
+                      setFocusedItemId(prevItem.id);
+                      setFocusedItemType(prevItem.type);
+                      setActiveCategoryId(prevItem.id);
+                      
+                      // Scroll into view
+                      const element = document.querySelector(`[data-nav-id="${prevItem.id}"]`);
+                      element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  } else if (currentIndex === -1 && navigationItems.length > 0) {
+                      // Start from last item
+                      const lastItem = navigationItems[navigationItems.length - 1];
+                      setFocusedItemId(lastItem.id);
+                      setFocusedItemType(lastItem.type);
+                      setActiveCategoryId(lastItem.id);
+                  }
+                  break;
+
+              case 'ArrowRight':
+                  e.preventDefault();
+                  if (focusedItemId) {
+                      const currentItem = navigationItems.find(item => item.id === focusedItemId);
+                      if (currentItem) {
+                          if (currentItem.type === 'category') {
+                              if (!expandedCategories.has(currentItem.id)) {
+                                  toggleCategory(currentItem.id);
+                              }
+                          } else if (currentItem.type === 'subcategory') {
+                              if (!expandedSubCategories.has(currentItem.id)) {
+                                  toggleSubCategory(currentItem.id);
+                              }
+                          }
+                      }
+                  }
+                  break;
+
+              case 'ArrowLeft':
+                  e.preventDefault();
+                  if (focusedItemId) {
+                      const currentItem = navigationItems.find(item => item.id === focusedItemId);
+                      if (currentItem) {
+                          if (currentItem.type === 'category') {
+                              if (expandedCategories.has(currentItem.id)) {
+                                  toggleCategory(currentItem.id);
+                              }
+                          } else if (currentItem.type === 'subcategory') {
+                              if (expandedSubCategories.has(currentItem.id)) {
+                                  toggleSubCategory(currentItem.id);
+                              }
+                          }
+                      }
+                  }
+                  break;
+          }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedItemId, focusedItemType, navigationItems, expandedCategories, expandedSubCategories, isModalOpen, isMasterItemModalOpen, isChoiceModalOpen, isAmazonSearchModalOpen, toggleCategory, toggleSubCategory]);
 
   const visibleProductIds = useMemo(() => {
       const ids: string[] = [];
@@ -1764,6 +1932,17 @@ export default function ProductsClient({
         </div>
       </div>
 
+      {/* Filter Active Indicator */}
+      {hasActiveFilters && (
+        <div className="mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={2.5} />
+          <span className="text-blue-900 dark:text-blue-100">
+            Showing <strong>{categoryCounts.visible}</strong> of <strong>{categoryCounts.total}</strong> categories
+            {searchTerm && <span className="ml-1 text-blue-700 dark:text-blue-300">matching "{searchTerm}"</span>}
+          </span>
+        </div>
+      )}
+
       {/* Product List (Grouped) */}
       <div className="space-y-2">
         {Object.entries(groupedProducts).length === 0 ? (
@@ -1789,12 +1968,18 @@ export default function ProductsClient({
                 <div key={group.category.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Main Category Header - Collapsible */}
                     <div
+                        data-nav-id={group.category.id}
                         className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/cat ${
-                            isCategoryActive
+                            isCategoryActive || focusedItemId === group.category.id
                                 ? 'bg-primary/10 text-primary'
                                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                         }`}
-                        onClick={() => toggleCategory(group.category.id)}
+                        onClick={() => {
+                            toggleCategory(group.category.id);
+                            setFocusedItemId(group.category.id);
+                            setFocusedItemType('category');
+                            setActiveCategoryId(group.category.id);
+                        }}
                         onContextMenu={(e) => handleCategoryContextMenu(e, group.category)}
                     >
                          {isExpanded ? (
@@ -1851,12 +2036,18 @@ export default function ProductsClient({
                                 {/* Subcategory Header (if exists) */}
                                 {subGroup.subCategory && (
                                     <div
+                                        data-nav-id={subGroup.subCategory.id}
                                         className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/subcat ${
-                                            isSubActive
+                                            isSubActive || focusedItemId === subGroup.subCategory.id
                                                 ? 'bg-primary/10 text-primary'
                                                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                                         }`}
-                                        onClick={() => toggleSubCategory(subCatId)}
+                                        onClick={() => {
+                                            toggleSubCategory(subCatId);
+                                            setFocusedItemId(subGroup.subCategory!.id);
+                                            setFocusedItemType('subcategory');
+                                            setActiveCategoryId(subGroup.subCategory!.id);
+                                        }}
                                         onContextMenu={(e) => handleCategoryContextMenu(e, subGroup.subCategory!)}
                                     >
                                         {isSubExpanded ? (
@@ -2482,6 +2673,13 @@ export default function ProductsClient({
                 <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
                 Add Product
             </button>
+            <button
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
+                onClick={() => handleMoveMasterItem(masterItemContextMenu.masterItem!)}
+            >
+                <MoveRight className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                Move Master Item
+            </button>
             <div className="h-px bg-border my-1" />
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors"
@@ -2893,6 +3091,15 @@ export default function ProductsClient({
         categories={categories}
         onClose={() => setMovingCategoryDialog(null)}
         onSave={handleSaveMoveCategory}
+      />
+
+      {/* Move Master Item Dialog */}
+      <MoveMasterItemDialog
+        isOpen={moveMasterItemDialog.isOpen}
+        masterItem={moveMasterItemDialog.masterItem}
+        categories={categories}
+        onClose={handleMoveMasterItemClose}
+        onSave={handleMoveMasterItemSave}
       />
 
     </div>

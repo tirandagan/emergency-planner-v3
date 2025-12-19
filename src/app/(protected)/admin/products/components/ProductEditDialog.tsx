@@ -149,7 +149,8 @@ export default function ProductEditDialog({
             const initialState: Partial<Product> = product ? { ...product } : {};
             
             // If pre-selected master item is provided (from UI selection), use it
-            if (!product && preSelectedMasterItem) {
+            // Use it if creating new product OR if product doesn't have masterItemId set
+            if (preSelectedMasterItem && (!product || !product.masterItemId)) {
                 initialState.masterItemId = preSelectedMasterItem;
             }
 
@@ -187,7 +188,7 @@ export default function ProductEditDialog({
                 }
             }
         }
-    }, [isOpen, product]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isOpen, product, preSelectedMasterItem, preSelectedCategory, preSelectedSubCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Cleanup debounce timer on unmount or dialog close
     useEffect(() => {
