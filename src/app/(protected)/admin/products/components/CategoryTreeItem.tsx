@@ -45,12 +45,14 @@ export interface CategoryTreeItemProps {
     taggingProductId: string | null;
     activeMasterItemId: string | null;
     expandedSubCategories: Set<string>;
+    expandedMasterItems: Set<string>;
     activeCategoryId: string | null;
     focusedItemId: string | null;
     onToggle: (id: string) => void;
     onSelect: (id: string) => void;
     onCategoryContextMenu: (e: React.MouseEvent, category: Category) => void;
     onMasterItemSelect: (id: string) => void;
+    onToggleMasterItem: (id: string) => void;
     onMasterItemContextMenu: (e: React.MouseEvent, masterItem: MasterItem) => void;
     onProductContextMenu: (e: React.MouseEvent, product: Product) => void;
     onProductClick: (e: React.MouseEvent, productId: string) => void;
@@ -76,12 +78,14 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
     taggingProductId,
     activeMasterItemId,
     expandedSubCategories,
+    expandedMasterItems,
     activeCategoryId,
     focusedItemId,
     onToggle,
     onSelect,
     onCategoryContextMenu,
     onMasterItemSelect,
+    onToggleMasterItem,
     onMasterItemContextMenu,
     onProductContextMenu,
     onProductClick,
@@ -132,7 +136,7 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
                     className="flex items-center gap-2 flex-1 text-left"
                  >
                      <div className="flex-1 min-w-0">
-                         <span className={`text-sm font-medium transition-colors ${isActive ? 'text-primary' : ''}`}>
+                         <span className="text-sm font-medium transition-colors">
                             {group.category.name}
                          </span>
                          {group.category.description && (
@@ -151,7 +155,7 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
 
             {/* Subgroups - Collapsible Content */}
             {isExpanded && (
-            <div className="grid gap-1 mt-1 ml-4">
+            <div className="grid gap-1.5 ml-4">
                 {Object.values(group.subGroups).map(subGroup => {
                     const subCatId = subGroup.subCategory?.id || `root-${group.category.id}`;
                     const isSubExpanded = subGroup.subCategory ? expandedSubCategories.has(subCatId) : true;
@@ -168,10 +172,12 @@ export const CategoryTreeItem = React.memo(function CategoryTreeItem({
                             selectedProductIds={selectedProductIds}
                             taggingProductId={taggingProductId}
                             activeMasterItemId={activeMasterItemId}
+                            expandedMasterItems={expandedMasterItems}
                             onToggle={onToggleSubCategory}
                             onSelect={onSelect}
                             onCategoryContextMenu={onCategoryContextMenu}
                             onMasterItemSelect={onMasterItemSelect}
+                            onToggleMasterItem={onToggleMasterItem}
                             onMasterItemContextMenu={onMasterItemContextMenu}
                             onProductContextMenu={onProductContextMenu}
                             onProductClick={onProductClick}

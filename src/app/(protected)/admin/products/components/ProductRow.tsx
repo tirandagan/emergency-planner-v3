@@ -157,7 +157,7 @@ export const ProductRow = React.memo(function ProductRow({
                 onContextMenu={(e) => onContextMenu(e, product)}
                 onClick={(e) => onClick(e, product.id)}
             >
-                <td className="px-6 py-3 min-w-0">
+                <td className="pl-8 pr-2 py-3 min-w-0">
                     <div className="flex gap-3 items-start">
                         {/* Broken link indicator */}
                         {hasOverriddenTags && (
@@ -230,7 +230,7 @@ export const ProductRow = React.memo(function ProductRow({
                             {product.metadata && Object.keys(product.metadata).length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1.5">
                                     {product.metadata.brand && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-warning/10 text-warning rounded border border-warning/20">{product.metadata.brand}</span>
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 rounded border border-amber-300 dark:border-amber-800/50">{product.metadata.brand}</span>
                                     )}
                                     {product.metadata.quantity && (
                                         <span className="text-[10px] px-1.5 py-0.5 bg-info/10 text-info rounded border border-info/20">×{product.metadata.quantity}</span>
@@ -242,17 +242,17 @@ export const ProductRow = React.memo(function ProductRow({
                                         <span className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border">{product.metadata.volume}{product.metadata.volume_unit || 'ml'}</span>
                                     )}
                                     {product.metadata.size && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-accent/10 text-accent rounded border border-accent/20">{product.metadata.size}</span>
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 rounded border border-purple-300 dark:border-purple-800/50">{product.metadata.size}</span>
                                     )}
                                     {product.metadata.color && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded border border-secondary/20">{product.metadata.color}</span>
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 rounded border border-sky-300 dark:border-sky-800/50">{product.metadata.color}</span>
                                     )}
                                 </div>
                             )}
                         </div>
                     </div>
                 </td>
-                <td className="px-6 py-3 w-[180px]">
+                <td className="px-2 py-3 w-[180px]">
                     <div className="flex flex-col gap-0.5">
                         <div className="text-foreground text-xs flex items-center gap-1.5 min-w-0">
                             {!product.supplierId && (
@@ -271,7 +271,7 @@ export const ProductRow = React.memo(function ProductRow({
                         </span>
                     </div>
                 </td>
-                <td className="px-6 py-3 w-[120px]">
+                <td className="px-2 py-3 w-[120px]">
                     <div className="text-foreground font-mono">
                         ${product.price ? Number(product.price).toFixed(2) : '0.00'}
                     </div>

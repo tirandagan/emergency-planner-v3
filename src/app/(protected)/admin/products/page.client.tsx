@@ -608,7 +608,7 @@ export default function ProductsClient({
       const updatedMasterItems = await getMasterItems();
       setAllMasterItems(updatedMasterItems);
 
-      // Expand parent category and subcategory to show the moved item
+      // Expand parent category, subcategory, and master item to show the moved item
       const movedItem = updatedMasterItems.find(item => item.id === masterItemId);
       if (movedItem) {
           const parentCategory = allCategories.find(cat =>
@@ -628,6 +628,8 @@ export default function ProductsClient({
                   }
                   navigation.expandSubCategory(parentCategory.id);
               }
+              // Auto-expand the moved master item to show its products
+              navigation.expandMasterItem(masterItemId);
           }
       }
   };
@@ -1386,12 +1388,16 @@ export default function ProductsClient({
                         onClick={() => {
                             const allCatIds = Object.keys(groupedProducts);
                             const allSubCatIds: string[] = [];
+                            const allMasterItemIds: string[] = [];
                             Object.values(groupedProducts).forEach(group => {
                                 Object.values(group.subGroups).forEach(subGroup => {
                                     if (subGroup.subCategory) allSubCatIds.push(subGroup.subCategory.id);
+                                    Object.values(subGroup.masterItems).forEach(masterGroup => {
+                                        if (masterGroup.masterItem) allMasterItemIds.push(masterGroup.masterItem.id);
+                                    });
                                 });
                             });
-                            navigation.expandAll(allCatIds, allSubCatIds);
+                            navigation.expandAll(allCatIds, allSubCatIds, allMasterItemIds);
                         }}
                         className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                         title="Expand All"
@@ -1421,7 +1427,7 @@ export default function ProductsClient({
       )}
 
       {/* Product List (Grouped) */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {Object.entries(groupedProducts).length === 0 ? (
              <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
                 <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground" strokeWidth={2.5} />
@@ -1445,12 +1451,14 @@ export default function ProductsClient({
                         taggingProductId={taggingProductId}
                         activeMasterItemId={navigation.activeMasterItemId}
                         expandedSubCategories={navigation.expandedSubCategories}
+                        expandedMasterItems={navigation.expandedMasterItems}
                         activeCategoryId={navigation.activeCategoryId}
                         focusedItemId={keyboard.focusedItemId}
                         onToggle={navigation.toggleCategory}
                         onSelect={navigation.handleCategorySelect}
                         onCategoryContextMenu={handleCategoryContextMenu}
                         onMasterItemSelect={navigation.handleMasterItemSelect}
+                        onToggleMasterItem={navigation.toggleMasterItem}
                         onMasterItemContextMenu={handleMasterItemContextMenu}
                         onProductContextMenu={handleContextMenu}
                         onProductClick={handleProductClick}
@@ -1524,7 +1532,7 @@ export default function ProductsClient({
                 modals.setCategoryModalMasterItem(newItem.id);
              }
 
-             // Auto-expand the parent subcategory to show the new item
+             // Auto-expand the parent subcategory and the new master item to show it
              if (newItem.categoryId) {
                  const parentCategory = allCategories.find(cat => cat.id === newItem.categoryId);
                  if (parentCategory) {
@@ -1536,6 +1544,8 @@ export default function ProductsClient({
                          // If it's a root category, just expand it
                          navigation.expandCategory(parentCategory.id);
                      }
+                     // Auto-expand the new master item to show its (empty) products list
+                     navigation.expandMasterItem(newItem.id);
                  }
              }
           }}

@@ -43,10 +43,12 @@ export interface SubCategoryTreeItemProps {
     selectedProductIds: Set<string>;
     taggingProductId: string | null;
     activeMasterItemId: string | null;
+    expandedMasterItems: Set<string>;
     onToggle: (id: string) => void;
     onSelect: (id: string) => void;
     onCategoryContextMenu: (e: React.MouseEvent, category: Category) => void;
     onMasterItemSelect: (id: string) => void;
+    onToggleMasterItem: (id: string) => void;
     onMasterItemContextMenu: (e: React.MouseEvent, masterItem: MasterItem) => void;
     onProductContextMenu: (e: React.MouseEvent, product: Product) => void;
     onProductClick: (e: React.MouseEvent, productId: string) => void;
@@ -71,10 +73,12 @@ export const SubCategoryTreeItem = React.memo(function SubCategoryTreeItem({
     selectedProductIds,
     taggingProductId,
     activeMasterItemId,
+    expandedMasterItems,
     onToggle,
     onSelect,
     onCategoryContextMenu,
     onMasterItemSelect,
+    onToggleMasterItem,
     onMasterItemContextMenu,
     onProductContextMenu,
     onProductClick,
@@ -127,7 +131,7 @@ export const SubCategoryTreeItem = React.memo(function SubCategoryTreeItem({
                         className="flex items-center gap-2 flex-1 text-left"
                     >
                         <div className="flex-1 min-w-0">
-                            <span className={`text-sm font-medium transition-colors ${isActive ? 'text-primary' : ''}`}>
+                            <span className="text-sm font-medium transition-colors">
                                 {subGroup.subCategory.name}
                             </span>
                             {subGroup.subCategory.description && (
@@ -147,15 +151,17 @@ export const SubCategoryTreeItem = React.memo(function SubCategoryTreeItem({
 
             {/* Master Items Groups */}
             {(isExpanded || !subGroup.subCategory) && (
-                <div className="space-y-4 mt-2 ml-4">
+                <div className="space-y-1.5 mt-0.5 ml-4">
                     {sortedMasterGroups.map(masterGroup => (
                         <MasterItemRow
                             key={masterGroup.masterItem?.id || 'nomaster'}
                             masterGroup={masterGroup}
                             isActive={masterGroup.masterItem?.id === activeMasterItemId}
+                            isExpanded={masterGroup.masterItem ? expandedMasterItems.has(masterGroup.masterItem.id) : false}
                             selectedProductIds={selectedProductIds}
                             taggingProductId={taggingProductId}
                             onSelectMasterItem={onMasterItemSelect}
+                            onToggleMasterItem={onToggleMasterItem}
                             onMasterItemContextMenu={onMasterItemContextMenu}
                             onProductContextMenu={onProductContextMenu}
                             onProductClick={onProductClick}
