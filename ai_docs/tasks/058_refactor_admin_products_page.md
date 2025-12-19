@@ -838,20 +838,36 @@ export default function ProductsClient({
 
 ## 11. Task Completion Tracking
 
-### Phase 1: Extract Constants & Types ⏳
-- [ ] Task 1.1: Create `lib/products-types.ts`
-- [ ] Task 1.2: Create `lib/products-utils.ts`
-- [ ] Task 1.3: Update `page.client.tsx` to use new types
-- [ ] Task 1.4: Type-check validation
+### Phase 1: Extract Constants & Types ✅ COMPLETED
+- [x] Task 1.1: Create `lib/products-types.ts`
+- [x] Task 1.2: Create `lib/products-utils.ts`
+- [x] Task 1.3: Update `page.client.tsx` to use new types
+- [x] Task 1.4: Type-check validation (partial - some pre-existing errors in other components)
 
-### Phase 2: Extract Custom Hooks ⏳
-- [ ] Task 2.1: Create `hooks/useProductFilters.ts`
-- [ ] Task 2.2: Create `hooks/useCategoryNavigation.ts`
-- [ ] Task 2.3: Create `hooks/useModalState.ts`
-- [ ] Task 2.4: Create `hooks/useContextMenu.ts`
-- [ ] Task 2.5: Create `hooks/useKeyboardNavigation.ts`
-- [ ] Task 2.6: Update `page.client.tsx` to use hooks
+**Git commit:** `4001aa4` - "Phase 1: Extract constants and types"
+
+### Phase 2: Extract Custom Hooks 🔄 IN PROGRESS (5/7 tasks complete)
+- [x] Task 2.1: Create `hooks/useProductFilters.ts` (200 lines extracted)
+- [x] Task 2.2: Create `hooks/useCategoryNavigation.ts` (100 lines extracted)
+- [x] Task 2.3: Create `hooks/useModalState.ts` (270 lines extracted)
+- [x] Task 2.4: Create `hooks/useContextMenu.ts` (70 lines, reusable)
+- [x] Task 2.5: Create `hooks/useKeyboardNavigation.ts` (180 lines extracted)
+- [ ] Task 2.6: Update `page.client.tsx` to use hooks **⚠️ PARTIALLY COMPLETE**
+  - [x] Added hook imports
+  - [x] Replaced initial state declarations (54 useState → 5 hook calls)
+  - [ ] **TODO:** Update ~500+ references throughout file to use hook properties
+    - `searchTerm` → `filters.searchTerm`
+    - `setSearchTerm` → `filters.setSearchTerm`
+    - `isModalOpen` → `modals.isModalOpen`
+    - `expandedCategories` → `navigation.expandedCategories`
+    - `toggleCategory` → `navigation.toggleCategory`
+    - Plus ~495 more references to update
+  - [ ] **TODO:** Remove extracted logic (filtering, sorting, keyboard handlers)
 - [ ] Task 2.7: Type-check validation
+
+**Git commit:** `d3874da` - "Phase 2: Extract custom hooks (in progress)"
+
+**Total extracted so far:** ~820 lines of hook logic
 
 ### Phase 3: Extract Render Components ⏳
 - [ ] Task 3.1: Create `components/CategoryTreeItem.tsx`
@@ -956,16 +972,154 @@ After Phase 6, verify all workflows:
 
 ## 15. Post-Implementation Notes
 
-_This section will be filled in after implementation completes._
+### Current Status (2025-12-19)
+
+**Branch:** `refactor/admin-products-page`
+**Commits:** 2 commits
+**Progress:** Phase 1 complete (100%), Phase 2 in progress (71%)
 
 ### What Went Well
 
+1. **Clean hook extraction** - All 5 custom hooks are well-designed, typed, and reusable
+2. **Type safety foundation** - Centralized types eliminated duplicate definitions
+3. **Git safety** - Working on feature branch with incremental commits
+4. **Hook quality** - Each hook has clear responsibilities and comprehensive JSDoc
 
 ### Challenges Encountered
 
+1. **File size** - The 3,116-line `page.client.tsx` makes large-scale find/replace risky
+2. **Reference updates** - ~500+ references to old state variables need updating throughout the file
+3. **Pre-existing type issues** - Some components (ProductEditDialog, etc.) have duplicate Product types that conflict with centralized types
 
-### Lessons Learned
+### Remaining Work to Complete Phase 2
 
+**Task 2.6 completion requires:**
+1. **Systematic reference updates** - Use find/replace or IDE refactoring to update:
+   ```typescript
+   // Filter state
+   searchTerm → filters.searchTerm
+   setSearchTerm → filters.setSearchTerm
+   selectedTags → filters.selectedTags
+   setSelectedTags → filters.setSelectedTags
+   selectedSuppliers → filters.selectedSuppliers
+   setSelectedSuppliers → filters.setSelectedSuppliers
+   filterPriceRange → filters.filterPriceRange
+   setFilterPriceRange → filters.setFilterPriceRange
+   sortField → filters.sortField
+   setSortField → filters.setSortField
+   sortDirection → filters.sortDirection
+   setSortDirection → filters.setSortDirection
+   handleSort → filters.handleSort
+   processedProducts → filters.processedProducts
+   hasActiveFilters → filters.hasActiveFilters
+
+   // Navigation state
+   expandedCategories → navigation.expandedCategories
+   expandedSubCategories → navigation.expandedSubCategories
+   activeCategoryId → navigation.activeCategoryId
+   activeMasterItemId → navigation.activeMasterItemId
+   toggleCategory → navigation.toggleCategory
+   toggleSubCategory → navigation.toggleSubCategory
+   handleCategorySelect → navigation.handleCategorySelect
+   handleMasterItemSelect → navigation.handleMasterItemSelect
+
+   // Modal state (12+ modals)
+   isModalOpen → modals.isModalOpen
+   editingProduct → modals.editingProduct
+   setEditingProduct → modals.openProductEdit / modals.closeProductEdit
+   isMasterItemModalOpen → modals.isMasterItemModalOpen
+   editingMasterItem → modals.editingMasterItem
+   targetCategoryForMasterItem → modals.targetCategoryForMasterItem
+   // ... plus 8 more modal states
+
+   // Context menus
+   contextMenu → productContextMenu.menu
+   setContextMenu → productContextMenu.openMenu / productContextMenu.closeMenu
+   categoryContextMenu → categoryContextMenu.menu
+   // ... etc
+
+   // Keyboard navigation
+   focusedItemId → keyboard.focusedItemId
+   setFocusedItemId → keyboard.setFocusedItemId
+   focusedItemType → keyboard.focusedItemType
+   ```
+
+2. **Remove duplicate logic** that's now in hooks:
+   - Lines 1227-1319: `processedProducts` filtering/sorting (now in useProductFilters)
+   - Lines 543-595: Category toggle functions (now in useCategoryNavigation)
+   - Lines 1529-1660: Keyboard navigation handler (now in useKeyboardNavigation)
+
+3. **Add keyboard navigation hook call** with proper options:
+   ```typescript
+   const keyboard = useKeyboardNavigation(navigationItems, {
+     onNavigate: (item) => {
+       navigation.handleCategorySelect(item.id);
+     },
+     onExpand: (itemId, type) => {
+       if (type === 'category') navigation.toggleCategory(itemId);
+       else navigation.toggleSubCategory(itemId);
+     },
+     onCollapse: (itemId, type) => {
+       if (type === 'category') navigation.toggleCategory(itemId);
+       else navigation.toggleSubCategory(itemId);
+     },
+     isModalOpen: modals.isAnyModalOpen,
+     expandedCategories: navigation.expandedCategories,
+     expandedSubCategories: navigation.expandedSubCategories,
+   });
+   ```
+
+4. **Type-check and validate** - Run `npx tsc --noEmit` after all updates
+
+### Recommended Approach to Complete Phase 2
+
+**Option 1: IDE Refactoring (Recommended)**
+- Use VS Code's "Rename Symbol" (F2) feature for safer refactoring
+- Works well for state variable renames
+- Type-safe and catches all references
+
+**Option 2: Regex Find/Replace**
+- Use careful regex patterns to update references
+- Test each pattern before applying
+- Commit after each major change
+
+**Option 3: Manual Review**
+- Review each section of the file
+- Update references as you go
+- Most time-consuming but safest
+
+### Files Created So Far
+
+```
+src/
+├── lib/
+│   ├── products-types.ts          ✅ NEW (Phase 1)
+│   └── products-utils.ts          ✅ NEW (Phase 1)
+└── app/(protected)/admin/products/
+    ├── hooks/
+    │   ├── useProductFilters.ts        ✅ NEW (Phase 2)
+    │   ├── useCategoryNavigation.ts    ✅ NEW (Phase 2)
+    │   ├── useModalState.ts            ✅ NEW (Phase 2)
+    │   ├── useContextMenu.ts           ✅ NEW (Phase 2)
+    │   └── useKeyboardNavigation.ts    ✅ NEW (Phase 2)
+    ├── page.client.tsx            🔄 MODIFIED (partial)
+    └── components/TagSelector.tsx 🔄 MODIFIED
+```
+
+### Next Session Checklist
+
+When resuming work:
+1. ✅ Checkout branch: `git checkout refactor/admin-products-page`
+2. ✅ Review this task document
+3. ✅ Complete Task 2.6 (update references)
+4. ✅ Complete Task 2.7 (type-check)
+5. → Continue to Phase 3 (Extract Components)
 
 ### Future Improvements
+
+**After completing this refactor:**
+1. Consider extracting more components from the 3,000+ line file
+2. Add unit tests for the custom hooks
+3. Consider splitting into multiple pages (categories, products, suppliers)
+4. Add Storybook stories for reusable components
 
