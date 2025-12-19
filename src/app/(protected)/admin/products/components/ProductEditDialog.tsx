@@ -1456,7 +1456,7 @@ export default function ProductEditDialog({
             />
 
             {conflictData && (
-                <DuplicateProductWarningModal 
+                <DuplicateProductWarningModal
                     isOpen={!!conflictData}
                     onClose={() => setConflictData(null)}
                     onMerge={handleMergeConflict}
@@ -1464,10 +1464,10 @@ export default function ProductEditDialog({
                     existingProduct={conflictData}
                     newProduct={{
                         name: formState.name || '',
-                        price: formState.price,
-                        asin: formState.asin,
-                        description: formState.description,
-                        image_url: formState.imageUrl,
+                        price: typeof formState.price === 'number' ? formState.price : typeof formState.price === 'string' ? parseFloat(formState.price) : undefined,
+                        asin: formState.asin ?? undefined,
+                        description: formState.description ?? undefined,
+                        image_url: formState.imageUrl ?? undefined,
                         supplier_name: localSuppliers.find(s => s.id === formState.supplierId)?.name,
                         master_item_name: localMasterItems.find(m => m.id === formState.masterItemId)?.name
                     }}
@@ -1530,8 +1530,8 @@ export default function ProductEditDialog({
                     config={formState.variations.config}
                     values={formState.variations.values}
                     onChange={handleVariationValuesChange}
-                    basePrice={formState.price}
-                    baseSku={formState.asin || formState.sku}
+                    basePrice={typeof formState.price === 'number' ? formState.price : typeof formState.price === 'string' ? parseFloat(formState.price) : undefined}
+                    baseSku={(formState.asin ?? formState.sku) ?? undefined}
                     baseQuantity={undefined}
                 />
             )}

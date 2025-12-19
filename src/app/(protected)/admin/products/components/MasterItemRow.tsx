@@ -76,7 +76,7 @@ export const MasterItemRow = React.memo(function MasterItemRow({
     return (
         <div
             key={masterGroup.masterItem?.id || 'nomaster'}
-            className="bg-card border rounded-xl overflow-hidden shadow-sm transition-colors"
+            className="bg-card border rounded-xl overflow-hidden shadow-sm transition-colors ml-4"
         >
             {/* Master Item Header */}
             {masterGroup.masterItem && (
@@ -98,10 +98,10 @@ export const MasterItemRow = React.memo(function MasterItemRow({
                     onContextMenu={(e) => onMasterItemContextMenu(e, masterGroup.masterItem!)}
                 >
                     <div className="flex items-start gap-3">
-                        {/* Chevron Icon - Left side, vertically centered */}
+                        {/* Chevron Icon - Aligned with title row center, stays in place when expanded */}
                         <div
                             data-chevron
-                            className="flex-shrink-0 transition-colors hover:text-primary mt-0.5"
+                            className="flex-shrink-0 transition-colors hover:text-primary mt-1"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onToggleMasterItem(masterGroup.masterItem!.id);

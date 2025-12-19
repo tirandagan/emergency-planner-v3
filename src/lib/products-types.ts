@@ -41,8 +41,46 @@ export interface ProductMetadata {
   volume_unit?: string;
   size?: string;
   color?: string;
-  [key: string]: unknown; // Allow additional metadata fields
+  upc?: string;
+  model_number?: string;
+  dimensions?: string;
+  rating?: number | string;
+  reviews?: number | string;
 }
+
+export interface VariationAttribute {
+  id: string;
+  name: string;
+  options: string[];
+}
+
+export interface VariationConfig {
+  attributes: VariationAttribute[];
+  toggles: {
+    price: boolean;
+    sku: boolean;
+    quantity: boolean;
+    processing: boolean;
+  };
+}
+
+export interface ProductVariations {
+  config: VariationConfig;
+  values: Record<string, any>;
+}
+
+export interface ChangeHistoryEntry {
+  timestamp: string;
+  userEmail: string;
+  userName?: string;
+  changes: Array<{
+    field: string;
+    oldValue: any;
+    newValue: any;
+  }>;
+}
+
+export type ChangeHistory = ChangeHistoryEntry[];
 
 export interface Product {
   id: string;
@@ -63,7 +101,8 @@ export interface Product {
   demographics?: string[] | null;
   locations?: string[] | null;
   scenarios?: string[] | null;
-  variations?: unknown;
+  variations?: ProductVariations | null;
+  changeHistory?: ChangeHistory;
 }
 
 // --- Component Props Types ---
