@@ -58,7 +58,11 @@ export interface SubCategoryTreeItemProps {
     sortDirection: 'asc' | 'desc';
 }
 
-export function SubCategoryTreeItem({
+/**
+ * SubCategoryTreeItem - Memoized for performance
+ * Only re-renders when props change, preventing cascading updates
+ */
+export const SubCategoryTreeItem = React.memo(function SubCategoryTreeItem({
     subGroup,
     subCatId,
     isExpanded,
@@ -165,4 +169,4 @@ export function SubCategoryTreeItem({
             )}
         </div>
     );
-}
+});

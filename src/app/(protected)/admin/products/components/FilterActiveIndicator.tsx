@@ -28,7 +28,11 @@ export interface FilterActiveIndicatorProps {
  * />
  * ```
  */
-export function FilterActiveIndicator({
+/**
+ * FilterActiveIndicator - Memoized for performance
+ * Only re-renders when filter counts or search term change
+ */
+export const FilterActiveIndicator = React.memo(function FilterActiveIndicator({
   visibleCount,
   totalCount,
   searchTerm
@@ -42,4 +46,4 @@ export function FilterActiveIndicator({
       </span>
     </div>
   );
-}
+});

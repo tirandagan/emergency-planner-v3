@@ -44,7 +44,11 @@ export interface ProductRowProps {
     onQuickTagClose: () => void;
 }
 
-export function ProductRow({
+/**
+ * ProductRow - Memoized for performance
+ * Only re-renders when its product data, selection state, or tagging state changes
+ */
+export const ProductRow = React.memo(function ProductRow({
     product,
     masterItem,
     isSelected,
@@ -286,4 +290,4 @@ export function ProductRow({
             )}
         </Fragment>
     );
-}
+});

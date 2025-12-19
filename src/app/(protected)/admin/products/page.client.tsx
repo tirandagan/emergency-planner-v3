@@ -1,7 +1,7 @@
 "use client";
 
 // React Core
-import { useState, useMemo, useEffect, Fragment, useRef } from "react";
+import { useState, useMemo, useEffect, Fragment, useRef, useCallback } from "react";
 
 // Icons
 import {
@@ -361,6 +361,11 @@ export default function ProductsClient({
   // Quick Tagging State
   const [taggingProductId, setTaggingProductId] = useState<string | null>(null);
 
+  // Quick tag close handler (memoized for React.memo components)
+  const handleQuickTagClose = useCallback(() => {
+      setTaggingProductId(null);
+  }, []);
+
   // Add To Bundle Modal State
   const [isAddToBundleModalOpen, setIsAddToBundleModalOpen] = useState(false);
   const [addToBundleProduct, setAddToBundleProduct] = useState<Product | null>(null);
@@ -393,15 +398,15 @@ export default function ProductsClient({
       }
   }, [taggingProductId]);
 
-  // Category Context Menu Handlers
-  const handleCategoryContextMenu = (e: React.MouseEvent, category: Category) => {
+  // Category Context Menu Handlers (memoized for React.memo components)
+  const handleCategoryContextMenu = useCallback((e: React.MouseEvent, category: Category) => {
       e.preventDefault();
       e.stopPropagation();
       // Close other menus
       masterItemContextMenu.closeMenu();
       productContextMenu.closeMenu();
       categoryContextMenu.openMenu(e, category);
-  };
+  }, [masterItemContextMenu, productContextMenu, categoryContextMenu]);
 
   const handleCategoryEdit = (category: Category) => {
       setEditingCategoryDialog(category);
@@ -564,15 +569,15 @@ export default function ProductsClient({
       }
   };
 
-  // Master Item Context Menu Handlers
-  const handleMasterItemContextMenu = (e: React.MouseEvent, masterItem: MasterItem) => {
+  // Master Item Context Menu Handlers (memoized for React.memo components)
+  const handleMasterItemContextMenu = useCallback((e: React.MouseEvent, masterItem: MasterItem) => {
       e.preventDefault();
       e.stopPropagation();
       // Close other menus
       categoryContextMenu.closeMenu();
       productContextMenu.closeMenu();
       masterItemContextMenu.openMenu(e, masterItem);
-  };
+  }, [categoryContextMenu, productContextMenu, masterItemContextMenu]);
 
   const handleMasterItemEdit = (masterItem: MasterItem) => {
       openEditMasterItemModal(masterItem.id);
@@ -693,7 +698,7 @@ export default function ProductsClient({
       modals.closePasteConfirm();
   };
 
-  const handleContextMenu = (e: React.MouseEvent, product: Product) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, product: Product) => {
       if (selectedIds.size >= 2) {
           e.preventDefault();
           setToastMessage("Right-click menu not available in multi-select");
@@ -704,7 +709,7 @@ export default function ProductsClient({
       categoryContextMenu.closeMenu();
       masterItemContextMenu.closeMenu();
       productContextMenu.openMenu(e, product);
-  };
+  }, [selectedIds, categoryContextMenu, masterItemContextMenu, productContextMenu]);
 
   const openCategoryModal = (product: Product) => {
       productContextMenu.closeMenu();
@@ -1109,22 +1114,22 @@ export default function ProductsClient({
       return ids;
   }, [groupedProducts, navigation.expandedCategories]);
 
-  const handleProductClick = (e: React.MouseEvent, productId: string) => {
+  const handleProductClick = useCallback((e: React.MouseEvent, productId: string) => {
       if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('input')) return;
-      
+
       if (e.shiftKey) {
           window.getSelection()?.removeAllRanges();
       }
 
       const newSelectedIds = new Set(selectedIds);
-      
+
       if (e.shiftKey && lastSelectedId) {
           const start = visibleProductIds.indexOf(lastSelectedId);
           const end = visibleProductIds.indexOf(productId);
-          
+
           if (start !== -1 && end !== -1) {
               const [lower, upper] = start < end ? [start, end] : [end, start];
-              
+
               if (!e.ctrlKey && !e.metaKey) {
                   newSelectedIds.clear();
               }
@@ -1147,9 +1152,9 @@ export default function ProductsClient({
           newSelectedIds.add(productId);
           setLastSelectedId(productId);
       }
-      
+
       setSelectedIds(newSelectedIds);
-  };
+  }, [selectedIds, lastSelectedId, visibleProductIds]);
 
   const handleExport = async () => {
       const ExcelJS = (await import('exceljs')).default;
@@ -1449,7 +1454,7 @@ export default function ProductsClient({
                         onMasterItemContextMenu={handleMasterItemContextMenu}
                         onProductContextMenu={handleContextMenu}
                         onProductClick={handleProductClick}
-                        onQuickTagClose={() => setTaggingProductId(null)}
+                        onQuickTagClose={handleQuickTagClose}
                         setFocusedItemId={keyboard.setFocusedItemId}
                         setFocusedItemType={keyboard.setFocusedItemType}
                         onSort={filters.handleSort}

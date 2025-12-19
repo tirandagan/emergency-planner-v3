@@ -63,7 +63,11 @@ export interface CategoryTreeItemProps {
     onToggleSubCategory: (id: string) => void;
 }
 
-export function CategoryTreeItem({
+/**
+ * CategoryTreeItem - Memoized for performance
+ * Only re-renders when props change, preventing unnecessary updates when sibling categories expand/collapse
+ */
+export const CategoryTreeItem = React.memo(function CategoryTreeItem({
     group,
     isExpanded,
     isActive,
@@ -184,4 +188,4 @@ export function CategoryTreeItem({
             )}
         </div>
     );
-}
+});

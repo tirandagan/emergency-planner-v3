@@ -43,7 +43,11 @@ export interface MasterItemRowProps {
     sortDirection: 'asc' | 'desc';
 }
 
-export function MasterItemRow({
+/**
+ * MasterItemRow - Memoized for performance
+ * Only re-renders when props change, not when sibling master items update
+ */
+export const MasterItemRow = React.memo(function MasterItemRow({
     masterGroup,
     isActive,
     selectedProductIds,
@@ -171,4 +175,4 @@ export function MasterItemRow({
             </table>
         </div>
     );
-}
+});

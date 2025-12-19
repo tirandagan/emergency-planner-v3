@@ -31,7 +31,11 @@ export interface BulkActionBarProps {
  * />
  * ```
  */
-export function BulkActionBar({
+/**
+ * BulkActionBar - Memoized for performance
+ * Only re-renders when selection count or handlers change
+ */
+export const BulkActionBar = React.memo(function BulkActionBar({
   selectedCount,
   onAssignCategory,
   onAssignSupplier,
@@ -62,4 +66,4 @@ export function BulkActionBar({
       </button>
     </div>
   );
-}
+});
