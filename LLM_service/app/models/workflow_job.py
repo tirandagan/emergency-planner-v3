@@ -62,6 +62,8 @@ class WorkflowJob(Base):
 
     # User tracking
     user_id = Column(UUID(as_uuid=True), nullable=True)  # References profiles(id)
+    username = Column(String(255), nullable=True)  # Username who triggered workflow
+    action = Column(String(255), nullable=True)  # User activity requiring workflow
 
     # Execution state
     status = Column(String(50), nullable=False, default=JobStatus.PENDING.value)
@@ -113,6 +115,8 @@ class WorkflowJob(Base):
             "status": self.status,
             "priority": self.priority,
             "user_id": str(self.user_id) if self.user_id else None,
+            "username": self.username,
+            "action": self.action,
             "input_data": self.input_data,
             "result_data": self.result_data,
             "error_message": self.error_message,
