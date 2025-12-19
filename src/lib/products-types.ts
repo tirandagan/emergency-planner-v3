@@ -32,6 +32,18 @@ export interface Supplier {
   name: string;
 }
 
+export interface ProductMetadata {
+  brand?: string;
+  quantity?: number | string;
+  weight?: number | string;
+  weight_unit?: string;
+  volume?: number | string;
+  volume_unit?: string;
+  size?: string;
+  color?: string;
+  [key: string]: unknown; // Allow additional metadata fields
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -46,7 +58,7 @@ export interface Product {
   supplierId: string | null;
   supplier?: { name: string } | null;
   masterItem?: { name: string } | null;
-  metadata?: unknown;
+  metadata?: ProductMetadata | null;
   timeframes?: string[] | null;
   demographics?: string[] | null;
   locations?: string[] | null;

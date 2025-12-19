@@ -430,84 +430,19 @@ export default function ProductsClient({
   const openEditMasterItemModal = (masterItemId: string) => {
       const item = allMasterItems.find(m => m.id === masterItemId);
       if (item) {
-          setEditingMasterItem(item);
-          setIsMasterItemModalOpen(true);
+          modals.openMasterItemEdit(item);
       }
   };
 
   // Supplier State
   const [suppliersList, setSuppliersList] = useState(suppliers);
-  
-  // Collapsible Categories State
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [expandedSubCategories, setExpandedSubCategories] = useState<Set<string>>(new Set());
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
-  const [activeMasterItemId, setActiveMasterItemId] = useState<string | null>(null);
-  
-  // Keyboard Navigation State
-  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
-  const [focusedItemType, setFocusedItemType] = useState<'category' | 'subcategory' | null>(null);
 
-  const toggleCategory = (catId: string) => {
-      setExpandedCategories(prev => {
-          const next = new Set(prev);
-          if (next.has(catId)) {
-              next.delete(catId);
-          } else {
-              next.add(catId);
-          }
-          return next;
-      });
-  };
-
-  const toggleSubCategory = (subCatId: string) => {
-      setExpandedSubCategories(prev => {
-          const next = new Set(prev);
-          if (next.has(subCatId)) {
-              next.delete(subCatId);
-          } else {
-              next.add(subCatId);
-          }
-          return next;
-      });
-  };
-
-  const handleCategorySelect = (catId: string) => {
-      setActiveCategoryId(prev => prev === catId ? null : catId);
-      setActiveMasterItemId(null); // Clear master item selection when category changes
-  };
-
-  const handleMasterItemSelect = (masterItemId: string) => {
-      setActiveMasterItemId(prev => prev === masterItemId ? null : masterItemId);
-  };
-
-  const expandAllCategories = () => {
-      const allCatIds = Object.keys(groupedProducts);
-      setExpandedCategories(new Set(allCatIds));
-      
-      // Also expand all subcategories
-      const allSubCatIds = new Set<string>();
-      Object.values(groupedProducts).forEach(group => {
-          Object.values(group.subGroups).forEach(subGroup => {
-              if (subGroup.subCategory) {
-                  allSubCatIds.add(subGroup.subCategory.id);
-              }
-          });
-      });
-      setExpandedSubCategories(allSubCatIds);
-  };
-
-  const collapseAllCategories = () => {
-      setExpandedCategories(new Set());
-      setExpandedSubCategories(new Set());
-  };
-
-  // Context Menu State
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; product: Product } | null>(null);
+  // Context Menu Helper State (submenu positioning)
   const [supplierSubmenuOpen, setSupplierSubmenuOpen] = useState(false);
   const [supplierSubmenuPosition, setSupplierSubmenuPosition] = useState<{ top: number; left: number } | null>(null);
   const supplierButtonRef = useRef<HTMLDivElement>(null);
 
+  // Copy/Paste Tags State
   const [copiedTags, setCopiedTags] = useState<{
       scenarios: string[] | null;
       demographics: string[] | null;
@@ -515,32 +450,6 @@ export default function ProductsClient({
       locations: string[] | null;
       sourceName: string;
   } | null>(null);
-  const [pasteConfirmModal, setPasteConfirmModal] = useState<{
-      targetMasterItem: MasterItem;
-  } | null>(null);
-  
-  // Category Change Modal State
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categoryModalProduct, setCategoryModalProduct] = useState<Product | null>(null);
-  const [categoryModalCategory, setCategoryModalCategory] = useState<string>("");
-  const [categoryModalSubCategory, setCategoryModalSubCategory] = useState<string>("");
-  const [categoryModalMasterItem, setCategoryModalMasterItem] = useState<string>("");
-
-  // Category Context Menu State
-  const [categoryContextMenu, setCategoryContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    category: Category | null;
-  }>({ visible: false, x: 0, y: 0, category: null });
-
-  // Master Item Context Menu State
-  const [masterItemContextMenu, setMasterItemContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    masterItem: MasterItem | null;
-  }>({ visible: false, x: 0, y: 0, masterItem: null });
 
   // Category Edit/Delete Dialog State
   const [editingCategoryDialog, setEditingCategoryDialog] = useState<Category | null>(null);
@@ -593,8 +502,6 @@ export default function ProductsClient({
   // Bulk Selection State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
-  const [isBulkSupplierModalOpen, setIsBulkSupplierModalOpen] = useState(false);
-  const [bulkSupplierId, setBulkSupplierId] = useState<string>("");
 
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -618,22 +525,7 @@ export default function ProductsClient({
       }
   }, [toastMessage]);
 
-  // Close context menu on click outside
-  useEffect(() => {
-      const handleClick = () => {
-          setContextMenu(null);
-          setSupplierSubmenuOpen(false);
-      };
-      if (contextMenu) {
-          const timer = setTimeout(() => {
-              window.addEventListener('click', handleClick);
-          }, 10);
-          return () => {
-              clearTimeout(timer);
-              window.removeEventListener('click', handleClick);
-          };
-      }
-  }, [contextMenu]);
+  // Close context menu on click outside (handled by useContextMenu hook automatically)
 
   // Close tagging interface on click outside
   useEffect(() => {
@@ -653,25 +545,19 @@ export default function ProductsClient({
   const handleCategoryContextMenu = (e: React.MouseEvent, category: Category) => {
       e.preventDefault();
       e.stopPropagation();
-      // Close master item menu if open
-      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
-      // Close product menu if open
-      setContextMenu(null);
-      setCategoryContextMenu({
-          visible: true,
-          x: e.pageX,
-          y: e.pageY,
-          category
-      });
+      // Close other menus
+      masterItemContextMenu.closeMenu();
+      productContextMenu.closeMenu();
+      categoryContextMenu.openMenu(e, category);
   };
 
   const handleCategoryEdit = (category: Category) => {
       setEditingCategoryDialog(category);
-      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+      categoryContextMenu.closeMenu();
   };
 
   const handleCategoryDelete = async (category: Category) => {
-      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+      categoryContextMenu.closeMenu();
 
       const impactRes = await getCategoryImpact(category.id);
       if (impactRes.success && impactRes.data) {
@@ -728,20 +614,7 @@ export default function ProductsClient({
               
               // Remove master items that belong to deleted categories
               setAllMasterItems(prev => prev.filter(mi => !categoryIdsToRemove.has(mi.categoryId)));
-              
-              // Remove from expanded sets if present
-              setExpandedCategories(prev => {
-                  const next = new Set(prev);
-                  categoryIdsToRemove.forEach(id => next.delete(id));
-                  return next;
-              });
-              
-              setExpandedSubCategories(prev => {
-                  const next = new Set(prev);
-                  categoryIdsToRemove.forEach(id => next.delete(id));
-                  return next;
-              });
-              
+
               setDeletingCategory(null);
               setDeleteImpact(null);
           } else {
@@ -754,12 +627,12 @@ export default function ProductsClient({
 
   const handleCategoryAdd = (category: Category) => {
       setAddingCategoryDialog({ id: category.id, name: category.name });
-      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+      categoryContextMenu.closeMenu();
   };
 
   const handleCategoryMove = (category: Category) => {
       setMovingCategoryDialog(category);
-      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+      categoryContextMenu.closeMenu();
   };
 
   const handleSaveNewCategory = async (data: { name: string; description: string; icon: string; parentId: string | null }) => {
@@ -768,11 +641,6 @@ export default function ProductsClient({
           if (res.success && res.data) {
               // Add new category to state
               setAllCategories(prev => [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name)));
-              
-              // If it's a subcategory, ensure parent category stays expanded
-              if (data.parentId) {
-                  setExpandedCategories(prev => new Set(prev).add(data.parentId!));
-              }
               
               setAddingCategoryDialog(null);
           } else {
@@ -800,10 +668,8 @@ export default function ProductsClient({
   };
 
   const handleAddMasterItem = (category: Category) => {
-      setTargetCategoryForMasterItem(category);
-      setEditingMasterItem(null);
-      setIsMasterItemModalOpen(true);
-      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
+      modals.openMasterItemEdit(null, category);
+      categoryContextMenu.closeMenu();
   };
 
   const handleAddProductFromMasterItem = (masterItem: MasterItem) => {
@@ -812,17 +678,17 @@ export default function ProductsClient({
       if (cat) {
           if (cat.parentId) {
               // Subcategory
-              setPreSelectedCategory(cat.parentId);
-              setPreSelectedSubCategory(cat.id);
+              modals.setPreSelectedCategory(cat.parentId);
+              modals.setPreSelectedSubCategory(cat.id);
           } else {
               // Root category
-              setPreSelectedCategory(cat.id);
-              setPreSelectedSubCategory("");
+              modals.setPreSelectedCategory(cat.id);
+              modals.setPreSelectedSubCategory("");
           }
       }
-      setPreSelectedMasterItem(masterItem.id);
-      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
-      setIsChoiceModalOpen(true);
+      modals.setPreSelectedMasterItem(masterItem.id);
+      masterItemContextMenu.closeMenu();
+      modals.openChoiceModal();
   };
 
   const handleBackgroundContextMenu = (e: React.MouseEvent) => {
@@ -831,9 +697,9 @@ export default function ProductsClient({
           e.preventDefault();
           e.stopPropagation();
           // Close other menus
-          setCategoryContextMenu(prev => ({ ...prev, visible: false }));
-          setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
-          setContextMenu(null);
+          categoryContextMenu.closeMenu();
+          masterItemContextMenu.closeMenu();
+          productContextMenu.closeMenu();
           setBackgroundContextMenu({
               visible: true,
               x: e.pageX,
@@ -846,26 +712,20 @@ export default function ProductsClient({
   const handleMasterItemContextMenu = (e: React.MouseEvent, masterItem: MasterItem) => {
       e.preventDefault();
       e.stopPropagation();
-      // Close category menu if open
-      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
-      // Close product menu if open
-      setContextMenu(null);
-      setMasterItemContextMenu({
-          visible: true,
-          x: e.pageX,
-          y: e.pageY,
-          masterItem
-      });
+      // Close other menus
+      categoryContextMenu.closeMenu();
+      productContextMenu.closeMenu();
+      masterItemContextMenu.openMenu(e, masterItem);
   };
 
   const handleMasterItemEdit = (masterItem: MasterItem) => {
       openEditMasterItemModal(masterItem.id);
-      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+      masterItemContextMenu.closeMenu();
   };
 
   const handleMoveMasterItem = (masterItem: MasterItem): void => {
       setMoveMasterItemDialog({ isOpen: true, masterItem });
-      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+      masterItemContextMenu.closeMenu();
   };
 
   const handleMoveMasterItemClose = (): void => {
@@ -884,47 +744,7 @@ export default function ProductsClient({
       }
   };
 
-  // Close context menus on global click or Escape
-  useEffect(() => {
-      const handleClick = () => {
-          if (categoryContextMenu.visible) {
-              setCategoryContextMenu(prev => ({ ...prev, visible: false }));
-          }
-          if (masterItemContextMenu.visible) {
-              setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
-          }
-          if (backgroundContextMenu.visible) {
-              setBackgroundContextMenu(prev => ({ ...prev, visible: false }));
-          }
-      };
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.key === 'Escape') {
-              if (categoryContextMenu.visible) {
-                  setCategoryContextMenu(prev => ({ ...prev, visible: false }));
-              }
-              if (masterItemContextMenu.visible) {
-                  setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
-              }
-              if (backgroundContextMenu.visible) {
-                  setBackgroundContextMenu(prev => ({ ...prev, visible: false }));
-              }
-          }
-      };
-
-      if (categoryContextMenu.visible || masterItemContextMenu.visible || backgroundContextMenu.visible) {
-          const timer = setTimeout(() => {
-              window.addEventListener('click', handleClick);
-              window.addEventListener('keydown', handleKeyDown);
-          }, 10);
-
-          return () => {
-              clearTimeout(timer);
-              window.removeEventListener('click', handleClick);
-              window.removeEventListener('keydown', handleKeyDown);
-          };
-      }
-  }, [categoryContextMenu.visible, masterItemContextMenu.visible, backgroundContextMenu.visible]);
+  // Context menu close handlers (now handled by useContextMenu hook automatically)
 
   const handleCopyTags = (masterItem: MasterItem) => {
       setCopiedTags({
@@ -934,12 +754,12 @@ export default function ProductsClient({
           locations: masterItem.locations || null,
           sourceName: masterItem.name
       });
-      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+      masterItemContextMenu.closeMenu();
       setToastMessage(`Tags copied from "${masterItem.name}"`);
   };
 
   const handlePasteTags = (targetMasterItem: MasterItem) => {
-      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
+      masterItemContextMenu.closeMenu();
       if (!copiedTags) return;
       
       // Check if target has existing tags
@@ -948,9 +768,9 @@ export default function ProductsClient({
           (targetMasterItem.demographics && targetMasterItem.demographics.length > 0) ||
           (targetMasterItem.timeframes && targetMasterItem.timeframes.length > 0) ||
           (targetMasterItem.locations && targetMasterItem.locations.length > 0);
-      
+
       if (hasExistingTags) {
-          setPasteConfirmModal({ targetMasterItem });
+          modals.openPasteConfirm(targetMasterItem);
       } else {
           executePaste(targetMasterItem);
       }
@@ -987,7 +807,7 @@ export default function ProductsClient({
       } catch (error) {
           setToastMessage('Failed to paste tags');
       }
-      setPasteConfirmModal(null);
+      modals.closePasteConfirm();
   };
 
   const handleContextMenu = (e: React.MouseEvent, product: Product) => {
@@ -997,172 +817,161 @@ export default function ProductsClient({
           return;
       }
       e.preventDefault();
-      // Close category menu if open
-      setCategoryContextMenu(prev => ({ ...prev, visible: false }));
-      // Close master item menu if open
-      setMasterItemContextMenu(prev => ({ ...prev, visible: false }));
-      setContextMenu({ x: e.clientX, y: e.clientY, product });
+      // Close other menus
+      categoryContextMenu.closeMenu();
+      masterItemContextMenu.closeMenu();
+      productContextMenu.openMenu(e, product);
   };
 
   const openCategoryModal = (product: Product) => {
-      setCategoryModalProduct(product);
-      setContextMenu(null);
-      
+      productContextMenu.closeMenu();
+
       // Initialize category dropdowns based on product's current master item
       const master = allMasterItems.find(m => m.id === product.masterItemId);
       if (master) {
           const cat = categories.find(c => c.id === master.categoryId); // Fixed: use camelCase
           if (cat) {
               if (cat.parentId) {
-                  setCategoryModalCategory(cat.parentId);
-                  setCategoryModalSubCategory(cat.id);
+                  modals.setCategoryModalCategory(cat.parentId);
+                  modals.setCategoryModalSubCategory(cat.id);
               } else {
-                  setCategoryModalCategory(cat.id);
-                  setCategoryModalSubCategory("");
+                  modals.setCategoryModalCategory(cat.id);
+                  modals.setCategoryModalSubCategory("");
               }
           } else {
-              setCategoryModalCategory("");
-              setCategoryModalSubCategory("");
+              modals.setCategoryModalCategory("");
+              modals.setCategoryModalSubCategory("");
           }
-          setCategoryModalMasterItem(product.masterItemId);
+          modals.setCategoryModalMasterItem(product.masterItemId);
       } else {
-          setCategoryModalCategory("");
-          setCategoryModalSubCategory("");
-          setCategoryModalMasterItem("");
+          modals.setCategoryModalCategory("");
+          modals.setCategoryModalSubCategory("");
+          modals.setCategoryModalMasterItem("");
       }
-      
-      setIsCategoryModalOpen(true);
+
+      modals.openCategoryModal(product);
   };
 
   // Derived lists for category modal
   const categoryModalSubCategories = useMemo(() => {
-      if (!categoryModalCategory) return [];
-      return allCategories.filter(c => c.parentId === categoryModalCategory);
-  }, [allCategories, categoryModalCategory]);
+      if (!modals.categoryModalCategory) return [];
+      return allCategories.filter(c => c.parentId === modals.categoryModalCategory);
+  }, [allCategories, modals.categoryModalCategory]);
 
   const categoryModalFilteredMasterItems = useMemo(() => {
-      if (categoryModalSubCategory) {
-          return allMasterItems.filter(m => m.categoryId === categoryModalSubCategory); // Fixed: use camelCase
+      if (modals.categoryModalSubCategory) {
+          return allMasterItems.filter(m => m.categoryId === modals.categoryModalSubCategory); // Fixed: use camelCase
       }
-      if (categoryModalCategory) {
+      if (modals.categoryModalCategory) {
           const childCategoryIds = categories
-              .filter(c => c.parentId === categoryModalCategory)
+              .filter(c => c.parentId === modals.categoryModalCategory)
               .map(c => c.id);
-          const relevantIds = new Set([categoryModalCategory, ...childCategoryIds]);
+          const relevantIds = new Set([modals.categoryModalCategory, ...childCategoryIds]);
           return allMasterItems.filter(m => relevantIds.has(m.categoryId)); // Fixed: use camelCase
       }
       return [];
-  }, [allMasterItems, categoryModalCategory, categoryModalSubCategory, categories]);
+  }, [allMasterItems, modals.categoryModalCategory, modals.categoryModalSubCategory, categories]);
 
   const handleSaveCategoryChange = async () => {
-      if (!categoryModalMasterItem) return;
-      
-      if (categoryModalProduct) {
-        const formData = new FormData();
-        formData.append('id', categoryModalProduct.id);
-        formData.append('name', categoryModalProduct.name || '');
-        formData.append('masterItemId', categoryModalMasterItem);
+      if (!modals.categoryModalMasterItem) return;
 
-        if (categoryModalProduct.supplierId) {
-            formData.append('supplierId', categoryModalProduct.supplierId);
+      if (modals.categoryModalProduct) {
+        const formData = new FormData();
+        formData.append('id', modals.categoryModalProduct.id);
+        formData.append('name', modals.categoryModalProduct.name || '');
+        formData.append('masterItemId', modals.categoryModalMasterItem);
+
+        if (modals.categoryModalProduct.supplierId) {
+            formData.append('supplierId', modals.categoryModalProduct.supplierId);
         }
 
-        formData.append('price', String(categoryModalProduct.price ?? 0));
-        formData.append('type', categoryModalProduct.type || 'AFFILIATE');
-        formData.append('productUrl', categoryModalProduct.productUrl || '');
-        formData.append('imageUrl', categoryModalProduct.imageUrl || '');
-        formData.append('description', categoryModalProduct.description || '');
-        formData.append('asin', categoryModalProduct.asin || categoryModalProduct.sku || '');
-        
-        if (categoryModalProduct.metadata) {
-            Object.entries(categoryModalProduct.metadata).forEach(([key, val]) => {
+        formData.append('price', String(modals.categoryModalProduct.price ?? 0));
+        formData.append('type', modals.categoryModalProduct.type || 'AFFILIATE');
+        formData.append('productUrl', modals.categoryModalProduct.productUrl || '');
+        formData.append('imageUrl', modals.categoryModalProduct.imageUrl || '');
+        formData.append('description', modals.categoryModalProduct.description || '');
+        formData.append('asin', modals.categoryModalProduct.asin || modals.categoryModalProduct.sku || '');
+
+        if (modals.categoryModalProduct.metadata) {
+            Object.entries(modals.categoryModalProduct.metadata).forEach(([key, val]) => {
                 if (val != null) formData.append(`meta_${key}`, String(val));
             });
         }
-        
+
         await updateProduct(formData);
       } else if (selectedIds.size > 0) {
-          await bulkUpdateProducts(Array.from(selectedIds), { masterItemId: categoryModalMasterItem });
+          await bulkUpdateProducts(Array.from(selectedIds), { masterItemId: modals.categoryModalMasterItem });
           setSelectedIds(new Set());
       }
 
-      setIsCategoryModalOpen(false);
-      setCategoryModalProduct(null);
+      modals.closeCategoryModal();
   };
 
   // Derived Lists
   const rootCategories = useMemo(() => allCategories.filter(c => !c.parentId), [allCategories]);
 
-  // New Modal State
-  const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
-  const [isAmazonSearchModalOpen, setIsAmazonSearchModalOpen] = useState(false);
-  const [preSelectedCategory, setPreSelectedCategory] = useState<string>("");
-  const [preSelectedSubCategory, setPreSelectedSubCategory] = useState<string>("");
-  const [preSelectedMasterItem, setPreSelectedMasterItem] = useState<string>("");
-
   const resolvePreSelectedCategories = () => {
       // Priority 1: Active Master Item Selection
-      if (activeMasterItemId) {
-          const master = allMasterItems.find(m => m.id === activeMasterItemId);
+      if (navigation.activeMasterItemId) {
+          const master = allMasterItems.find(m => m.id === navigation.activeMasterItemId);
           if (master) {
               const cat = categories.find(c => c.id === master.categoryId); // Fixed: use camelCase
               if (cat) {
                   if (cat.parentId) {
-                      setPreSelectedCategory(cat.parentId);
-                      setPreSelectedSubCategory(cat.id);
+                      modals.setPreSelectedCategory(cat.parentId);
+                      modals.setPreSelectedSubCategory(cat.id);
                   } else {
-                      setPreSelectedCategory(cat.id);
-                      setPreSelectedSubCategory("");
+                      modals.setPreSelectedCategory(cat.id);
+                      modals.setPreSelectedSubCategory("");
                   }
               }
-              setPreSelectedMasterItem(activeMasterItemId);
+              modals.setPreSelectedMasterItem(navigation.activeMasterItemId);
               return;
           }
       }
       
       // Priority 2: Active Category/SubCategory Selection
-      if (activeCategoryId && activeCategoryId !== 'uncategorized') {
-          const cat = allCategories.find(c => c.id === activeCategoryId);
+      if (navigation.activeCategoryId && navigation.activeCategoryId !== 'uncategorized') {
+          const cat = allCategories.find(c => c.id === navigation.activeCategoryId);
           if (cat) {
               if (cat.parentId) {
-                  setPreSelectedCategory(cat.parentId);
-                  setPreSelectedSubCategory(cat.id);
+                  modals.setPreSelectedCategory(cat.parentId);
+                  modals.setPreSelectedSubCategory(cat.id);
               } else {
-                  setPreSelectedCategory(cat.id);
-                  setPreSelectedSubCategory("");
+                  modals.setPreSelectedCategory(cat.id);
+                  modals.setPreSelectedSubCategory("");
               }
-              setPreSelectedMasterItem("");
+              modals.setPreSelectedMasterItem("");
               return;
           }
       }
 
       // Default: No pre-selection
-      setPreSelectedCategory("");
-      setPreSelectedSubCategory("");
-      setPreSelectedMasterItem("");
+      modals.setPreSelectedCategory("");
+      modals.setPreSelectedSubCategory("");
+      modals.setPreSelectedMasterItem("");
   };
 
   const handleManualSelect = () => {
-      setIsChoiceModalOpen(false);
-      setEditingProduct(null);
+      modals.closeChoiceModal();
+      modals.openProductEdit(null);
       // Only resolve categories if not already pre-selected (e.g., from context menu)
-      if (!preSelectedMasterItem && !preSelectedCategory) {
+      if (!modals.preSelectedMasterItem && !modals.preSelectedCategory) {
           resolvePreSelectedCategories();
       }
-      setIsModalOpen(true);
   };
 
   const handleAmazonSelect = () => {
-      setIsChoiceModalOpen(false);
-      setIsAmazonSearchModalOpen(true);
+      modals.closeChoiceModal();
+      modals.openAmazonSearch();
   };
 
   const handleAmazonProductSelected = (product: any) => {
-      setIsAmazonSearchModalOpen(false);
+      modals.closeAmazonSearch();
 
       // Find Amazon supplier
       const amazonSupplier = suppliers.find(s => s.name?.toLowerCase() === 'amazon');
-      
+
       // Fix URL - ensure it's a full URL
       let productUrl = product.url;
       if (productUrl && !productUrl.startsWith('http')) {
@@ -1192,137 +1001,31 @@ export default function ProductsClient({
           }
       };
 
-      setEditingProduct(mappedProduct as Product);
+      modals.openProductEdit(mappedProduct as Product);
       // Only resolve categories if not already pre-selected (e.g., from context menu)
-      if (!preSelectedMasterItem && !preSelectedCategory) {
+      if (!modals.preSelectedMasterItem && !modals.preSelectedCategory) {
           resolvePreSelectedCategories();
       }
-      setIsModalOpen(true);
   };
-  
+
   // Initialize form state when opening modal
   const openEditModal = (product: Product) => {
-      setEditingProduct(product);
-      setPreSelectedCategory(""); // Reset for edit mode (it uses product's master item)
-      setPreSelectedSubCategory("");
-      setIsModalOpen(true);
+      modals.openProductEdit(product);
+      modals.setPreSelectedCategory(""); // Reset for edit mode (it uses product's master item)
+      modals.setPreSelectedSubCategory("");
   };
 
   const openNewModal = () => {
-      setIsChoiceModalOpen(true);
+      modals.openChoiceModal();
   };
 
-  // Sorting Helper
-  const handleSort = (field: string) => {
-      if (sortField === field) {
-          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-      } else {
-          setSortField(field);
-          setSortDirection('asc');
-      }
-  };
-
+  // Sorting Helper (now in filters hook)
   const SortIcon = ({ field }: { field: string }) => {
-      if (sortField !== field) return <div className="w-4 h-4 opacity-0 group-hover/th:opacity-30 flex flex-col -space-y-1"><ChevronUp className="w-3 h-3" /><ChevronDown className="w-3 h-3" /></div>;
-      return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 text-primary" strokeWidth={2.5} /> : <ChevronDown className="w-4 h-4 text-primary" strokeWidth={2.5} />;
+      if (filters.sortField !== field) return <div className="w-4 h-4 opacity-0 group-hover/th:opacity-30 flex flex-col -space-y-1"><ChevronUp className="w-3 h-3" /><ChevronDown className="w-3 h-3" /></div>;
+      return filters.sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 text-primary" strokeWidth={2.5} /> : <ChevronDown className="w-4 h-4 text-primary" strokeWidth={2.5} />;
   };
 
-  // Filter & Sort Logic
-  const processedProducts = useMemo(() => {
-    let result = products.filter(p => {
-        // Text Search
-        const term = searchTerm.toLowerCase();
-        const matchesSearch = !term || (
-            (p.name && p.name.toLowerCase().includes(term)) ||
-            (p.sku && p.sku.toLowerCase().includes(term)) ||
-            (p.asin && p.asin.toLowerCase().includes(term)) ||
-            (p.supplier?.name && p.supplier.name.toLowerCase().includes(term))
-        );
-
-        // Tag Filter (with include/exclude support)
-        let matchesTags = true;
-        if (selectedTags.length > 0) {
-            const master = masterItems.find(m => m.id === p.masterItemId);
-            const allProductTags = new Set([
-                ...(p.scenarios || master?.scenarios || []),
-                ...(p.demographics || master?.demographics || []),
-                ...(p.timeframes || master?.timeframes || []),
-                ...(p.locations || master?.locations || []),
-                ...(master?.scenarios || []),
-                ...(master?.demographics || []),
-                ...(master?.timeframes || []),
-                ...(master?.locations || [])
-            ]);
-            
-            const includeTags = selectedTags.filter(t => !t.startsWith('!')).map(t => t);
-            const excludeTags = selectedTags.filter(t => t.startsWith('!')).map(t => t.slice(1));
-            
-            const hasAllInclude = includeTags.every(tag => allProductTags.has(tag));
-            const hasNoExclude = excludeTags.every(tag => !allProductTags.has(tag));
-            matchesTags = hasAllInclude && hasNoExclude;
-        }
-
-        // Supplier Filter (with include/exclude support)
-        let matchesSupplier = true;
-        if (selectedSuppliers.length > 0) {
-            const includeSuppliers = selectedSuppliers.filter(s => !s.startsWith('!')).map(s => s);
-            const excludeSuppliers = selectedSuppliers.filter(s => s.startsWith('!')).map(s => s.slice(1));
-            
-            // If there are include suppliers, must match one of them
-            const matchesInclude = includeSuppliers.length === 0 || includeSuppliers.includes(p.supplierId);
-            // Must not match any exclude suppliers
-            const matchesExclude = !excludeSuppliers.includes(p.supplierId);
-            matchesSupplier = matchesInclude && matchesExclude;
-        }
-
-        // Price Filter
-        let matchesPrice = true;
-        if (filterPriceRange) {
-            const price = Number(p.price) || 0;
-            if (filterPriceRange === "0-50") matchesPrice = price < 50;
-            else if (filterPriceRange === "50-100") matchesPrice = price >= 50 && price <= 100;
-            else if (filterPriceRange === "100-500") matchesPrice = price > 100 && price <= 500;
-            else if (filterPriceRange === "500+") matchesPrice = price > 500;
-        }
-
-        return matchesSearch && matchesTags && matchesSupplier && matchesPrice;
-    });
-
-    // Sorting
-    result.sort((a, b) => {
-        let valA = a[sortField as keyof Product] as any;
-        let valB = b[sortField as keyof Product] as any;
-
-        if (sortField === 'supplier') {
-            valA = a.supplier?.name || '';
-            valB = b.supplier?.name || '';
-        }
-        
-        if (sortField === 'master_item') {
-            const masterA = masterItems.find(m => m.id === a.masterItemId);
-            const masterB = masterItems.find(m => m.id === b.masterItemId);
-            valA = masterA?.name || '';
-            valB = masterB?.name || '';
-        }
-
-        // Handle price sorting - convert string to number
-        if (sortField === 'price') {
-            valA = Number(valA) || 0;
-            valB = Number(valB) || 0;
-        } else {
-            if (typeof valA === 'string') valA = valA.toLowerCase();
-            if (typeof valB === 'string') valB = valB.toLowerCase();
-        }
-
-        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-    });
-
-    return result;
-  }, [products, searchTerm, selectedTags, selectedSuppliers, filterPriceRange, sortField, sortDirection, masterItems]);
-
-  // Grouping Logic
+  // Grouping Logic (uses filters.processedProducts)
   const groupedProducts = useMemo(() => {
       type MasterGroup = { masterItem: MasterItem | null, products: Product[] };
       type SubGroup = { subCategory: Category | null, masterItems: Record<string, MasterGroup> };
@@ -1354,7 +1057,7 @@ export default function ProductsClient({
 
       // Build hierarchy from filtered products only (bottom-up approach)
       // This ensures only categories/subcategories/master items with matching products appear
-      processedProducts.forEach(p => {
+      filters.processedProducts.forEach(p => {
           const masterItem = allMasterItems.find(m => m.id === p.masterItemId);
           let catId = 'uncategorized';
           let subCatId = null;
@@ -1382,7 +1085,7 @@ export default function ProductsClient({
       });
 
       return groups;
-  }, [processedProducts, allMasterItems, allCategories]);
+  }, [filters.processedProducts, allMasterItems, allCategories]);
 
   // Build flat navigation list for keyboard navigation
   const navigationItems = useMemo(() => {
@@ -1395,20 +1098,20 @@ export default function ProductsClient({
 
       sortedGroups.forEach(group => {
           items.push({ id: group.category.id, type: 'category' });
-          
-          if (expandedCategories.has(group.category.id)) {
+
+          if (navigation.expandedCategories.has(group.category.id)) {
               const sortedSubGroups = Object.values(group.subGroups).sort((a, b) => {
                   const nameA = a.subCategory?.name || '';
                   const nameB = b.subCategory?.name || '';
                   return nameA.localeCompare(nameB);
               });
-              
+
               sortedSubGroups.forEach(subGroup => {
                   if (subGroup.subCategory) {
-                      items.push({ 
-                          id: subGroup.subCategory.id, 
+                      items.push({
+                          id: subGroup.subCategory.id,
                           type: 'subcategory',
-                          parentId: group.category.id 
+                          parentId: group.category.id
                       });
                   }
               });
@@ -1416,15 +1119,7 @@ export default function ProductsClient({
       });
 
       return items;
-  }, [groupedProducts, expandedCategories]);
-
-  // Check if any filters are active
-  const hasActiveFilters = useMemo(() => {
-      return searchTerm !== "" ||
-             selectedTags.length > 0 ||
-             selectedSuppliers.length > 0 ||
-             filterPriceRange !== "";
-  }, [searchTerm, selectedTags, selectedSuppliers, filterPriceRange]);
+  }, [groupedProducts, navigation.expandedCategories]);
 
   // Count total categories and visible categories
   const categoryCounts = useMemo(() => {
@@ -1433,104 +1128,23 @@ export default function ProductsClient({
       return { total: totalCategories, visible: visibleCategories };
   }, [allCategories, groupedProducts]);
 
-  // Keyboard navigation handler
-  useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-          // Don't handle if user is typing in an input/textarea
-          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-              return;
-          }
-
-          // Don't handle if a modal is open
-          if (isModalOpen || isMasterItemModalOpen || isChoiceModalOpen || isAmazonSearchModalOpen) {
-              return;
-          }
-
-          const currentIndex = focusedItemId 
-              ? navigationItems.findIndex(item => item.id === focusedItemId)
-              : -1;
-
-          switch (e.key) {
-              case 'ArrowDown':
-                  e.preventDefault();
-                  if (currentIndex === -1 && navigationItems.length > 0) {
-                      // Start navigation from first item
-                      setFocusedItemId(navigationItems[0].id);
-                      setFocusedItemType(navigationItems[0].type);
-                      setActiveCategoryId(navigationItems[0].id);
-                  } else if (currentIndex < navigationItems.length - 1) {
-                      const nextItem = navigationItems[currentIndex + 1];
-                      setFocusedItemId(nextItem.id);
-                      setFocusedItemType(nextItem.type);
-                      setActiveCategoryId(nextItem.id);
-                      
-                      // Scroll into view
-                      const element = document.querySelector(`[data-nav-id="${nextItem.id}"]`);
-                      element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  }
-                  break;
-
-              case 'ArrowUp':
-                  e.preventDefault();
-                  if (currentIndex > 0) {
-                      const prevItem = navigationItems[currentIndex - 1];
-                      setFocusedItemId(prevItem.id);
-                      setFocusedItemType(prevItem.type);
-                      setActiveCategoryId(prevItem.id);
-                      
-                      // Scroll into view
-                      const element = document.querySelector(`[data-nav-id="${prevItem.id}"]`);
-                      element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  } else if (currentIndex === -1 && navigationItems.length > 0) {
-                      // Start from last item
-                      const lastItem = navigationItems[navigationItems.length - 1];
-                      setFocusedItemId(lastItem.id);
-                      setFocusedItemType(lastItem.type);
-                      setActiveCategoryId(lastItem.id);
-                  }
-                  break;
-
-              case 'ArrowRight':
-                  e.preventDefault();
-                  if (focusedItemId) {
-                      const currentItem = navigationItems.find(item => item.id === focusedItemId);
-                      if (currentItem) {
-                          if (currentItem.type === 'category') {
-                              if (!expandedCategories.has(currentItem.id)) {
-                                  toggleCategory(currentItem.id);
-                              }
-                          } else if (currentItem.type === 'subcategory') {
-                              if (!expandedSubCategories.has(currentItem.id)) {
-                                  toggleSubCategory(currentItem.id);
-                              }
-                          }
-                      }
-                  }
-                  break;
-
-              case 'ArrowLeft':
-                  e.preventDefault();
-                  if (focusedItemId) {
-                      const currentItem = navigationItems.find(item => item.id === focusedItemId);
-                      if (currentItem) {
-                          if (currentItem.type === 'category') {
-                              if (expandedCategories.has(currentItem.id)) {
-                                  toggleCategory(currentItem.id);
-                              }
-                          } else if (currentItem.type === 'subcategory') {
-                              if (expandedSubCategories.has(currentItem.id)) {
-                                  toggleSubCategory(currentItem.id);
-                              }
-                          }
-                      }
-                  }
-                  break;
-          }
-      };
-
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedItemId, focusedItemType, navigationItems, expandedCategories, expandedSubCategories, isModalOpen, isMasterItemModalOpen, isChoiceModalOpen, isAmazonSearchModalOpen, toggleCategory, toggleSubCategory]);
+  // Keyboard navigation (now handled by useKeyboardNavigation hook)
+  const keyboard = useKeyboardNavigation(navigationItems, {
+      onNavigate: (item) => {
+          navigation.handleCategorySelect(item.id);
+      },
+      onExpand: (itemId, type) => {
+          if (type === 'category') navigation.toggleCategory(itemId);
+          else navigation.toggleSubCategory(itemId);
+      },
+      onCollapse: (itemId, type) => {
+          if (type === 'category') navigation.toggleCategory(itemId);
+          else navigation.toggleSubCategory(itemId);
+      },
+      isModalOpen: modals.isAnyModalOpen,
+      expandedCategories: navigation.expandedCategories,
+      expandedSubCategories: navigation.expandedSubCategories,
+  });
 
   const visibleProductIds = useMemo(() => {
       const ids: string[] = [];
@@ -1541,7 +1155,7 @@ export default function ProductsClient({
       });
 
       sortedGroups.forEach(group => {
-          if (expandedCategories.has(group.category.id)) {
+          if (navigation.expandedCategories.has(group.category.id)) {
               Object.values(group.subGroups).forEach(subGroup => {
                   Object.values(subGroup.masterItems).forEach(masterGroup => {
                       masterGroup.products.forEach(p => ids.push(p.id));
@@ -1550,7 +1164,7 @@ export default function ProductsClient({
           }
       });
       return ids;
-  }, [groupedProducts, expandedCategories]);
+  }, [groupedProducts, navigation.expandedCategories]);
 
   const handleProductClick = (e: React.MouseEvent, productId: string) => {
       if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('input')) return;
@@ -1804,14 +1418,14 @@ export default function ProductsClient({
         {/* Toolbar: Search & Filters */}
         <div className="bg-muted/50 p-4 rounded-xl border border-border flex flex-col lg:flex-row gap-4 items-center">
             <ProductCatalogFilter
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                selectedTags={selectedTags}
-                onTagsChange={setSelectedTags}
-                selectedSuppliers={selectedSuppliers}
-                onSuppliersChange={setSelectedSuppliers}
-                priceRange={filterPriceRange}
-                onPriceRangeChange={setFilterPriceRange}
+                searchTerm={filters.searchTerm}
+                onSearchChange={filters.setSearchTerm}
+                selectedTags={filters.selectedTags}
+                onTagsChange={filters.setSelectedTags}
+                selectedSuppliers={filters.selectedSuppliers}
+                onSuppliersChange={filters.setSelectedSuppliers}
+                priceRange={filters.filterPriceRange}
+                onPriceRangeChange={filters.setFilterPriceRange}
                 suppliers={suppliers}
                 className="flex-1 w-full"
             />
@@ -1821,7 +1435,16 @@ export default function ProductsClient({
                 <div className="flex gap-1 border-l border-border pl-3 ml-1">
                     <button
                         type="button"
-                        onClick={expandAllCategories}
+                        onClick={() => {
+                            const allCatIds = Object.keys(groupedProducts);
+                            const allSubCatIds: string[] = [];
+                            Object.values(groupedProducts).forEach(group => {
+                                Object.values(group.subGroups).forEach(subGroup => {
+                                    if (subGroup.subCategory) allSubCatIds.push(subGroup.subCategory.id);
+                                });
+                            });
+                            navigation.expandAll(allCatIds, allSubCatIds);
+                        }}
                         className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                         title="Expand All"
                     >
@@ -1829,7 +1452,7 @@ export default function ProductsClient({
                     </button>
                     <button
                         type="button"
-                        onClick={collapseAllCategories}
+                        onClick={navigation.collapseAll}
                         className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                         title="Collapse All"
                     >
@@ -1841,12 +1464,12 @@ export default function ProductsClient({
       </div>
 
       {/* Filter Active Indicator */}
-      {hasActiveFilters && (
+      {filters.hasActiveFilters && (
         <div className="mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={2.5} />
           <span className="text-blue-900 dark:text-blue-100">
             Showing <strong>{categoryCounts.visible}</strong> of <strong>{categoryCounts.total}</strong> categories
-            {searchTerm && <span className="ml-1 text-blue-700 dark:text-blue-300">matching "{searchTerm}"</span>}
+            {filters.searchTerm && <span className="ml-1 text-blue-700 dark:text-blue-300">matching "{filters.searchTerm}"</span>}
           </span>
         </div>
       )}
@@ -1866,27 +1489,27 @@ export default function ProductsClient({
                     return a.category.name.localeCompare(b.category.name);
                 })
                 .map(group => {
-                const isExpanded = expandedCategories.has(group.category.id);
-                const isCategoryActive = activeCategoryId === group.category.id;
-                const itemCount = Object.values(group.subGroups).reduce((acc, g) => 
+                const isExpanded = navigation.expandedCategories.has(group.category.id);
+                const isCategoryActive = navigation.activeCategoryId === group.category.id;
+                const itemCount = Object.values(group.subGroups).reduce((acc, g) =>
                     acc + Object.values(g.masterItems).reduce((acc2, m) => acc2 + m.products.length, 0)
                 , 0);
-                
+
                 return (
                 <div key={group.category.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Main Category Header - Collapsible */}
                     <div
                         data-nav-id={group.category.id}
                         className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/cat ${
-                            isCategoryActive || focusedItemId === group.category.id
+                            isCategoryActive || keyboard.focusedItemId === group.category.id
                                 ? 'bg-primary/10 text-primary'
                                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                         }`}
                         onClick={() => {
-                            toggleCategory(group.category.id);
-                            setFocusedItemId(group.category.id);
-                            setFocusedItemType('category');
-                            setActiveCategoryId(group.category.id);
+                            navigation.toggleCategory(group.category.id);
+                            keyboard.setFocusedItemId(group.category.id);
+                            keyboard.setFocusedItemType('category');
+                            navigation.handleCategorySelect(group.category.id);
                         }}
                         onContextMenu={(e) => handleCategoryContextMenu(e, group.category)}
                     >
@@ -1902,7 +1525,7 @@ export default function ProductsClient({
                          
                          <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); handleCategorySelect(group.category.id); }}
+                            onClick={(e) => { e.stopPropagation(); navigation.handleCategorySelect(group.category.id); }}
                             className="flex items-center gap-2 flex-1 text-left"
                          >
                              <div className="flex-1 min-w-0">
@@ -1928,8 +1551,8 @@ export default function ProductsClient({
                     <div className="grid gap-1 mt-1 ml-4">
                         {Object.values(group.subGroups).map(subGroup => {
                             const subCatId = subGroup.subCategory?.id || `root-${group.category.id}`;
-                            const isSubExpanded = subGroup.subCategory ? expandedSubCategories.has(subCatId) : true;
-                            const isSubActive = subGroup.subCategory ? activeCategoryId === subGroup.subCategory.id : false;
+                            const isSubExpanded = subGroup.subCategory ? navigation.expandedSubCategories.has(subCatId) : true;
+                            const isSubActive = subGroup.subCategory ? navigation.activeCategoryId === subGroup.subCategory.id : false;
 
                             // Sort Master Items by Name (or keep original order?)
                             // Using sort by name for consistency as previously products were sorted but now we have groups.
@@ -1946,15 +1569,15 @@ export default function ProductsClient({
                                     <div
                                         data-nav-id={subGroup.subCategory.id}
                                         className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors group/subcat ${
-                                            isSubActive || focusedItemId === subGroup.subCategory.id
+                                            isSubActive || keyboard.focusedItemId === subGroup.subCategory.id
                                                 ? 'bg-primary/10 text-primary'
                                                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                                         }`}
                                         onClick={() => {
-                                            toggleSubCategory(subCatId);
-                                            setFocusedItemId(subGroup.subCategory!.id);
-                                            setFocusedItemType('subcategory');
-                                            setActiveCategoryId(subGroup.subCategory!.id);
+                                            navigation.toggleSubCategory(subCatId);
+                                            keyboard.setFocusedItemId(subGroup.subCategory!.id);
+                                            keyboard.setFocusedItemType('subcategory');
+                                            navigation.handleCategorySelect(subGroup.subCategory!.id);
                                         }}
                                         onContextMenu={(e) => handleCategoryContextMenu(e, subGroup.subCategory!)}
                                     >
@@ -1970,7 +1593,7 @@ export default function ProductsClient({
                                         
                                         <button
                                             type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleCategorySelect(subGroup.subCategory!.id); }}
+                                            onClick={(e) => { e.stopPropagation(); navigation.handleCategorySelect(subGroup.subCategory!.id); }}
                                             className="flex items-center gap-2 flex-1 text-left"
                                         >
                                             <div className="flex-1 min-w-0">
@@ -1996,7 +1619,7 @@ export default function ProductsClient({
                                 {(isSubExpanded || !subGroup.subCategory) && (
                                 <div className="space-y-4 mt-2 ml-4">
                                     {sortedMasterGroups.map(masterGroup => {
-                                        const isMasterActive = masterGroup.masterItem?.id === activeMasterItemId;
+                                        const isMasterActive = masterGroup.masterItem?.id === navigation.activeMasterItemId;
                                         return (
                                         <div key={masterGroup.masterItem?.id || 'nomaster'} className="bg-card border rounded-xl overflow-hidden shadow-sm transition-colors">
                                             {/* Master Item Header */}
@@ -2007,7 +1630,7 @@ export default function ProductsClient({
                                                             ? 'bg-success/10'
                                                             : 'bg-muted/40 hover:bg-muted/60'
                                                     }`}
-                                                    onClick={() => handleMasterItemSelect(masterGroup.masterItem!.id)}
+                                                    onClick={() => navigation.handleMasterItemSelect(masterGroup.masterItem!.id)}
                                                     onContextMenu={(e) => handleMasterItemContextMenu(e, masterGroup.masterItem!)}
                                                 >
                                                     <div className="flex items-start justify-between gap-4">
@@ -2072,13 +1695,13 @@ export default function ProductsClient({
                                             <table className="w-full text-left text-sm text-muted-foreground table-fixed">
                                                 <thead className="bg-background/50 text-muted-foreground text-[10px] uppercase font-medium border-b border-border/50">
                                                     <tr>
-                                                        <th className="px-6 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('name')}>
+                                                        <th className="px-6 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => filters.handleSort('name')}>
                                                             <div className="flex items-center gap-2">Product <SortIcon field="name" /></div>
                                                         </th>
-                                                        <th className="px-6 py-2 w-[180px] cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('supplier')}>
+                                                        <th className="px-6 py-2 w-[180px] cursor-pointer hover:text-foreground group/th" onClick={() => filters.handleSort('supplier')}>
                                                             <div className="flex items-center gap-2">Supplier <SortIcon field="supplier" /></div>
                                                         </th>
-                                                        <th className="px-6 py-2 w-[120px] cursor-pointer hover:text-foreground group/th" onClick={() => handleSort('price')}>
+                                                        <th className="px-6 py-2 w-[120px] cursor-pointer hover:text-foreground group/th" onClick={() => filters.handleSort('price')}>
                                                             <div className="flex items-center gap-2">Price <SortIcon field="price" /></div>
                                                         </th>
                                                     </tr>
@@ -2365,16 +1988,16 @@ export default function ProductsClient({
 
       {/* Add Product Choice Modal */}
       <AddProductChoiceModal
-          isOpen={isChoiceModalOpen}
-          onClose={() => setIsChoiceModalOpen(false)}
+          isOpen={modals.isChoiceModalOpen}
+          onClose={modals.closeChoiceModal}
           onManualSelect={handleManualSelect}
           onAmazonSelect={handleAmazonSelect}
       />
 
       {/* Amazon Search Dialog */}
       <AmazonSearchDialog
-          isOpen={isAmazonSearchModalOpen}
-          onClose={() => setIsAmazonSearchModalOpen(false)}
+          isOpen={modals.isAmazonSearchModalOpen}
+          onClose={modals.closeAmazonSearch}
           onSelect={handleAmazonProductSelected}
       />
 
@@ -2386,63 +2009,61 @@ export default function ProductsClient({
       />
 
       {/* Product Edit Dialog */}
-      <ProductEditDialog 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        product={editingProduct}
+      <ProductEditDialog
+        isOpen={modals.isModalOpen}
+        onClose={modals.closeProductEdit}
+        product={modals.editingProduct}
         masterItems={masterItems}
         suppliers={suppliers}
         categories={categories}
-        preSelectedCategory={preSelectedCategory}
-        preSelectedSubCategory={preSelectedSubCategory}
-        preSelectedMasterItem={preSelectedMasterItem}
+        preSelectedCategory={modals.preSelectedCategory}
+        preSelectedSubCategory={modals.preSelectedSubCategory}
+        preSelectedMasterItem={modals.preSelectedMasterItem}
       />
 
       {/* New Master Item Modal (For Category Change flow & Editing) */}
       <MasterItemModal
-          isOpen={isMasterItemModalOpen}
-          onClose={() => {
-              setIsMasterItemModalOpen(false);
-              setEditingMasterItem(null);
-              setTargetCategoryForMasterItem(null);
-          }}
+          isOpen={modals.isMasterItemModalOpen}
+          onClose={modals.closeMasterItemEdit}
           onCreated={(newItem) => {
              setAllMasterItems(prev => [...prev, newItem].sort((a, b) => a.name.localeCompare(b.name)));
-             if (isCategoryModalOpen) {
-                setCategoryModalMasterItem(newItem.id);
+             if (modals.isCategoryModalOpen) {
+                modals.setCategoryModalMasterItem(newItem.id);
              }
-             setTargetCategoryForMasterItem(null);
           }}
           onUpdated={(updatedItem) => {
               setAllMasterItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
           }}
-          itemToEdit={editingMasterItem}
+          itemToEdit={modals.editingMasterItem}
           selectedCategoryId={
-            targetCategoryForMasterItem
-              ? targetCategoryForMasterItem.id
-              : (isCategoryModalOpen ? (categoryModalSubCategory || categoryModalCategory) : null)
+            modals.targetCategoryForMasterItem
+              ? modals.targetCategoryForMasterItem.id
+              : (modals.isCategoryModalOpen ? (modals.categoryModalSubCategory || modals.categoryModalCategory) : null)
           }
           selectedCategoryName={
-              editingMasterItem
-                ? allCategories.find(c => c.id === editingMasterItem.categoryId)?.name || 'Unknown Category' // Fixed: use camelCase
-                : targetCategoryForMasterItem
-                  ? targetCategoryForMasterItem.name
-                  : allCategories.find(c => c.id === (isCategoryModalOpen ? (categoryModalSubCategory || categoryModalCategory) : ''))?.name || 'Unknown Category'
+              modals.editingMasterItem
+                ? allCategories.find(c => c.id === modals.editingMasterItem!.categoryId)?.name || 'Unknown Category'
+                : modals.targetCategoryForMasterItem
+                  ? modals.targetCategoryForMasterItem.name
+                  : allCategories.find(c => c.id === (modals.isCategoryModalOpen ? (modals.categoryModalSubCategory || modals.categoryModalCategory) : ''))?.name || 'Unknown Category'
           }
       />
 
-      {/* Context Menu */}
-      {contextMenu && (
+      {/* Product Context Menu */}
+      {productContextMenu.menu && (() => {
+        const product = productContextMenu.menu.item;
+        if (!product) return null;
+        return (
         <div
             className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit animate-in fade-in zoom-in-95"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
+            style={{ top: productContextMenu.menu.y, left: productContextMenu.menu.x }}
             onClick={(e) => e.stopPropagation()}
         >
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => {
-                    openEditModal(contextMenu.product);
-                    setContextMenu(null);
+                    openEditModal(product);
+                    productContextMenu.closeMenu();
                 }}
             >
                 <Pencil className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
@@ -2451,8 +2072,8 @@ export default function ProductsClient({
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => {
-                    setTaggingProductId(contextMenu.product.id);
-                    setContextMenu(null);
+                    setTaggingProductId(product.id);
+                    productContextMenu.closeMenu();
                 }}
             >
                 <Tag className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
@@ -2460,7 +2081,7 @@ export default function ProductsClient({
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => openCategoryModal(contextMenu.product)}
+                onClick={() => openCategoryModal(product)}
             >
                 <FolderTree className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
                 Change Category
@@ -2468,8 +2089,8 @@ export default function ProductsClient({
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => {
-                    openAddToBundleModal(contextMenu.product);
-                    setContextMenu(null);
+                    openAddToBundleModal(product);
+                    productContextMenu.closeMenu();
                 }}
             >
                 <Package className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
@@ -2506,29 +2127,29 @@ export default function ProductsClient({
                     }}
                 >
                     <Truck className="w-4 h-4 text-info flex-shrink-0" strokeWidth={2.5} />
-                    {contextMenu.product.supplierId ? 'Change Supplier' : 'Assign Supplier'}
+                    {product.supplierId ? 'Change Supplier' : 'Assign Supplier'}
                     <ChevronRight className={`w-4 h-4 ml-auto text-muted-foreground transition-transform flex-shrink-0 ${supplierSubmenuOpen ? '' : ''}`} strokeWidth={2.5} />
                 </button>
                 {/* Flyout submenu - positioned to the right */}
                 {supplierSubmenuOpen && supplierSubmenuPosition && (
-                    <div 
+                    <div
                         className="fixed z-[80] inline-flex flex-col w-fit"
-                        style={{ 
+                        style={{
                             top: supplierSubmenuPosition.top,
                             left: supplierSubmenuPosition.left
                         }}
                     >
                         <div className="bg-card border border-border rounded-lg shadow-2xl py-1 max-h-[300px] overflow-y-auto">
                             {suppliersList
-                                .filter(s => s.id !== contextMenu.product.supplierId)
+                                .filter(s => s.id !== product.supplierId)
                                 .map(supplier => (
                                     <button
                                         key={supplier.id}
                                         className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            await bulkUpdateProducts([contextMenu.product.id], { supplierId: supplier.id });
-                                            setContextMenu(null);
+                                            await bulkUpdateProducts([product.id], { supplierId: supplier.id });
+                                            productContextMenu.closeMenu();
                                             setSupplierSubmenuOpen(false);
                                         }}
                                     >
@@ -2536,7 +2157,7 @@ export default function ProductsClient({
                                     </button>
                                 ))
                             }
-                            {suppliersList.filter(s => s.id !== contextMenu.product.supplierId).length === 0 && (
+                            {suppliersList.filter(s => s.id !== product.supplierId).length === 0 && (
                                 <div className="px-4 py-2.5 text-sm text-muted-foreground italic">No other suppliers</div>
                             )}
                         </div>
@@ -2548,41 +2169,45 @@ export default function ProductsClient({
                 className="w-full text-left px-4 py-2.5 hover:bg-destructive/10 text-sm text-destructive flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={async () => {
                     if (confirm('Delete this product?')) {
-                        await deleteProduct(contextMenu.product.id);
+                        await deleteProduct(product.id);
                     }
-                    setContextMenu(null);
+                    productContextMenu.closeMenu();
                 }}
             >
                 <Trash2 className="w-4 h-4" strokeWidth={2.5} />
                 Delete
             </button>
         </div>
-      )}
+        );
+      })()}
 
       {/* Master Item Context Menu */}
-      {masterItemContextMenu.visible && masterItemContextMenu.masterItem && (
+      {masterItemContextMenu.menu && (() => {
+        const masterItem = masterItemContextMenu.menu.item;
+        if (!masterItem) return null;
+        return (
         <div
             className="fixed z-[70] bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden animate-in fade-in zoom-in-95"
-            style={{ top: masterItemContextMenu.y, left: masterItemContextMenu.x }}
+            style={{ top: masterItemContextMenu.menu.y, left: masterItemContextMenu.menu.x }}
             onClick={(e) => e.stopPropagation()}
         >
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleMasterItemEdit(masterItemContextMenu.masterItem!)}
+                onClick={() => handleMasterItemEdit(masterItem)}
             >
                 <Edit className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Edit Master Item
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleAddProductFromMasterItem(masterItemContextMenu.masterItem!)}
+                onClick={() => handleAddProductFromMasterItem(masterItem)}
             >
                 <Plus className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Add Product
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleMoveMasterItem(masterItemContextMenu.masterItem!)}
+                onClick={() => handleMoveMasterItem(masterItem)}
             >
                 <MoveRight className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Move Master Item
@@ -2590,7 +2215,7 @@ export default function ProductsClient({
             <div className="h-px bg-border my-1" />
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={() => handleCopyTags(masterItemContextMenu.masterItem!)}
+                onClick={() => handleCopyTags(masterItem)}
             >
                 <Copy className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Copy Tags
@@ -2601,7 +2226,7 @@ export default function ProductsClient({
                         ? 'hover:bg-muted text-foreground'
                         : 'text-muted-foreground cursor-not-allowed'
                 }`}
-                onClick={() => copiedTags && handlePasteTags(masterItemContextMenu.masterItem!)}
+                onClick={() => copiedTags && handlePasteTags(masterItem)}
                 disabled={!copiedTags}
             >
                 <ClipboardPaste className={`w-4 h-4 flex-shrink-0 ${copiedTags ? 'text-success' : 'text-muted-foreground'}`} strokeWidth={2.5} />
@@ -2613,10 +2238,11 @@ export default function ProductsClient({
                 )}
             </button>
         </div>
-      )}
+        );
+      })()}
 
       {/* Paste Confirmation Modal */}
-      {pasteConfirmModal && copiedTags && (
+      {modals.pasteConfirmModal && copiedTags && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[80]">
             <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-xl shadow-xl animate-in fade-in zoom-in-95">
                 <div className="flex items-center gap-3 mb-4">
@@ -2626,7 +2252,7 @@ export default function ProductsClient({
                     <div>
                         <h2 className="text-lg font-bold text-foreground">Overwrite Existing Tags?</h2>
                         <p className="text-muted-foreground text-sm">
-                            &quot;{pasteConfirmModal.targetMasterItem.name}&quot; already has tags
+                            &quot;{modals.pasteConfirmModal.targetMasterItem.name}&quot; already has tags
                         </p>
                     </div>
                 </div>
@@ -2638,17 +2264,17 @@ export default function ProductsClient({
                             <X className="w-3 h-3" strokeWidth={2.5} /> Current (will be replaced)
                         </h3>
                         <div className="space-y-2 text-xs">
-                            {pasteConfirmModal.targetMasterItem.scenarios?.length ? (
-                                <div><span className="text-muted-foreground">Scenarios:</span> <span className="text-destructive">{pasteConfirmModal.targetMasterItem.scenarios.join(', ')}</span></div>
+                            {modals.pasteConfirmModal.targetMasterItem.scenarios?.length ? (
+                                <div><span className="text-muted-foreground">Scenarios:</span> <span className="text-destructive">{modals.pasteConfirmModal.targetMasterItem.scenarios.join(', ')}</span></div>
                             ) : null}
-                            {pasteConfirmModal.targetMasterItem.demographics?.length ? (
-                                <div><span className="text-muted-foreground">Demographics:</span> <span className="text-success">{pasteConfirmModal.targetMasterItem.demographics.join(', ')}</span></div>
+                            {modals.pasteConfirmModal.targetMasterItem.demographics?.length ? (
+                                <div><span className="text-muted-foreground">Demographics:</span> <span className="text-success">{modals.pasteConfirmModal.targetMasterItem.demographics.join(', ')}</span></div>
                             ) : null}
-                            {pasteConfirmModal.targetMasterItem.timeframes?.length ? (
-                                <div><span className="text-muted-foreground">Timeframes:</span> <span className="text-primary">{pasteConfirmModal.targetMasterItem.timeframes.join(', ')}</span></div>
+                            {modals.pasteConfirmModal.targetMasterItem.timeframes?.length ? (
+                                <div><span className="text-muted-foreground">Timeframes:</span> <span className="text-primary">{modals.pasteConfirmModal.targetMasterItem.timeframes.join(', ')}</span></div>
                             ) : null}
-                            {pasteConfirmModal.targetMasterItem.locations?.length ? (
-                                <div><span className="text-muted-foreground">Locations:</span> <span className="text-warning">{pasteConfirmModal.targetMasterItem.locations.join(', ')}</span></div>
+                            {modals.pasteConfirmModal.targetMasterItem.locations?.length ? (
+                                <div><span className="text-muted-foreground">Locations:</span> <span className="text-warning">{modals.pasteConfirmModal.targetMasterItem.locations.join(', ')}</span></div>
                             ) : null}
                         </div>
                     </div>
@@ -2677,13 +2303,13 @@ export default function ProductsClient({
 
                 <div className="flex justify-end gap-3">
                     <button
-                        onClick={() => setPasteConfirmModal(null)}
+                        onClick={modals.closePasteConfirm}
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                         Cancel
                     </button>
                     <button
-                        onClick={() => executePaste(pasteConfirmModal.targetMasterItem)}
+                        onClick={() => executePaste(modals.pasteConfirmModal!.targetMasterItem)}
                         className="px-4 py-2 bg-warning hover:bg-warning/90 text-warning-foreground text-sm font-medium rounded-lg transition-colors"
                     >
                         Overwrite Tags
@@ -2694,16 +2320,16 @@ export default function ProductsClient({
       )}
 
       {/* Category Change Modal - Supports Single & Bulk */}
-      {isCategoryModalOpen && (categoryModalProduct || selectedIds.size > 0) && (
+      {modals.isCategoryModalOpen && (modals.categoryModalProduct || selectedIds.size > 0) && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
             <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg shadow-xl animate-in fade-in zoom-in-95">
                 <h2 className="text-xl font-bold text-foreground mb-1 flex items-center gap-2">
                     <FolderTree className="w-5 h-5 text-warning" strokeWidth={2.5} />
-                    {categoryModalProduct ? 'Change Category' : 'Bulk Assign Category'}
+                    {modals.categoryModalProduct ? 'Change Category' : 'Bulk Assign Category'}
                 </h2>
                 <p className="text-muted-foreground text-sm mb-6 truncate">
-                    {categoryModalProduct ? (
-                        <>Product: <span className="text-foreground font-medium">{categoryModalProduct.name}</span></>
+                    {modals.categoryModalProduct ? (
+                        <>Product: <span className="text-foreground font-medium">{modals.categoryModalProduct.name}</span></>
                     ) : (
                         <span className="text-foreground font-medium">{selectedIds.size} products selected</span>
                     )}
@@ -2714,11 +2340,11 @@ export default function ProductsClient({
                         <CompactCategoryTreeSelector
                             categories={categories}
                             masterItems={masterItems}
-                            selectedMasterItemId={categoryModalMasterItem}
+                            selectedMasterItemId={modals.categoryModalMasterItem}
                             onSelect={(mId: string, cId: string, sId?: string) => {
-                                setCategoryModalMasterItem(mId);
-                                setCategoryModalCategory(cId);
-                                setCategoryModalSubCategory(sId || "");
+                                modals.setCategoryModalMasterItem(mId);
+                                modals.setCategoryModalCategory(cId);
+                                modals.setCategoryModalSubCategory(sId || "");
                             }}
                             className="flex-1 bg-background/50 border border-border rounded-lg p-3"
                         />
@@ -2726,7 +2352,12 @@ export default function ProductsClient({
                             <span className="text-xs text-muted-foreground">Can't find the item?</span>
                             <button
                                 type="button"
-                                onClick={() => setIsMasterItemModalOpen(true)}
+                                onClick={() => {
+                                    const category = modals.categoryModalCategory
+                                        ? allCategories.find(c => c.id === modals.categoryModalCategory) || null
+                                        : null;
+                                    modals.openMasterItemEdit(null, category);
+                                }}
                                 className="text-primary hover:text-primary/80 text-xs flex items-center gap-1.5 transition-colors"
                             >
                                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
@@ -2739,10 +2370,7 @@ export default function ProductsClient({
                 <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-border">
                     <button
                         type="button"
-                        onClick={() => {
-                            setIsCategoryModalOpen(false);
-                            setCategoryModalProduct(null);
-                        }}
+                        onClick={() => modals.closeCategoryModal()}
                         className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                         Cancel
@@ -2750,10 +2378,10 @@ export default function ProductsClient({
                     <button
                         type="button"
                         onClick={handleSaveCategoryChange}
-                        disabled={!categoryModalMasterItem}
+                        disabled={!modals.categoryModalMasterItem}
                         className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                        {categoryModalProduct ? 'Save Changes' : 'Apply to Selected'}
+                        {modals.categoryModalProduct ? 'Save Changes' : 'Apply to Selected'}
                     </button>
                 </div>
             </div>
@@ -2761,7 +2389,7 @@ export default function ProductsClient({
       )}
 
       {/* Bulk Supplier Modal */}
-      {isBulkSupplierModalOpen && (
+      {modals.isBulkSupplierModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
             <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl animate-in fade-in zoom-in-95">
                 <h2 className="text-xl font-bold text-foreground mb-1 flex items-center gap-2">
@@ -2776,8 +2404,8 @@ export default function ProductsClient({
                     <div className="mb-4">
                         <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Select Supplier <span className="text-destructive">*</span></label>
                         <SelectInput
-                            value={bulkSupplierId}
-                            onChange={e => setBulkSupplierId(e.target.value)}
+                            value={modals.bulkSupplierId}
+                            onChange={e => modals.setBulkSupplierId(e.target.value)}
                         >
                             <option value="">Select Supplier...</option>
                             {suppliersList.map(s => (
@@ -2790,10 +2418,7 @@ export default function ProductsClient({
                 <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-border">
                     <button
                         type="button"
-                        onClick={() => {
-                            setIsBulkSupplierModalOpen(false);
-                            setBulkSupplierId("");
-                        }}
+                        onClick={() => modals.closeBulkSupplierModal()}
                         className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                         Cancel
@@ -2801,13 +2426,12 @@ export default function ProductsClient({
                     <button
                         type="button"
                         onClick={async () => {
-                            if (!bulkSupplierId) return;
-                            await bulkUpdateProducts(Array.from(selectedIds), { supplierId: bulkSupplierId });
-                            setIsBulkSupplierModalOpen(false);
-                            setBulkSupplierId("");
+                            if (!modals.bulkSupplierId) return;
+                            await bulkUpdateProducts(Array.from(selectedIds), { supplierId: modals.bulkSupplierId });
+                            modals.closeBulkSupplierModal();
                             setSelectedIds(new Set());
                         }}
-                        disabled={!bulkSupplierId}
+                        disabled={!modals.bulkSupplierId}
                         className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         Apply to Selected
@@ -2834,23 +2458,14 @@ export default function ProductsClient({
                     Selected
                 </div>
                 <button
-                    onClick={() => {
-                        setCategoryModalProduct(null);
-                        setCategoryModalCategory("");
-                        setCategoryModalSubCategory("");
-                        setCategoryModalMasterItem("");
-                        setIsCategoryModalOpen(true);
-                    }}
+                    onClick={() => modals.openCategoryModal(null)}
                     className="text-muted-foreground hover:text-foreground text-sm font-medium flex items-center gap-2 transition-colors"
                 >
                     <FolderTree className="w-4 h-4" strokeWidth={2.5} /> Assign Category
                 </button>
                 <div className="w-px h-4 bg-border" />
                 <button
-                    onClick={() => {
-                        setBulkSupplierId("");
-                        setIsBulkSupplierModalOpen(true);
-                    }}
+                    onClick={() => modals.openBulkSupplierModal()}
                     className="text-muted-foreground hover:text-foreground text-sm font-medium flex items-center gap-2 transition-colors"
                 >
                     <Truck className="w-4 h-4" strokeWidth={2.5} /> Assign Supplier
@@ -2863,18 +2478,21 @@ export default function ProductsClient({
       )}
 
       {/* Category Context Menu */}
-      {categoryContextMenu.visible && categoryContextMenu.category && (
+      {categoryContextMenu.menu && (() => {
+        const category = categoryContextMenu.menu.item;
+        if (!category) return null;
+        return (
         <div
           id="category-context-menu"
           className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl py-1 inline-flex flex-col w-fit overflow-hidden backdrop-blur-sm"
           style={{
-            top: categoryContextMenu.y,
-            left: categoryContextMenu.x
+            top: categoryContextMenu.menu.y,
+            left: categoryContextMenu.menu.x
           }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            onClick={() => handleCategoryEdit(categoryContextMenu.category!)}
+            onClick={() => handleCategoryEdit(category)}
             className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
           >
             <Edit className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
@@ -2882,9 +2500,9 @@ export default function ProductsClient({
           </button>
 
           {/* Only show "Add New Category" for root categories (parentId === null) */}
-          {categoryContextMenu.category.parentId === null && (
+          {category.parentId === null && (
             <button
-              onClick={() => handleCategoryAdd(categoryContextMenu.category!)}
+              onClick={() => handleCategoryAdd(category)}
               className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
             >
               <Plus className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
@@ -2893,17 +2511,17 @@ export default function ProductsClient({
           )}
 
           {/* Only show "Move Category" and "Add Master Item" for subcategories (parentId !== null) */}
-          {categoryContextMenu.category.parentId !== null && (
+          {category.parentId !== null && (
             <>
               <button
-                onClick={() => handleCategoryMove(categoryContextMenu.category!)}
+                onClick={() => handleCategoryMove(category)}
                 className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
               >
                 <FolderTree className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
                 Move Category
               </button>
               <button
-                onClick={() => handleAddMasterItem(categoryContextMenu.category!)}
+                onClick={() => handleAddMasterItem(category)}
                 className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3 transition-colors whitespace-nowrap"
               >
                 <Layers className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
@@ -2914,14 +2532,15 @@ export default function ProductsClient({
 
           <div className="h-px bg-border my-1" />
           <button
-            onClick={() => handleCategoryDelete(categoryContextMenu.category!)}
+            onClick={() => handleCategoryDelete(category)}
             className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-3 transition-colors whitespace-nowrap"
           >
             <Trash2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
             Delete
           </button>
         </div>
-      )}
+        );
+      })()}
 
       {/* Category Edit Dialog */}
       <EditCategoryDialog

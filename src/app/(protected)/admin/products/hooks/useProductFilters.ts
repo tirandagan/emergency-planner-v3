@@ -129,22 +129,33 @@ export function useProductFilters(
 
     // Sorting
     result.sort((a, b) => {
-      let valA: string | number = (a as Record<string, unknown>)[sortField] as string | number;
-      let valB: string | number = (b as Record<string, unknown>)[sortField] as string | number;
+      let valA: string | number = '';
+      let valB: string | number = '';
 
-      if (sortField === 'supplier') {
+      // Handle each sort field explicitly (type-safe)
+      if (sortField === 'name') {
+        valA = a.name || '';
+        valB = b.name || '';
+      } else if (sortField === 'supplier') {
         valA = a.supplier?.name || '';
         valB = b.supplier?.name || '';
-      }
-
-      if (sortField === 'master_item') {
+      } else if (sortField === 'master_item') {
         const masterA = masterItems.find(m => m.id === a.masterItemId);
         const masterB = masterItems.find(m => m.id === b.masterItemId);
         valA = masterA?.name || '';
         valB = masterB?.name || '';
+      } else if (sortField === 'price') {
+        valA = Number(a.price) || 0;
+        valB = Number(b.price) || 0;
+      } else if (sortField === 'sku') {
+        valA = a.sku || '';
+        valB = b.sku || '';
+      } else if (sortField === 'asin') {
+        valA = a.asin || '';
+        valB = b.asin || '';
       }
 
-      // Handle price sorting - convert string to number
+      // Handle price sorting
       if (sortField === 'price') {
         valA = Number(valA) || 0;
         valB = Number(valB) || 0;
