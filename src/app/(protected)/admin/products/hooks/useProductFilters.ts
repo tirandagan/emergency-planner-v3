@@ -76,7 +76,7 @@ export function useProductFilters(
         const master = masterItems.find(m => m.id === p.masterItemId);
 
         // Check product fields
-        const productMatches = (
+        const productMatches = Boolean(
           (p.name && p.name.toLowerCase().includes(term)) ||
           (p.sku && p.sku.toLowerCase().includes(term)) ||
           (p.asin && p.asin.toLowerCase().includes(term)) ||
@@ -85,10 +85,10 @@ export function useProductFilters(
         );
 
         // Check master item fields (OR relationship)
-        const masterItemMatches = master && (
+        const masterItemMatches = Boolean(master && (
           (master.name && master.name.toLowerCase().includes(term)) ||
           (master.description && master.description.toLowerCase().includes(term))
-        );
+        ));
 
         matchesSearch = productMatches || masterItemMatches;
       }

@@ -710,6 +710,24 @@ export default function ProductsClient({
       }
   }, [masterItemContextMenu]);
 
+  const handleDuplicateMasterItem = useCallback(async (masterItem: MasterItem) => {
+      try {
+          const duplicate = await duplicateMasterItem(masterItem.id);
+
+          const updatedMasterItems = await getMasterItems();
+          setAllMasterItems(updatedMasterItems);
+
+          modals.openMasterItemEdit(duplicate);
+
+          setToastMessage(`Duplicated "${masterItem.name}" - you can now edit it`);
+
+          masterItemContextMenu.closeMenu();
+      } catch (error) {
+          console.error('Error duplicating master item:', error);
+          alert(error instanceof Error ? error.message : 'Failed to duplicate master item');
+      }
+  }, [masterItemContextMenu, modals]);
+
   const handleConfirmDeleteMasterItem = async (): Promise<void> => {
       if (!deleteMasterItemModal.masterItem) return;
 
@@ -869,36 +887,20 @@ export default function ProductsClient({
   const handleSaveCategoryChange = async () => {
       if (!modals.categoryModalMasterItem) return;
 
-      if (modals.categoryModalProduct) {
-        const formData = new FormData();
-        formData.append('id', modals.categoryModalProduct.id);
-        formData.append('name', modals.categoryModalProduct.name || '');
-        formData.append('masterItemId', modals.categoryModalMasterItem);
-
-        if (modals.categoryModalProduct.supplierId) {
-            formData.append('supplierId', modals.categoryModalProduct.supplierId);
+      try {
+        if (modals.categoryModalProduct) {
+          await bulkUpdateProducts([modals.categoryModalProduct.id], { masterItemId: modals.categoryModalMasterItem });
+        } else if (selectedIds.size > 0) {
+            await bulkUpdateProducts(Array.from(selectedIds), { masterItemId: modals.categoryModalMasterItem });
+            setSelectedIds(new Set());
         }
 
-        formData.append('price', String(modals.categoryModalProduct.price ?? 0));
-        formData.append('type', modals.categoryModalProduct.type || 'AFFILIATE');
-        formData.append('productUrl', modals.categoryModalProduct.productUrl || '');
-        formData.append('imageUrl', modals.categoryModalProduct.imageUrl || '');
-        formData.append('description', modals.categoryModalProduct.description || '');
-        formData.append('asin', modals.categoryModalProduct.asin || modals.categoryModalProduct.sku || '');
-
-        if (modals.categoryModalProduct.metadata) {
-            Object.entries(modals.categoryModalProduct.metadata).forEach(([key, val]) => {
-                if (val != null) formData.append(`meta_${key}`, String(val));
-            });
-        }
-
-        await updateProduct(formData);
-      } else if (selectedIds.size > 0) {
-          await bulkUpdateProducts(Array.from(selectedIds), { masterItemId: modals.categoryModalMasterItem });
-          setSelectedIds(new Set());
+        navigation.expandMasterItem(modals.categoryModalMasterItem);
+        modals.closeCategoryModal();
+      } catch (error) {
+        console.error('Error updating product master item:', error);
+        alert(error instanceof Error ? error.message : 'Failed to change master item');
       }
-
-      modals.closeCategoryModal();
   };
 
   // Derived Lists
@@ -1781,8 +1783,8 @@ export default function ProductsClient({
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => openCategoryModal(product)}
             >
-                <FolderTree className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
-                Change Category
+                <Layers className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
+                Change Master Item
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
@@ -1893,6 +1895,7 @@ export default function ProductsClient({
             onAddProduct={handleAddProductFromMasterItem}
             onMove={handleMoveMasterItem}
             onDelete={handleDeleteMasterItem}
+            onDuplicate={handleDuplicateMasterItem}
             onCopyTags={handleCopyTags}
             onPasteTags={handlePasteTags}
             hasCopiedTags={!!copiedTags}
@@ -1984,8 +1987,8 @@ export default function ProductsClient({
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
             <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg shadow-xl animate-in fade-in zoom-in-95">
                 <h2 className="text-xl font-bold text-foreground mb-1 flex items-center gap-2">
-                    <FolderTree className="w-5 h-5 text-warning" strokeWidth={2.5} />
-                    {modals.categoryModalProduct ? 'Change Category' : 'Bulk Assign Category'}
+                    <Layers className="w-5 h-5 text-warning" strokeWidth={2.5} />
+                    {modals.categoryModalProduct ? 'Change Master Item' : 'Bulk Assign Master Item'}
                 </h2>
                 <p className="text-muted-foreground text-sm mb-6 truncate">
                     {modals.categoryModalProduct ? (

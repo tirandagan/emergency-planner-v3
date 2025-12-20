@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Tag, FolderTree, Package, Trash2 } from 'lucide-react';
+import { Pencil, Tag, Layers, Package, Trash2 } from 'lucide-react';
 import type { Product } from '@/lib/products-types';
 
 /**
@@ -18,8 +18,8 @@ export interface ProductContextMenuProps {
   onEdit: (product: Product) => void;
   /** Handler for quick tagging the product */
   onQuickTag: (productId: string) => void;
-  /** Handler for changing the product's category */
-  onChangeCategory: (product: Product) => void;
+  /** Handler for changing the product's master item */
+  onChangeMasterItem: (product: Product) => void;
   /** Handler for adding product to a bundle */
   onAddToBundle: (product: Product) => void;
   /** Handler for deleting the product */
@@ -35,7 +35,7 @@ export interface ProductContextMenuProps {
  * Provides options to:
  * - Edit the product
  * - Quick tag the product
- * - Change the product's category
+ * - Change the product's master item
  * - Add product to a bundle
  * - Delete the product
  * - Change/Assign supplier (via render prop for complex submenu)
@@ -49,7 +49,7 @@ export interface ProductContextMenuProps {
  *   onClose={() => setMenu(null)}
  *   onEdit={handleEdit}
  *   onQuickTag={handleQuickTag}
- *   onChangeCategory={handleChangeCategory}
+ *   onChangeMasterItem={handleChangeMasterItem}
  *   onAddToBundle={handleAddToBundle}
  *   onDelete={handleDelete}
  *   renderSupplierMenu={() => <SupplierSubmenu product={product} />}
@@ -63,7 +63,7 @@ export function ProductContextMenu({
   onClose,
   onEdit,
   onQuickTag,
-  onChangeCategory,
+  onChangeMasterItem,
   onAddToBundle,
   onDelete,
   renderSupplierMenu
@@ -97,12 +97,12 @@ export function ProductContextMenu({
       <button
         className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
         onClick={() => {
-          onChangeCategory(product);
+          onChangeMasterItem(product);
           onClose();
         }}
       >
-        <FolderTree className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
-        Change Category
+        <Layers className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
+        Change Master Item
       </button>
       <button
         className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
