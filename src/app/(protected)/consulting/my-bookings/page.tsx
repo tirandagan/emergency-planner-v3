@@ -95,6 +95,10 @@ export default async function MyBookingsPage(): Promise<React.JSX.Element> {
           {bookings.map(({ booking, service }) => {
             if (!service) return null as React.ReactNode;
 
+            const scheduledDate = booking.scheduledAt;
+            const duration = booking.estimatedDurationMinutes;
+            const cost = booking.totalEstimatedCost;
+
             return (
               <Card key={booking.id}>
                 <CardHeader>
@@ -112,43 +116,41 @@ export default async function MyBookingsPage(): Promise<React.JSX.Element> {
                 <CardContent className="space-y-4">
                   {/* Booking metadata */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
-                    <>
-                      {booking.scheduledAt ? (
-                        <div className="flex items-start gap-2">
-                          <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium">Scheduled</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatDate(booking.scheduledAt)}
-                            </p>
-                          </div>
+                    {scheduledDate && (
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Scheduled</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(scheduledDate)}
+                          </p>
                         </div>
-                      ) : null}
+                      </div>
+                    )}
 
-                      {booking.estimatedDurationMinutes ? (
-                        <div className="flex items-start gap-2">
-                          <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium">Duration</p>
-                            <p className="text-sm text-muted-foreground">
-                              {booking.estimatedDurationMinutes} minutes
-                            </p>
-                          </div>
+                    {duration && (
+                      <div className="flex items-start gap-2">
+                        <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Duration</p>
+                          <p className="text-sm text-muted-foreground">
+                            {duration} minutes
+                          </p>
                         </div>
-                      ) : null}
+                      </div>
+                    )}
 
-                      {booking.totalEstimatedCost ? (
-                        <div className="flex items-start gap-2">
-                          <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium">Estimated Cost</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatCurrency(booking.totalEstimatedCost)}
-                            </p>
-                          </div>
+                    {cost && (
+                      <div className="flex items-start gap-2">
+                        <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Estimated Cost</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatCurrency(cost)}
+                          </p>
                         </div>
-                      ) : null}
-                    </>
+                      </div>
+                    )}
                   </div>
 
                   {/* Intake responses */}
