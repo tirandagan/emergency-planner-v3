@@ -1,0 +1,132 @@
+import { Metadata } from 'next';
+import { ConsultingServicesList } from '@/components/consulting';
+import { getActiveConsultingServices } from '@/lib/consulting';
+import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export const metadata: Metadata = {
+  title: 'Emergency Preparedness Consulting | Expert Guidance',
+  description:
+    'Get personalized expert guidance on your emergency preparedness journey. One-on-one consulting sessions to help you optimize your plans, supplies, and disaster readiness.',
+};
+
+async function ConsultingServicesContent(): Promise<React.JSX.Element> {
+  const services = await getActiveConsultingServices({ isGeneric: true });
+
+  return <ConsultingServicesList services={services} />;
+}
+
+function LoadingSkeleton(): React.JSX.Element {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="space-y-4">
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default async function ConsultingPage(): Promise<React.JSX.Element> {
+  return (
+    <div className="container mx-auto px-4 py-12 max-w-7xl">
+      {/* Hero Section */}
+      <div className="text-center mb-12 space-y-4">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+          Expert Emergency Preparedness Consulting
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          Get personalized guidance from experienced emergency preparedness professionals. Whether
+          you're just starting out or optimizing an existing plan, our consultants are here to
+          help you succeed.
+        </p>
+      </div>
+
+      {/* Value Propositions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <div className="text-center p-6 rounded-lg border bg-card">
+          <div className="text-3xl mb-3">🎯</div>
+          <h3 className="text-lg font-semibold mb-2">Personalized Guidance</h3>
+          <p className="text-sm text-muted-foreground">
+            Tailored advice based on your specific situation, family needs, and local risks
+          </p>
+        </div>
+
+        <div className="text-center p-6 rounded-lg border bg-card">
+          <div className="text-3xl mb-3">⚡</div>
+          <h3 className="text-lg font-semibold mb-2">Expert Knowledge</h3>
+          <p className="text-sm text-muted-foreground">
+            Years of experience in emergency management, survival training, and disaster response
+          </p>
+        </div>
+
+        <div className="text-center p-6 rounded-lg border bg-card">
+          <div className="text-3xl mb-3">📋</div>
+          <h3 className="text-lg font-semibold mb-2">Actionable Plans</h3>
+          <p className="text-sm text-muted-foreground">
+            Walk away with clear next steps and practical strategies you can implement immediately
+          </p>
+        </div>
+      </div>
+
+      {/* Services Section */}
+      <div className="mb-12">
+        <h2 className="text-3xl font-bold text-center mb-8">Available Consulting Services</h2>
+        <Suspense fallback={<LoadingSkeleton />}>
+          <ConsultingServicesContent />
+        </Suspense>
+      </div>
+
+      {/* How It Works */}
+      <div className="bg-muted/50 rounded-lg p-8 mb-12">
+        <h2 className="text-2xl font-bold text-center mb-8">How It Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-lg mb-3">
+              1
+            </div>
+            <h3 className="font-semibold mb-2">Choose a Service</h3>
+            <p className="text-sm text-muted-foreground">
+              Select the consulting service that matches your needs
+            </p>
+          </div>
+
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-lg mb-3">
+              2
+            </div>
+            <h3 className="font-semibold mb-2">Share Your Goals</h3>
+            <p className="text-sm text-muted-foreground">
+              Answer a few questions about your preparedness situation
+            </p>
+          </div>
+
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-lg mb-3">
+              3
+            </div>
+            <h3 className="font-semibold mb-2">Review Your Agenda</h3>
+            <p className="text-sm text-muted-foreground">
+              Get an AI-generated session agenda customized for you
+            </p>
+          </div>
+
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-lg mb-3">
+              4
+            </div>
+            <h3 className="font-semibold mb-2">Schedule & Meet</h3>
+            <p className="text-sm text-muted-foreground">
+              Book a time that works for you and meet with your expert
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ / Testimonials could go here */}
+    </div>
+  );
+}

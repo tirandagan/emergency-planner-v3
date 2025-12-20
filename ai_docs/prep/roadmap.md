@@ -705,11 +705,15 @@ All database schemas, migrations, storage buckets, and Stripe integration comple
 
 ### 3.9 Admin Additional Tools
 [Goal: Complete the admin toolkit with categories, import tools, and debugging capabilities]
-- [ ] **Note on `/admin/approvals`**:
-  - [ ] If `src/app/admin/approvals/page.tsx` exists: review for Phase 1 relevance
-  - [ ] Vendor/influencer approvals are Phase 2+ features (deferred)
-  - [ ] If approvals page is for Phase 2 vendor/influencer workflow, leave as-is but don't enhance yet
-  - [ ] If approvals needed for MVP (e.g., manual verification requests from Phase 2.2), implement approval queue in Phase 3
+- [x] **Legacy Approvals Workflow Removed** ✅ COMPLETE (2025-12-20):
+  - [x] Removed deprecated `/admin/approvals` page and approval workflow system
+  - [x] Deleted `scraped_queue` database table and `master_items.status` field
+  - [x] Removed 8 approval-related server actions (~900+ lines of legacy code)
+  - [x] Deleted old Gemini-based survival plan generator (`src/app/actions.ts`)
+  - [x] Cleaned up `masterItemService.ts` (vector similarity matching no longer needed)
+  - [x] **Impact**: Simplified admin interface, reduced database overhead, zero impact on active features
+  - [x] **Note**: Vendor/influencer approvals for Phase 2+ will be implemented fresh when needed
+  - [x] **Task Document**: [ai_docs/tasks/063_remove_legacy_approvals_workflow.md](../tasks/063_remove_legacy_approvals_workflow.md)
 - [x] Implement `/admin/categories` enhancement and restyling: ✓ 2025-12-10
   - [x] Category tree view with expand/collapse ✓
   - [x] Drag-and-drop reordering ✓

@@ -3,6 +3,18 @@
 // React Core
 import { useState, useMemo, useEffect, Fragment, useRef, useCallback } from "react";
 
+// UI Components
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 // Icons
 import {
   AlertCircle, AlertTriangle, Baby, ChevronDown, ChevronRight, ChevronUp,
@@ -316,6 +328,16 @@ export default function ProductsClient({
     products: [],
   });
   const [isDeletingMasterItem, setIsDeletingMasterItem] = useState(false);
+
+  // Delete product modal state
+  const [deleteProductModal, setDeleteProductModal] = useState<{
+    isOpen: boolean;
+    product: Product | null;
+  }>({
+    isOpen: false,
+    product: null,
+  });
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
 
   // Build category tree from flat array (like /admin/categories does)
   const categoryTree = useMemo(() => {
@@ -753,6 +775,26 @@ export default function ProductsClient({
           alert('An error occurred while deleting the master item');
       } finally {
           setIsDeletingMasterItem(false);
+      }
+  };
+
+  const handleConfirmDeleteProduct = async (): Promise<void> => {
+      if (!deleteProductModal.product) return;
+
+      setIsDeletingProduct(true);
+
+      try {
+          await deleteProduct(deleteProductModal.product.id);
+
+          setDeleteProductModal({
+              isOpen: false,
+              product: null,
+          });
+      } catch (error) {
+          console.error('Error deleting product:', error);
+          alert('An error occurred while deleting the product');
+      } finally {
+          setIsDeletingProduct(false);
       }
   };
 
@@ -1867,10 +1909,11 @@ export default function ProductsClient({
             <div className="h-px bg-border my-1" />
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-destructive/10 text-sm text-destructive flex items-center gap-3 transition-colors whitespace-nowrap"
-                onClick={async () => {
-                    if (confirm('Delete this product?')) {
-                        await deleteProduct(product.id);
-                    }
+                onClick={() => {
+                    setDeleteProductModal({
+                        isOpen: true,
+                        product: product,
+                    });
                     productContextMenu.closeMenu();
                 }}
             >
@@ -2247,6 +2290,45 @@ export default function ProductsClient({
         onConfirm={handleConfirmDeleteMasterItem}
         isDeleting={isDeletingMasterItem}
       />
+
+      {/* Delete Product Confirmation Dialog */}
+      <AlertDialog
+        open={deleteProductModal.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteProductModal({ isOpen: false, product: null });
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>&quot;{deleteProductModal.product?.name}&quot;</strong>?
+              {deleteProductModal.product?.asin && (
+                <span className="block mt-1 text-muted-foreground text-xs">
+                  ASIN: {deleteProductModal.product.asin}
+                </span>
+              )}
+              <span className="block mt-2">
+                This action cannot be undone.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingProduct}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteProduct}
+              disabled={isDeletingProduct}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingProduct ? 'Deleting...' : 'Delete Product'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

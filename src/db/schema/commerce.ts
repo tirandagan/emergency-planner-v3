@@ -2,6 +2,7 @@ import { pgTable, text, uuid, timestamp, integer, decimal, jsonb, index, boolean
 import { profiles } from './profiles';
 import { specificProducts } from './products';
 import { bundles } from './bundles';
+import { consultingBookings } from './consulting';
 
 export const orders = pgTable(
   'orders',
@@ -17,6 +18,7 @@ export const orders = pgTable(
     taxAmount: decimal('tax_amount', { precision: 10, scale: 2 }).default('0'),
     totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(),
     currency: text('currency').notNull().default('usd'),
+    orderType: text('order_type').notNull().default('product'),
     status: text('status').notNull().default('pending'),
     shippingAddress: jsonb('shipping_address'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -24,6 +26,7 @@ export const orders = pgTable(
   (table) => ({
     userIdIdx: index('idx_orders_user_id').on(table.userId),
     statusIdx: index('idx_orders_status').on(table.status),
+    orderTypeIdx: index('idx_orders_order_type').on(table.orderType),
   })
 );
 
@@ -35,8 +38,10 @@ export const orderItems = pgTable(
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
     specificProductId: uuid('specific_product_id')
-      .notNull()
       .references(() => specificProducts.id, { onDelete: 'restrict' }),
+    consultingBookingId: uuid('consulting_booking_id')
+      .references(() => consultingBookings.id, { onDelete: 'restrict' }),
+    itemType: text('item_type').notNull().default('product'),
     quantity: integer('quantity').notNull(),
     unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
     supplierStatus: text('supplier_status').default('pending'),
@@ -54,6 +59,8 @@ export const orderItems = pgTable(
     isOriginalProductIdx: index('idx_order_items_is_original_product').on(
       table.isOriginalProduct
     ),
+    consultingBookingIdIdx: index('idx_order_items_consulting_booking_id').on(table.consultingBookingId),
+    itemTypeIdx: index('idx_order_items_item_type').on(table.itemType),
   })
 );
 

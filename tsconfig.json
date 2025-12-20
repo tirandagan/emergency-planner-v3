@@ -39,6 +39,7 @@
   "exclude": [
     "node_modules",
     "_legacy",
-    "ai_docs"
+    "ai_docs",
+    "scripts"
   ]
 }

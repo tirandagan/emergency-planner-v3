@@ -3,6 +3,7 @@ export * from './categories';
 export * from './suppliers';
 export * from './products';
 export * from './bundles';
+export * from './consulting';
 export * from './mission-reports';
 export * from './manual-verification-requests';
 export * from './inventory';

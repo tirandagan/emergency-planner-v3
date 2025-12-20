@@ -25,7 +25,6 @@ export interface MasterItemData {
   categoryId: string;
   name: string;
   description?: string;
-  status: string;
   timeframes: string[] | null;
   demographics: string[] | null;
   locations: string[] | null;
@@ -458,7 +457,6 @@ export async function upsertMasterItem(item: {
         name: payload.name,
         categoryId: payload.categoryId,
         description: payload.description,
-        status: payload.status || 'active',
         timeframes: payload.timeframes,
         demographics: payload.demographics,
         locations: payload.locations,

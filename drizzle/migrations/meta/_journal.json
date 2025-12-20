@@ -113,6 +113,20 @@
       "when": 1766128537183,
       "tag": "0015_perfect_dorian_gray",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1734699900000,
+      "tag": "0028_add_consulting_services",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1734700000000,
+      "tag": "0029_remove_approvals_workflow",
+      "breakpoints": true
     }
   ]
 }

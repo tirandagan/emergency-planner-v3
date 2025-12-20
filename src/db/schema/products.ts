@@ -12,7 +12,6 @@ export const masterItems = pgTable(
     name: text('name').notNull(),
     description: text('description'),
     embedding: vector('embedding', { dimensions: 768 }),
-    status: text('status').notNull().default('active'),
     timeframes: text('timeframes').array(),
     demographics: text('demographics').array(),
     locations: text('locations').array(),
@@ -22,7 +21,6 @@ export const masterItems = pgTable(
   },
   (table) => ({
     categoryIdIdx: index('idx_master_items_category_id').on(table.categoryId),
-    statusIdx: index('idx_master_items_status').on(table.status),
     embeddingIdx: index('idx_master_items_embedding').using(
       'ivfflat',
       table.embedding.op('vector_cosine_ops')
@@ -69,19 +67,4 @@ export const specificProducts = pgTable(
   })
 );
 
-export const scrapedQueue = pgTable(
-  'scraped_queue',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    asin: text('asin').notNull().unique(),
-    status: text('status').notNull().default('pending'),
-    priority: integer('priority').notNull().default(0),
-    metadata: jsonb('metadata'),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => ({
-    statusIdx: index('idx_scraped_queue_status').on(table.status),
-    priorityIdx: index('idx_scraped_queue_priority').on(table.priority),
-  })
-);
 

@@ -962,3 +962,182 @@ export async function reactivatePlanShare(
     };
   }
 }
+
+/**
+ * Get all saved scenarios (mission reports) for a user
+ * Legacy function name for compatibility
+ */
+export async function getSavedScenarios(userId: string): Promise<any[]> {
+  try {
+    const { getMissionReportsByUserId } = await import('@/lib/mission-reports');
+    const reports = await getMissionReportsByUserId(userId);
+
+    // Transform to legacy format expected by Dashboard
+    return reports.map((report) => ({
+      id: report.id,
+      user_id: report.userId,
+      title: report.title,
+      location: report.location,
+      scenarios: report.scenarios,
+      family_size: report.familySize,
+      duration_days: report.durationDays,
+      mobility_type: report.mobilityType,
+      budget_amount: report.budgetAmount,
+      report_data: report.reportData,
+      readiness_score: report.readinessScore,
+      scenario_scores: report.scenarioScores,
+      component_scores: report.componentScores,
+      created_at: report.createdAt.toISOString(),
+      updated_at: report.updatedAt.toISOString(),
+    }));
+  } catch (error) {
+    console.error('Error getting saved scenarios:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a scenario (soft delete)
+ * Legacy function name for compatibility
+ */
+export async function deleteScenario(
+  scenarioId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || user.id !== userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify ownership
+    const [report] = await db
+      .select({ id: missionReports.id })
+      .from(missionReports)
+      .where(and(eq(missionReports.id, scenarioId), eq(missionReports.userId, userId)))
+      .limit(1);
+
+    if (!report) {
+      return { success: false, error: 'Report not found or access denied' };
+    }
+
+    // Use the existing deleteMissionReport function
+    return await deleteMissionReport(scenarioId);
+  } catch (error) {
+    console.error('Error deleting scenario:', error);
+    return { success: false, error: 'Failed to delete scenario' };
+  }
+}
+
+/**
+ * Update mission report title
+ * Legacy function for compatibility
+ */
+export async function updateMissionReportTitle(
+  reportId: string,
+  userId: string,
+  newTitle: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || user.id !== userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify ownership
+    const [report] = await db
+      .select({ id: missionReports.id })
+      .from(missionReports)
+      .where(and(eq(missionReports.id, reportId), eq(missionReports.userId, userId)))
+      .limit(1);
+
+    if (!report) {
+      return { success: false, error: 'Report not found or access denied' };
+    }
+
+    // Update title
+    await db
+      .update(missionReports)
+      .set({
+        title: newTitle,
+        updatedAt: new Date(),
+      })
+      .where(eq(missionReports.id, reportId));
+
+    revalidatePath(`/plans/${reportId}`, 'page');
+    revalidatePath('/dashboard', 'page');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating mission report title:', error);
+    return { success: false, error: 'Failed to update title' };
+  }
+}
+
+/**
+ * Permanently delete a mission report
+ * Hard delete from database (admin function or for expired trash items)
+ */
+export async function permanentlyDeleteMissionReport(
+  reportId: string
+): Promise<{ success: boolean; error?: string }> {
+  let userId: string | undefined;
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id;
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify ownership
+    const [report] = await db
+      .select({ id: missionReports.id })
+      .from(missionReports)
+      .where(and(eq(missionReports.id, reportId), eq(missionReports.userId, user.id)))
+      .limit(1);
+
+    if (!report) {
+      return { success: false, error: 'Report not found or access denied' };
+    }
+
+    // Hard delete (CASCADE will handle related records)
+    await db.delete(missionReports).where(eq(missionReports.id, reportId));
+
+    revalidatePath('/dashboard', 'page');
+    revalidatePath('/dashboard/trash', 'page');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error permanently deleting mission report:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      userId,
+      component: 'PlanActions',
+      route: '/app/actions/plans',
+      userAction: 'Permanently deleting mission report',
+      metadata: {
+        reportId,
+        operation: 'permanentlyDeleteMissionReport',
+      },
+    });
+
+    return {
+      success: false,
+      error: "We're experiencing issues permanently deleting your plan. Our team has been notified and will resolve this shortly.",
+    };
+  }
+}

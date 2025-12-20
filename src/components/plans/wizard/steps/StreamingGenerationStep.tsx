@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StreamingReportView } from '@/components/planner/StreamingReportView';
+import { ConsultingUpsellCard } from '@/components/consulting/ConsultingUpsellCard';
 import { saveMissionReportFromStream } from '@/app/actions/save-mission-report';
 import type { WizardFormData } from '@/types/wizard';
 
@@ -145,8 +146,8 @@ export function StreamingGenerationStep({
   // Show success state
   if (status === 'success') {
     return (
-      <div className="space-y-8 max-w-2xl mx-auto text-center">
-        <div>
+      <div className="space-y-8 max-w-2xl mx-auto">
+        <div className="text-center">
           <CheckCircle2 className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             Plan Generated Successfully!
@@ -155,6 +156,9 @@ export function StreamingGenerationStep({
             Your personalized disaster preparedness plan is ready
           </p>
         </div>
+
+        {/* Consulting Upsell */}
+        <ConsultingUpsellCard placement="post-plan" />
 
         <div className="flex justify-center">
           <p className="text-sm text-slate-600 dark:text-slate-400">

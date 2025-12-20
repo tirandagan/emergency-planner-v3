@@ -26,7 +26,6 @@ import {
   Moon,
   LogOut,
   Users,
-  CheckCircle,
   Factory,
   Tags,
   Boxes,
@@ -36,7 +35,8 @@ import {
   ArrowLeftRight,
   Info,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from 'lucide-react'
 import type { SubscriptionTier } from '@/lib/types/subscription'
 import { UserAvatar } from './UserAvatar'
@@ -77,6 +77,7 @@ const userNavigationLinks = [
   { href: '/bundles', label: 'Bundles', icon: Package },
   { href: '/inventory', label: 'Inventory', icon: ClipboardList },
   { href: '/store', label: 'Store', icon: ShoppingBag },
+  { href: '/consulting/my-bookings', label: 'Consulting', icon: MessageSquare },
   { href: '/readiness', label: 'Readiness', icon: Activity },
   { href: '/skills', label: 'Skills', icon: GraduationCap },
   { href: '/expert-calls', label: 'Expert Calls', icon: Video },
@@ -87,11 +88,11 @@ const userNavigationLinks = [
 const adminNavigationLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/consulting', label: 'Consulting', icon: MessageSquare },
   { href: '/admin/ai-usage', label: 'AI Usage', icon: Brain },
   { href: '/admin/suppliers', label: 'Suppliers', icon: Factory },
   { href: '/admin/products', label: 'Products', icon: Tags },
   { href: '/admin/bundles', label: 'Bundles', icon: Boxes },
-  { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
   { href: '/admin/import', label: 'Import', icon: Upload },
   { href: '/admin/debug', label: 'System', icon: Wrench },
 ]
