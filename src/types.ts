@@ -22,7 +22,7 @@ export enum ScenarioType {
   NATURAL_DISASTER = 'Natural Disaster (Hurricane/Quake)',
   PANDEMIC = 'Pandemic / Bio-Threat',
   CIVIL_UNREST = 'Civil Unrest',
-  EMP = 'EMP / Grid Down',
+  EMP = 'EMP/Grid Down',
   NUCLEAR = 'Nuclear Fallout'
 }
 

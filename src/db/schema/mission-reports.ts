@@ -25,6 +25,18 @@ export type UserEnrichments = {
   }>;
 };
 
+/**
+ * Personnel data from wizard form
+ * Stores family member information entered during plan creation
+ */
+export type PersonnelData = Array<{
+  name?: string;
+  age: number;
+  gender?: 'male' | 'female' | 'prefer_not_to_say';
+  medicalConditions?: string;
+  specialNeeds?: string;
+}>;
+
 export const missionReports = pgTable(
   'mission_reports',
   {
@@ -41,6 +53,7 @@ export const missionReports = pgTable(
     budgetAmount: decimal('budget_amount', { precision: 10, scale: 2 }),
     reportData: jsonb('report_data').notNull(),
     evacuationRoutes: jsonb('evacuation_routes'), // Separate field for evacuation routes
+    personnelData: jsonb('personnel_data').$type<PersonnelData>(), // Personnel from wizard step 2
     userEnrichments: jsonb('user_enrichments').$type<UserEnrichments>().default({
       familyMembers: [],
       notes: [],

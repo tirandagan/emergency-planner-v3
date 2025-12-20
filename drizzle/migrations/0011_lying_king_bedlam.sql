@@ -1,1 +1,0 @@
-ALTER TABLE "mission_reports" ADD COLUMN "evacuation_routes" jsonb;

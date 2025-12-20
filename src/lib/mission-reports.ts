@@ -25,6 +25,13 @@ export interface MissionReport {
     version: string;
   };
   evacuationRoutes?: any; // Separate field for evacuation routes
+  personnelData?: Array<{
+    name?: string;
+    age: number;
+    gender?: 'male' | 'female' | 'prefer_not_to_say';
+    medicalConditions?: string;
+    specialNeeds?: string;
+  }>; // Personnel data from wizard step 2
   readinessScore: number | null;
   scenarioScores: any;
   componentScores: any;

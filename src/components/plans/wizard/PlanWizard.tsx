@@ -161,6 +161,21 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
   useEffect(() => {
     if (hasLoadedState) return; // Only run once
 
+    // IMPORTANT: Edit mode takes precedence over saved state
+    // When editing an existing plan, always load fresh data from database
+    if (isEditMode && initialData) {
+      // Edit mode - preload with existing plan data
+      console.log('📝 PlanWizard - Edit mode initialData:', initialData);
+      console.log('📝 PlanWizard - familyMembers from initialData:', initialData.familyMembers);
+      Object.entries(initialData).forEach(([key, value]) => {
+        console.log(`📝 Setting ${key}:`, value);
+        setValue(key as keyof WizardFormData, value);
+      });
+      setHasLoadedState(true);
+      console.log('📝 PlanWizard - After setValue, current form data:', watch());
+      return; // Exit early, don't check localStorage
+    }
+
     const savedState = loadSavedState(storageKey);
     if (savedState) {
       // Restore form data from localStorage
@@ -182,12 +197,6 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
       // Restore current step
       setCurrentStep(savedState.currentStep);
       setIsResuming(true);
-      setHasLoadedState(true);
-    } else if (isEditMode && initialData) {
-      // Edit mode - preload with existing plan data
-      Object.entries(initialData).forEach(([key, value]) => {
-        setValue(key as keyof WizardFormData, value);
-      });
       setHasLoadedState(true);
     } else if (user) {
       // No saved state - preload user profile data for first family member

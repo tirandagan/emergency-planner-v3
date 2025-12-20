@@ -13,23 +13,33 @@ import type { MissionReport } from '@/lib/mission-reports';
 export function transformReportToWizardData(report: MissionReport): Partial<WizardFormData> {
   const wizardData: Partial<WizardFormData> = {};
 
+  console.log('🔄 Transform - Input report:', {
+    id: report.id,
+    personnelData: report.personnelData,
+    familySize: report.familySize,
+  });
+
   // Step 1: Scenarios
   if (report.scenarios && Array.isArray(report.scenarios)) {
     wizardData.scenarios = report.scenarios as ScenarioType[];
   }
 
-  // Step 2: Personnel - Extract from report data if available
-  // The original wizard stores family members, but the report stores familySize
-  // We'll create a basic structure based on familySize
-  if (report.familySize) {
-    // Create family members array based on family size
-    // We don't have detailed member info in the report, so create placeholders
+  // Step 2: Personnel - Extract from personnelData if available
+  if (report.personnelData && Array.isArray(report.personnelData) && report.personnelData.length > 0) {
+    // Use stored personnel data from the database
+    console.log('✅ Using personnelData from database:', report.personnelData);
+    wizardData.familyMembers = report.personnelData as FamilyMember[];
+  } else if (report.familySize) {
+    // Fallback: Create placeholders based on familySize for old reports
+    console.log('⚠️ No personnelData found, creating placeholders for familySize:', report.familySize);
     wizardData.familyMembers = Array.from({ length: report.familySize }, (_, i) => ({
       age: 30, // Default age
       medicalConditions: '',
       specialNeeds: '',
     }));
   }
+
+  console.log('🔄 Transform - Output familyMembers:', wizardData.familyMembers);
 
   // Step 3: Location & Context
   if (report.location) {

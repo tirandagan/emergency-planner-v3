@@ -69,6 +69,7 @@ export async function saveMissionReportV2({
         familySize: formData.familyMembers.length,
         durationDays: formData.durationDays,
         reportData: reportData as any, // JSONB accepts any structure
+        personnelData: formData.familyMembers, // Store personnel data from wizard
         readinessScore,
         scenarioScores,
         componentScores,

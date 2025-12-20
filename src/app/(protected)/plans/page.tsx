@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { getMissionReportsByUserId } from '@/lib/mission-reports';
 import { PlanCard } from '@/components/plans/PlanCard';
 import { Button } from '@/components/ui/button';
+import { ResumePlanDialog } from '@/components/plans/ResumePlanDialog';
 
 async function PlansContent(): Promise<React.JSX.Element> {
   const supabase = await createClient();
@@ -108,8 +109,11 @@ function PlansLoading(): React.JSX.Element {
 
 export default function PlansPage(): React.JSX.Element {
   return (
-    <Suspense fallback={<PlansLoading />}>
-      <PlansContent />
-    </Suspense>
+    <>
+      <ResumePlanDialog />
+      <Suspense fallback={<PlansLoading />}>
+        <PlansContent />
+      </Suspense>
+    </>
   );
 }
