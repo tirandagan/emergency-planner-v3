@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import { UseFormRegister, UseFormWatch, UseFormSetValue, Control, Controller } from 'react-hook-form';
+import { UseFormRegister, UseFormWatch, UseFormSetValue, Control, Controller, FieldErrors } from 'react-hook-form';
 import {
   Building2,
   Home,
@@ -91,7 +91,7 @@ interface LocationStepProps {
   watch: UseFormWatch<WizardFormData>;
   setValue: UseFormSetValue<WizardFormData>;
   control: Control<WizardFormData>;
-  errors?: Record<string, any>;
+  errors?: FieldErrors<WizardFormData>;
 }
 
 const DURATION_OPTIONS = [

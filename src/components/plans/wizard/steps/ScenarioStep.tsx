@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { UseFormRegister, UseFormWatch, UseFormSetValue } from 'react-hook-form';
+import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from 'react-hook-form';
 import { Cloud, Zap, Activity, Radiation, Users, Sprout, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,9 +19,7 @@ interface ScenarioStepProps {
   register: UseFormRegister<WizardFormData>;
   watch: UseFormWatch<WizardFormData>;
   setValue: UseFormSetValue<WizardFormData>;
-  errors?: {
-    scenarios?: { message: string };
-  };
+  errors?: FieldErrors<WizardFormData>;
 }
 
 const SCENARIOS: Array<{
@@ -258,9 +256,9 @@ export function ScenarioStep({ register, watch, setValue, errors }: ScenarioStep
       </div>
 
       {/* Error Message */}
-      {errors?.scenarios && (
+      {errors?.scenarios?.message && (
         <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive">
-          <p className="text-sm text-destructive">{errors.scenarios.message as string}</p>
+          <p className="text-sm text-destructive">{errors.scenarios.message}</p>
         </div>
       )}
 
