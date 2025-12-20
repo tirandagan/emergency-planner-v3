@@ -59,7 +59,10 @@ export async function getConsultingServiceById(id: string) {
  * Get all consulting bookings for a specific user
  * Includes service details and ordered by most recent first
  */
-export async function getUserConsultingBookings(userId: string) {
+export async function getUserConsultingBookings(userId: string): Promise<Array<{
+  booking: typeof consultingBookings.$inferSelect;
+  service: typeof consultingServices.$inferSelect | null;
+}>> {
   const results = await db
     .select({
       booking: consultingBookings,

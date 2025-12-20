@@ -33,7 +33,10 @@ export {
 } from './subscriptions';
 
 // Admin actions
-export type { AdminMetrics } from './admin';
+// (No types currently exported from admin)
 
-// Note: If you're looking for getSavedScenarios, deleteScenario, updateMissionReportTitle, or fetchSkillResources,
+// Skills actions
+export { fetchSkillResources } from './skills';
+
+// Note: If you're looking for getSavedScenarios, deleteScenario, or updateMissionReportTitle,
 // these may have been refactored. Please use the new action names from './plans' or update component imports.
