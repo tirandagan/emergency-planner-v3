@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Fragment } from 'react';
 import type { Product, MasterItem, ProductMetadata } from '@/lib/products-types';
 import { AlertCircle, Shield, Users, Clock, MapPin, Unlink } from 'lucide-react';
@@ -59,6 +59,8 @@ export const ProductRow = React.memo(function ProductRow({
     onClick,
     onQuickTagClose
 }: ProductRowProps): React.JSX.Element {
+    const [showDescriptionTooltip, setShowDescriptionTooltip] = useState(false);
+
     // Check if product has overridden tags (non-null means inheritance is broken)
     const hasOverriddenTags = product.timeframes !== null ||
         product.demographics !== null ||
@@ -68,6 +70,48 @@ export const ProductRow = React.memo(function ProductRow({
     // Check if search term matches description (for badge display)
     const matchesDescription = searchTerm && product.description &&
         product.description.toLowerCase().includes(searchTerm.toLowerCase().trim());
+
+    // Extract context around the first match for tooltip
+    const getMatchContext = (): { before: string; match: string; after: string } | null => {
+        if (!searchTerm || !product.description) return null;
+        
+        const lowerDescription = product.description.toLowerCase();
+        const lowerTerm = searchTerm.toLowerCase().trim();
+        const matchIndex = lowerDescription.indexOf(lowerTerm);
+        
+        if (matchIndex === -1) return null;
+        
+        // Extract match text (preserve original case)
+        const match = product.description.slice(matchIndex, matchIndex + lowerTerm.length);
+        
+        // Extract approximately 60 characters before and after the match (to center it)
+        // This should give us roughly 12 words total
+        const contextSize = 60;
+        const start = Math.max(0, matchIndex - contextSize);
+        const end = Math.min(product.description.length, matchIndex + lowerTerm.length + contextSize);
+        
+        const isClippingStart = start > 0;
+        const isClippingEnd = end < product.description.length;
+        
+        let before = product.description.slice(start, matchIndex).trim();
+        let after = product.description.slice(matchIndex + lowerTerm.length, end).trim();
+        
+        // Add ellipsis only if we're actually clipping
+        if (isClippingStart) {
+            before = '...' + before;
+        }
+        if (isClippingEnd) {
+            after = after + '...';
+        }
+        
+        return {
+            before,
+            match,
+            after
+        };
+    };
+
+    const matchContext = getMatchContext();
 
     // Calculate tag differences for display
     const getTagDifferences = (): TagDifference[] => {
@@ -182,8 +226,38 @@ export const ProductRow = React.memo(function ProductRow({
                                     <HighlightedText text={product.name || ''} searchTerm={searchTerm} />
                                 </span>
                                 {matchesDescription && (
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-info/10 text-info border border-info/30 rounded">
+                                    <span 
+                                        className="relative inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-foreground rounded border border-gray-300 shadow-sm" 
+                                        style={{ backgroundColor: '#ffff00' }}
+                                        onMouseEnter={() => setShowDescriptionTooltip(true)}
+                                        onMouseLeave={() => setShowDescriptionTooltip(false)}
+                                    >
                                         Match in description
+                                        {showDescriptionTooltip && matchContext && (
+                                            <div 
+                                                className="absolute z-50 bg-card rounded shadow-lg p-2 text-xs text-foreground"
+                                                style={{
+                                                    width: 'max-content',
+                                                    maxWidth: '240px', // Approximately 12 words wide
+                                                    maxHeight: '7em', // Maximum 5 lines (line-height 1.4 * 5)
+                                                    overflow: 'hidden',
+                                                    bottom: '100%',
+                                                    left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    marginBottom: '4px',
+                                                    lineHeight: '1.4',
+                                                    wordBreak: 'break-word',
+                                                    border: '0.5px solid rgb(209, 213, 219)', // Very thin outline
+                                                    display: 'block'
+                                                }}
+                                                onMouseEnter={() => setShowDescriptionTooltip(true)}
+                                                onMouseLeave={() => setShowDescriptionTooltip(false)}
+                                            >
+                                                {matchContext.before && <span>{matchContext.before} </span>}
+                                                <span style={{ backgroundColor: '#ffff00' }}>{matchContext.match}</span>
+                                                {matchContext.after && <span> {matchContext.after}</span>}
+                                            </div>
+                                        )}
                                     </span>
                                 )}
                             </div>
