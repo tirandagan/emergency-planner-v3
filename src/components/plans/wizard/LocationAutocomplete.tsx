@@ -112,6 +112,17 @@ export function LocationAutocomplete({
   const [manualCountry, setManualCountry] = useState('United States');
   const hasLoggedError = useRef(false);
 
+  // Debug: Log component state
+  console.log('[LocationAutocomplete] Render:', {
+    isLoaded,
+    loadError: !!loadError,
+    apiError: !!apiError,
+    showManualEntry,
+    address,
+    hasContainer: !!autocompleteContainerRef.current,
+    hasAutocomplete: !!placeAutocompleteRef.current,
+  });
+
   /**
    * Handle Google Maps API errors
    */
@@ -175,33 +186,54 @@ export function LocationAutocomplete({
    * Initialize PlaceAutocompleteElement when Maps API is loaded
    */
   useEffect(() => {
+    console.log('[LocationAutocomplete] useEffect called:', {
+      isLoaded,
+      hasContainer: !!autocompleteContainerRef.current,
+      apiError: !!apiError,
+      showManualEntry,
+      hasExisting: !!placeAutocompleteRef.current,
+    });
+
     if (!isLoaded || !autocompleteContainerRef.current || apiError || showManualEntry) {
+      console.log('[LocationAutocomplete] Skipping initialization');
       return;
     }
 
     // If autocomplete already exists, don't create a new one
     if (placeAutocompleteRef.current) {
+      console.log('[LocationAutocomplete] Autocomplete already exists');
       return;
     }
 
     const initAutocomplete = async () => {
+      console.log('[LocationAutocomplete] Starting autocomplete initialization');
       try {
         // Double-check container is still available and not already initialized
-        if (!autocompleteContainerRef.current || placeAutocompleteRef.current) return;
+        console.log('[LocationAutocomplete] Checking container:', !!autocompleteContainerRef.current);
+        if (!autocompleteContainerRef.current || placeAutocompleteRef.current) {
+          console.log('[LocationAutocomplete] Container check failed, aborting');
+          return;
+        }
 
         // Import the places library
+        console.log('[LocationAutocomplete] Importing places library');
         await google.maps.importLibrary('places');
+        console.log('[LocationAutocomplete] Places library imported successfully');
 
         // Create PlaceAutocompleteElement
+        console.log('[LocationAutocomplete] Creating PlaceAutocompleteElement');
         // @ts-ignore - PlaceAutocompleteElement types may not be up to date
         const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
           // Restrict to geocode results (cities, addresses)
           componentRestrictions: undefined,
         });
+        console.log('[LocationAutocomplete] PlaceAutocompleteElement created:', !!placeAutocomplete);
 
         placeAutocompleteRef.current = placeAutocomplete;
+        console.log('[LocationAutocomplete] Ref set successfully');
 
         // Add event listener for place selection (gmp-select is the new event name)
+        console.log('[LocationAutocomplete] Adding gmp-select event listener');
         // @ts-ignore - Event types may not be up to date
         placeAutocomplete.addEventListener('gmp-select', async (event: any) => {
           try {
@@ -239,26 +271,38 @@ export function LocationAutocomplete({
             console.error('[LocationAutocomplete] Error handling place selection:', err);
           }
         });
+        console.log('[LocationAutocomplete] Event listener added successfully');
 
         // Append to container (recheck it's still available)
+        console.log('[LocationAutocomplete] Checking if container still available for appendChild:', !!autocompleteContainerRef.current);
         if (autocompleteContainerRef.current) {
+          console.log('[LocationAutocomplete] Appending PlaceAutocompleteElement to container');
           autocompleteContainerRef.current.appendChild(placeAutocomplete);
+          console.log('[LocationAutocomplete] PlaceAutocompleteElement appended successfully');
           
-          // Remove default outline from gmp-place-autocomplete and ensure container gets focus styling
+          // Force explicit sizing and visibility on the PlaceAutocompleteElement
           // @ts-ignore - style property may not be typed
-          placeAutocomplete.style.outline = 'none';
+          placeAutocomplete.style.display = 'block';
           // @ts-ignore
-          placeAutocomplete.style.border = 'none';
+          placeAutocomplete.style.visibility = 'visible';
+          // @ts-ignore
+          placeAutocomplete.style.opacity = '1';
           // @ts-ignore
           placeAutocomplete.style.width = '100%';
           // @ts-ignore
+          placeAutocomplete.style.minWidth = '200px';
+          // @ts-ignore
           placeAutocomplete.style.maxWidth = '100%';
+          // @ts-ignore
+          placeAutocomplete.style.height = '50px';
+          // @ts-ignore
+          placeAutocomplete.style.minHeight = '50px';
           // @ts-ignore
           placeAutocomplete.style.flex = '1';
           // @ts-ignore
-          placeAutocomplete.style.height = 'auto';
+          placeAutocomplete.style.outline = 'none';
           // @ts-ignore
-          placeAutocomplete.style.minHeight = '40px';
+          placeAutocomplete.style.border = 'none';
           
           // Remove focus outline via CSS variables
           // @ts-ignore
@@ -267,10 +311,8 @@ export function LocationAutocomplete({
           placeAutocomplete.style.setProperty('--gmpx-color-primary', 'transparent');
           // @ts-ignore
           placeAutocomplete.style.setProperty('--gmpx-focus-outline-color', 'transparent');
-          // @ts-ignore
-          placeAutocomplete.style.display = 'block';
-          // @ts-ignore
-          placeAutocomplete.style.visibility = 'visible';
+          
+          console.log('[LocationAutocomplete] Applied styling to PlaceAutocompleteElement');
           
           // Add global style to remove Google Maps focus outline
           const globalStyleId = 'gmp-autocomplete-focus-fix';
@@ -431,6 +473,30 @@ export function LocationAutocomplete({
       }
     };
   }, [isLoaded, apiError, showManualEntry, handleApiError]);
+
+  /**
+   * Re-append PlaceAutocompleteElement when container becomes available again
+   * (e.g., when address is cleared after being set)
+   */
+  useEffect(() => {
+    console.log('[LocationAutocomplete] Re-append check:', {
+      hasContainer: !!autocompleteContainerRef.current,
+      hasElement: !!placeAutocompleteRef.current,
+      elementInDOM: placeAutocompleteRef.current?.parentNode === autocompleteContainerRef.current,
+      address,
+    });
+
+    if (
+      autocompleteContainerRef.current &&
+      placeAutocompleteRef.current &&
+      placeAutocompleteRef.current.parentNode !== autocompleteContainerRef.current
+    ) {
+      // PlaceAutocompleteElement exists but is not in the container - re-append it
+      console.log('[LocationAutocomplete] Re-appending PlaceAutocompleteElement to container');
+      autocompleteContainerRef.current.appendChild(placeAutocompleteRef.current);
+      console.log('[LocationAutocomplete] PlaceAutocompleteElement re-appended successfully');
+    }
+  }, [address]);
 
   /**
    * Extract location data from the new Place class
@@ -698,17 +764,22 @@ export function LocationAutocomplete({
         }
       },
       (geoError) => {
-        console.error('Geolocation error:', geoError);
         setIsGettingLocation(false);
 
         let errorMessage = 'Failed to get your location.';
 
         if (geoError.code === geoError.PERMISSION_DENIED) {
+          // User declined - this is expected behavior, not an error
           errorMessage = 'Location access was denied. Please use the search box above to enter your location.';
         } else if (geoError.code === geoError.POSITION_UNAVAILABLE) {
+          console.warn('Geolocation unavailable:', geoError);
           errorMessage = 'Location information is unavailable. Please use the search box above to enter your location.';
         } else if (geoError.code === geoError.TIMEOUT) {
+          console.warn('Geolocation timeout:', geoError);
           errorMessage = 'Location request timed out. Please try again or use the search box above.';
+        } else {
+          // Unknown error - log as error
+          console.error('Geolocation error:', geoError);
         }
 
         setValidationError(errorMessage);

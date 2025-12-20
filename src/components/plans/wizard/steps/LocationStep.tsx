@@ -147,33 +147,35 @@ export function LocationStep({ register, watch, setValue, control, errors }: Loc
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Why We Need Your Location</DialogTitle>
-                      <DialogDescription className="space-y-3 pt-2">
-                        <p>
-                          Your location is crucial for creating a truly personalized preparedness plan that works for your specific area.
-                        </p>
-                        <p className="font-semibold text-foreground">
-                          Here&rsquo;s how we use it:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-2 text-sm">
-                          <li>
-                            <span className="font-medium">Local Risk Assessment:</span> Identify region-specific threats like earthquakes, hurricanes, wildfires, or flooding
-                          </li>
-                          <li>
-                            <span className="font-medium">Climate-Specific Guidance:</span> Tailor recommendations for your local weather patterns and seasonal hazards
-                          </li>
-                          <li>
-                            <span className="font-medium">Resource Mapping:</span> Locate nearby emergency services, shelters, and supply points
-                          </li>
-                          <li>
-                            <span className="font-medium">Evacuation Planning:</span> Generate realistic evacuation routes and safe zones based on local geography
-                          </li>
-                          <li>
-                            <span className="font-medium">Smart Recommendations:</span> Suggest gear and supplies appropriate for your area&rsquo;s unique conditions
-                          </li>
-                        </ul>
-                        <p className="text-xs text-muted-foreground pt-2">
-                          Your privacy is protected. Location data is used solely for plan generation and is never shared with third parties.
-                        </p>
+                      <DialogDescription asChild>
+                        <div className="space-y-3 pt-2 text-sm text-muted-foreground">
+                          <p>
+                            Your location is crucial for creating a truly personalized preparedness plan that works for your specific area.
+                          </p>
+                          <p className="font-semibold text-foreground">
+                            Here&rsquo;s how we use it:
+                          </p>
+                          <ul className="list-disc pl-5 space-y-2 text-sm">
+                            <li>
+                              <span className="font-medium">Local Risk Assessment:</span> Identify region-specific threats like earthquakes, hurricanes, wildfires, or flooding
+                            </li>
+                            <li>
+                              <span className="font-medium">Climate-Specific Guidance:</span> Tailor recommendations for your local weather patterns and seasonal hazards
+                            </li>
+                            <li>
+                              <span className="font-medium">Resource Mapping:</span> Locate nearby emergency services, shelters, and supply points
+                            </li>
+                            <li>
+                              <span className="font-medium">Evacuation Planning:</span> Generate realistic evacuation routes and safe zones based on local geography
+                            </li>
+                            <li>
+                              <span className="font-medium">Smart Recommendations:</span> Suggest gear and supplies appropriate for your area&rsquo;s unique conditions
+                            </li>
+                          </ul>
+                          <p className="text-xs text-muted-foreground pt-2">
+                            Your privacy is protected. Location data is used solely for plan generation and is never shared with third parties.
+                          </p>
+                        </div>
                       </DialogDescription>
                     </DialogHeader>
                   </DialogContent>
