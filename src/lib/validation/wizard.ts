@@ -31,6 +31,10 @@ export const scenarioSelectionSchema = z.object({
  * Family member validation
  */
 export const familyMemberSchema = z.object({
+  name: z
+    .string()
+    .max(50, 'Name must be 50 characters or less')
+    .optional(),
   age: z
     .number({
       required_error: 'Age is required',
@@ -208,7 +212,7 @@ export const generatedKitSchema = z.object({
  */
 export function validateStep(
   step: number,
-  data: any
+  data: unknown
 ): { success: boolean; errors: Record<string, string> } {
   try {
     switch (step) {
@@ -241,7 +245,7 @@ export function validateStep(
 /**
  * Helper function to validate complete wizard form
  */
-export function validateWizardForm(data: any): {
+export function validateWizardForm(data: unknown): {
   success: boolean;
   errors: Record<string, string>;
 } {

@@ -16,6 +16,7 @@ export type ScenarioType =
  * Family member configuration for personnel planning
  */
 export interface FamilyMember {
+  name?: string; // Optional name for identification (e.g., "Mom", "Sarah")
   age: number; // 0-120
   gender?: 'male' | 'female' | 'prefer_not_to_say'; // Optional gender
   medicalConditions?: string; // Optional medical conditions

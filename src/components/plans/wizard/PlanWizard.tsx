@@ -92,6 +92,7 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
     scenarios: [],
     familyMembers: [
       {
+        name: '',
         age: 30,
         medicalConditions: '',
         specialNeeds: '',
@@ -258,7 +259,6 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
       case 1:
         return (
           <PersonnelStep
-            register={register}
             control={control}
             errors={errors}
           />

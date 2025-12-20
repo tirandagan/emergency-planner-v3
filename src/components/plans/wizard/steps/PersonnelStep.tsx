@@ -1,19 +1,18 @@
 "use client";
 
 import React from 'react';
-import { Control, useFieldArray, FieldErrors, UseFormRegister } from 'react-hook-form';
+import { Control, useFieldArray, FieldErrors } from 'react-hook-form';
 import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CompactPersonCard } from '../CompactPersonCard';
 import type { WizardFormData } from '@/types/wizard';
 
 interface PersonnelStepProps {
-  register: UseFormRegister<WizardFormData>;
   control: Control<WizardFormData>;
   errors?: FieldErrors<WizardFormData>;
 }
 
-export function PersonnelStep({ register, control, errors }: PersonnelStepProps) {
+export function PersonnelStep({ control, errors }: PersonnelStepProps) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'familyMembers',
@@ -21,6 +20,7 @@ export function PersonnelStep({ register, control, errors }: PersonnelStepProps)
 
   const addFamilyMember = () => {
     append({
+      name: '',
       age: 30,
       medicalConditions: '',
       specialNeeds: '',
@@ -46,16 +46,7 @@ export function PersonnelStep({ register, control, errors }: PersonnelStepProps)
           <CompactPersonCard
             key={field.id}
             index={index}
-            value={field}
-            onChange={(fieldName, value) => {
-              const event = {
-                target: {
-                  name: `familyMembers.${index}.${fieldName}`,
-                  value,
-                },
-              };
-              register(`familyMembers.${index}.${fieldName}`).onChange(event);
-            }}
+            control={control}
             onRemove={() => remove(index)}
             canRemove={fields.length > 1}
             error={errors?.familyMembers?.[index]}
@@ -69,9 +60,9 @@ export function PersonnelStep({ register, control, errors }: PersonnelStepProps)
           type="button"
           variant="outline"
           onClick={addFamilyMember}
-          className="w-full border-dashed"
+          className="w-full border-dashed hover:border-solid"
         >
-          <UserPlus className="w-4 h-4" />
+          <UserPlus className="!w-4 !h-4" />
           Add Another Person
         </Button>
       )}
