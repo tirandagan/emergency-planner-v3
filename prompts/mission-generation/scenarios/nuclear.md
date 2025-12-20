@@ -485,7 +485,7 @@ Radioactive iodine released in nuclear events concentrates in thyroid, causing c
 - Rest
 - No specific home treatment (requires medical intervention)
 
-## Budget Considerations for {{budget_tier}}
+## Budget Considerations
 
 **Tight Budget ($200-500):**
 - Focus: Basement shelter improvement (sandbags, water jugs)

@@ -259,7 +259,7 @@ I analyzed your {{top_scenario}} plan and noticed you're strong on water and foo
 **Total investment:** $XXX to reach 85% readiness
 **Or:** Start with just the Medical Bundle this month
 
-These match your {{budget_tier}} budget and {{top_scenario}} focus. No pressure - review when you're ready.
+These match your {{top_scenario}} focus and preparedness goals. No pressure - review when you're ready.
 
 Questions? Just reply!
 

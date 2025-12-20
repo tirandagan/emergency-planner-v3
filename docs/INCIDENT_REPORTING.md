@@ -162,7 +162,7 @@ export async function generateMissionPlan(formData: WizardFormData, userId: stri
       userId,
       userAction: 'Generating disaster preparedness plan',
       component: 'MissionGenerator',
-      route: '/planner/wizard',
+      route: '/plans/new',
       requestData: {
         scenario: formData.scenario,
         location: formData.location,

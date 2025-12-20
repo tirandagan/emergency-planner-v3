@@ -68,7 +68,6 @@ export async function saveMissionReportV2({
         scenarios: formData.scenarios,
         familySize: formData.familyMembers.length,
         durationDays: formData.durationDays,
-        budgetAmount: getBudgetAmount(formData.budgetTier).toString(),
         reportData: reportData as any, // JSONB accepts any structure
         readinessScore,
         scenarioScores,
@@ -113,18 +112,6 @@ function generateReportTitle(formData: ReportDataV2['formData']): string {
       : 'Custom Location';
 
   return `${scenarioNames} - ${location}`;
-}
-
-/**
- * Get budget amount from tier
- */
-function getBudgetAmount(tier: string): number {
-  const budgetMap = {
-    LOW: 350,
-    MEDIUM: 1000,
-    HIGH: 2000,
-  };
-  return budgetMap[tier as keyof typeof budgetMap] || 1000;
 }
 
 /**

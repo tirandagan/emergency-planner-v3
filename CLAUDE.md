@@ -353,7 +353,7 @@ export async function generatePlan(formData: WizardFormData, userId: string) {
 ### Modifying AI Prompts
 1. Edit prompt files in `prompts/` directory
 2. Prompts are loaded server-side by `buildMegaPrompt()` in `src/lib/prompts/`
-3. Test with wizard flow: `/planner/wizard`
+3. Test with wizard flow: `/plans/new`
 4. Monitor token usage in `calls` table
 
 ## Testing & Quality Assurance

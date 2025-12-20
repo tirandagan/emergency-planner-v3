@@ -26,6 +26,7 @@ export const db = {
       firstName: data.first_name,
       lastName: data.last_name,
       birthYear: data.birth_year,
+      gender: data.gender as 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined,
       role: data.role as 'ADMIN' | 'USER'
     };
   },

@@ -121,7 +121,7 @@ Quality-of-life improvements and specialized needs.
 - "The crank radio is locked (essential), but you can remove the emergency blankets if you have sleeping bags"
 
 **Budget Fit:**
-- "At $X, this represents excellent value for {{budget_tier}} budget"
+- "At $X, this represents excellent value for your preparedness investment"
 - "This investment covers Y% of your critical survival needs"
 
 ## Handling Special Situations

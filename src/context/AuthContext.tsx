@@ -35,6 +35,7 @@ const createUserFromMetadata = (authUser: AuthUser): User => {
     firstName: (metadata.first_name as string) || '',
     lastName: (metadata.last_name as string) || '',
     birthYear: (metadata.birth_year as number) || undefined,
+    gender: (metadata.gender as 'male' | 'female' | 'other' | 'prefer_not_to_say') || undefined,
     role: (metadata.role as 'USER' | 'ADMIN') || 'USER'
   };
 };

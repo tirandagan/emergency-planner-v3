@@ -67,16 +67,6 @@ export function PersonnelStep({ control, errors }: PersonnelStepProps) {
         </Button>
       )}
 
-      {/* Summary */}
-      {fields.length > 0 && (
-        <div className="p-4 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20">
-          <p className="text-sm text-slate-700 dark:text-slate-300">
-            <span className="font-semibold">{fields.length} person{fields.length > 1 ? 's' : ''}</span>{' '}
-            added to your disaster preparedness plan
-          </p>
-        </div>
-      )}
-
       {/* General Error */}
       {errors?.familyMembers && typeof errors.familyMembers === 'object' && !Array.isArray(errors.familyMembers) && (
         <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive">

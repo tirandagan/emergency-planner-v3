@@ -394,7 +394,7 @@ Pandemic preparedness is fundamentally different from other scenarios:
 - Lower transmission risk
 - Self-sufficiency already practiced
 
-## Budget Considerations for {{budget_tier}}
+## Budget Considerations
 
 **Tight Budget ($200-500):**
 - Food: Bulk rice, beans, pasta, canned goods

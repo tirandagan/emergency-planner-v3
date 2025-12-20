@@ -311,7 +311,7 @@ Assign roles based on age and ability:
 - [ ] Feminine hygiene: {{feminine_product_count}}
 - [ ] Lime or bleach (waste treatment)
 
-## Budget Considerations for {{budget_tier}}
+## Budget Considerations
 
 **Tight Budget ($500-1,500):**
 Focus on basics that enable long-term sustainability:

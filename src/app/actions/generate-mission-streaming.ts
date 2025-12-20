@@ -8,7 +8,7 @@
 
 import { streamText } from 'ai';
 import { openrouter, MODELS } from '@/lib/openrouter';
-import { buildStreamingMegaPrompt, buildStreamingUserMessage, getBudgetAmount } from '@/lib/prompts';
+import { buildStreamingMegaPrompt, buildStreamingUserMessage } from '@/lib/prompts';
 import { getBundlesForScenarios, getAllBundles } from '@/lib/bundles';
 import { buildBundleContext, getEnrichedBundleData } from '@/lib/ai/bundle-context';
 import { parseReportContent } from '@/lib/mission-generation/markdown-parser';
@@ -47,11 +47,9 @@ export async function generateMissionPlanNonStreaming(
 
   try {
     // Step 1: Pre-filter bundles for this scenario
-    const budgetAmount = getBudgetAmount(formData.budgetTier);
     let bundles = await getBundlesForScenarios({
       scenarios: formData.scenarios,
       familySize: formData.familyMembers.length,
-      maxPrice: budgetAmount * 2,
       limit: 10,
     });
 

@@ -123,9 +123,12 @@ const runSeed = async (): Promise<void> => {
   const { error: categoriesError } = await supabase.rpc('exec_sql', {
     sql: `
       INSERT INTO categories (id, name, parent_id, slug, description)
-      VALUES 
+      VALUES
         ${categories.map((c) => `('${c.id}', '${c.name}', ${c.parentId ? `'${c.parentId}'` : 'NULL'}, '${c.slug}', '${c.description}')`).join(',\n        ')}
-      ON CONFLICT (id) DO NOTHING;
+      ON CONFLICT (slug) DO UPDATE SET
+        name = EXCLUDED.name,
+        parent_id = EXCLUDED.parent_id,
+        description = EXCLUDED.description;
     `,
   });
 
@@ -167,9 +170,12 @@ const runSeed = async (): Promise<void> => {
   const { error: suppliersError } = await supabase.rpc('exec_sql', {
     sql: `
       INSERT INTO suppliers (id, name, fulfillment_type, website_url)
-      VALUES 
+      VALUES
         ${suppliers.map((s) => `('${s.id}', '${s.name}', '${s.fulfillmentType}', '${s.websiteUrl}')`).join(',\n        ')}
-      ON CONFLICT (id) DO NOTHING;
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        fulfillment_type = EXCLUDED.fulfillment_type,
+        website_url = EXCLUDED.website_url;
     `,
   });
 
@@ -188,7 +194,7 @@ const runSeed = async (): Promise<void> => {
       name: 'Water Storage Container (5 gallon)',
       description: '5-gallon water storage container for emergency water supply',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family', 'individual'],
       locations: ['urban', 'suburban', 'rural'],
       scenarios: ['earthquake', 'flood', 'hurricane', 'wildfire', 'power-outage'],
@@ -199,7 +205,7 @@ const runSeed = async (): Promise<void> => {
       name: 'Water Purification Tablets',
       description: 'Tablets for purifying contaminated water',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family', 'individual', 'elderly'],
       locations: ['urban', 'suburban', 'rural', 'wilderness'],
       scenarios: ['earthquake', 'flood', 'hurricane', 'wildfire'],
@@ -210,7 +216,7 @@ const runSeed = async (): Promise<void> => {
       name: 'Emergency Food Ration Bars',
       description: '3600 calorie emergency food bars, 5-year shelf life',
       status: 'active',
-      timeframes: ['72-hour', '2-week'],
+      timeframes: ['72-hour', '1-week'],
       demographics: ['family', 'individual'],
       locations: ['urban', 'suburban', 'rural'],
       scenarios: ['earthquake', 'flood', 'hurricane', 'wildfire', 'power-outage'],
@@ -221,7 +227,7 @@ const runSeed = async (): Promise<void> => {
       name: 'Freeze-Dried Meals (4-person, 3-day supply)',
       description: 'Freeze-dried meal kit for 4 people, 3-day supply',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family'],
       locations: ['urban', 'suburban', 'rural'],
       scenarios: ['earthquake', 'flood', 'hurricane', 'wildfire', 'power-outage'],
@@ -232,7 +238,7 @@ const runSeed = async (): Promise<void> => {
       name: 'First Aid Kit (Family Size)',
       description: 'Comprehensive first aid kit with 200+ pieces',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family', 'individual'],
       locations: ['urban', 'suburban', 'rural'],
       scenarios: ['earthquake', 'flood', 'hurricane', 'wildfire', 'tornado'],
@@ -243,7 +249,7 @@ const runSeed = async (): Promise<void> => {
       name: 'LED Flashlight (High-Powered)',
       description: 'High-powered LED flashlight with multiple brightness settings',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family', 'individual', 'elderly'],
       locations: ['urban', 'suburban', 'rural'],
       scenarios: ['earthquake', 'power-outage', 'hurricane', 'tornado'],
@@ -254,7 +260,7 @@ const runSeed = async (): Promise<void> => {
       name: 'AA Batteries (24-pack)',
       description: 'Pack of 24 AA batteries for flashlights and radios',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family', 'individual', 'elderly'],
       locations: ['urban', 'suburban', 'rural'],
       scenarios: ['earthquake', 'power-outage', 'hurricane', 'tornado', 'wildfire'],
@@ -265,7 +271,7 @@ const runSeed = async (): Promise<void> => {
       name: 'Emergency Weather Radio',
       description: 'Hand-crank emergency radio with NOAA weather alerts',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family', 'individual', 'elderly'],
       locations: ['urban', 'suburban', 'rural'],
       scenarios: ['hurricane', 'tornado', 'wildfire', 'flood', 'blizzard'],
@@ -276,7 +282,7 @@ const runSeed = async (): Promise<void> => {
       name: 'Emergency Tent (4-person)',
       description: '4-person waterproof tent for emergency shelter',
       status: 'active',
-      timeframes: ['2-week', '1-month'],
+      timeframes: ['1-week', '1-month'],
       demographics: ['family'],
       locations: ['suburban', 'rural', 'wilderness'],
       scenarios: ['earthquake', 'wildfire', 'flood'],
@@ -287,7 +293,7 @@ const runSeed = async (): Promise<void> => {
       name: 'Emergency Blanket (Pack of 4)',
       description: 'Mylar emergency blankets for warmth and shelter',
       status: 'active',
-      timeframes: ['72-hour', '2-week', '1-month'],
+      timeframes: ['72-hour', '1-week', '1-month'],
       demographics: ['family', 'individual', 'elderly'],
       locations: ['urban', 'suburban', 'rural', 'wilderness'],
       scenarios: ['earthquake', 'blizzard', 'hurricane', 'tornado', 'wildfire'],
@@ -313,9 +319,17 @@ const runSeed = async (): Promise<void> => {
   const { error: masterItemsError } = await supabase.rpc('exec_sql', {
     sql: `
       INSERT INTO master_items (id, category_id, name, description, status, timeframes, demographics, locations, scenarios)
-      VALUES 
+      VALUES
       ${masterItemsSQL}
-      ON CONFLICT (id) DO NOTHING;
+      ON CONFLICT (id) DO UPDATE SET
+        category_id = EXCLUDED.category_id,
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        status = EXCLUDED.status,
+        timeframes = EXCLUDED.timeframes,
+        demographics = EXCLUDED.demographics,
+        locations = EXCLUDED.locations,
+        scenarios = EXCLUDED.scenarios;
     `,
   });
 

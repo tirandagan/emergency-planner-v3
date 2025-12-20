@@ -130,30 +130,6 @@ function calculateSupplies(formData: WizardFormData) {
 }
 
 /**
- * Get budget tier label from string value
- */
-function getBudgetTierLabel(tier: string): string {
-  const tiers = {
-    LOW: 'Tight Budget (<$500)',
-    MEDIUM: 'Moderate Budget ($500-1,500)',
-    HIGH: 'Premium Budget ($1,500+)',
-  };
-  return tiers[tier as keyof typeof tiers] || 'Moderate Budget ($500-1,500)';
-}
-
-/**
- * Get budget amount from tier
- */
-export function getBudgetAmount(tier: string): number {
-  const budgetMap = {
-    LOW: 350,
-    MEDIUM: 1000,
-    HIGH: 2000,
-  };
-  return budgetMap[tier as keyof typeof budgetMap] || 1000;
-}
-
-/**
  * Extract variables from form data for template replacement
  */
 export function extractTemplateVariables(formData: WizardFormData): Record<string, string | number> {
@@ -196,16 +172,11 @@ export function extractTemplateVariables(formData: WizardFormData): Record<strin
     // Special needs (dietary, mobility, etc.)
     special_needs: specialNeeds.length > 0 ? specialNeeds.join(', ') : 'None',
 
-    // Duration & Budget
+    // Duration
     duration_days: formData.durationDays,
-    budget_tier: getBudgetTierLabel(formData.budgetTier),
-    budget_amount: getBudgetAmount(formData.budgetTier),
 
     // Calculated supplies
     ...supplies,
-
-    // Preparedness level
-    preparedness_level: formData.existingPreparedness,
   };
 }
 
@@ -358,10 +329,6 @@ export function buildStreamingUserMessage(
 
 **PLANNING DURATION**: ${formData.durationDays} days
 
-**BUDGET**: ${getBudgetTierLabel(formData.budgetTier)} (approximately $${getBudgetAmount(formData.budgetTier)})
-
-**CURRENT PREPAREDNESS**: ${formData.existingPreparedness}
-
 Generate the complete mission report following the exact output format specified. Include:
 1. Executive Summary (2-3 paragraphs)
 2. Risk Assessment (with all four subsections)
@@ -410,7 +377,6 @@ export async function buildRoutePrompt(
 
     // Calculate preparedness data
     const duration_days = formData.durationDays || 14;
-    const budget_amount = getBudgetAmount(formData.budgetTier) || 500;
     const water_72hr = `${family_size * 3} gallons`;
     const food_calories_total = family_size * 2000 * duration_days;
 
@@ -439,7 +405,6 @@ export async function buildRoutePrompt(
       // NEW preparedness variables
       location: locationStr,
       duration_days,
-      budget_amount,
       water_72hr,
       food_calories_total,
     };
@@ -491,10 +456,6 @@ export function buildUserMessage(formData: WizardFormData): string {
 **Home Type**: ${formData.homeType}
 
 **Planning Duration**: ${formData.durationDays} days
-
-**Budget Tier**: ${getBudgetTierLabel(formData.budgetTier)}
-
-**Current Preparedness Level**: ${formData.existingPreparedness}
 
 Please provide a detailed, actionable plan that addresses all scenarios and is personalized for this family's specific needs, location, and constraints.`;
 }

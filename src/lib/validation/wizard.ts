@@ -78,8 +78,8 @@ export const locationDataSchema = z.object({
     lng: z.number().min(-180).max(180),
   }),
   climateZone: z.string().min(1, 'Climate zone is required'),
-  fullAddress: z.string().min(1, 'Full address is required'),
-  placeId: z.string().min(1, 'Google Place ID is required'),
+  fullAddress: z.string().min(1, 'Please enter your scenario location to create a plan specific to your area'),
+  placeId: z.string().min(1, 'Please select a location from the dropdown'),
   rawPlaceData: z.any().optional(), // Google Places response
 });
 
@@ -88,6 +88,9 @@ export const locationDataSchema = z.object({
  */
 export const locationContextSchema = z.object({
   location: locationDataSchema,
+  homeType: z.enum(['apartment', 'house', 'condo', 'rural', 'mobile', 'other'], {
+    errorMap: () => ({ message: 'Please select a home type' }),
+  }),
   durationDays: z
     .number({
       required_error: 'Duration is required',
@@ -95,18 +98,9 @@ export const locationContextSchema = z.object({
     })
     .int('Duration must be a whole number')
     .refine(
-      (val) => [3, 7, 14, 30, 90, 365].includes(val),
-      'Duration must be 3, 7, 14, 30, 90, or 365 days'
+      (val) => [3, 7, 30, 90, 365].includes(val),
+      'Duration must be 3, 7, 30, 90, or 365 days'
     ),
-  homeType: z.enum(['apartment', 'house', 'condo', 'rural', 'mobile', 'other'], {
-    errorMap: () => ({ message: 'Please select a home type' }),
-  }),
-  existingPreparedness: z.enum(['none', 'basic', 'moderate', 'advanced'], {
-    errorMap: () => ({ message: 'Please select your current preparedness level' }),
-  }),
-  budgetTier: z.enum(['LOW', 'MEDIUM', 'HIGH'], {
-    errorMap: () => ({ message: 'Please select a budget tier' }),
-  }),
 });
 
 /**

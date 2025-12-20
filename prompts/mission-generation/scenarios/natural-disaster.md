@@ -234,8 +234,6 @@ Include in your plan:
 
 ## Budget Considerations
 
-For {{budget_tier}} budget:
-
 **Tight Budget ($200-500):**
 - Focus on water storage (food-grade buckets)
 - Costco/Sam's Club for bulk food

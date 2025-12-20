@@ -635,86 +635,111 @@ export interface WizardFormData {
 
 ## 11. Implementation Plan
 
-### Phase 1: TypeScript Types and Validation Updates
+### Phase 1: TypeScript Types and Validation Updates ✅ COMPLETED 2025-12-20
 **Goal:** Update core type definitions and validation schemas
 
-- [ ] **Task 1.1:** Update WizardFormData Interface
-  - Files: `src/types/wizard.ts` (line 57-58)
-  - Details: Remove `existingPreparedness` and `budgetTier` fields
-- [ ] **Task 1.2:** Update Validation Schema
-  - Files: `src/lib/validation/wizard.ts` (lines 98-109)
-  - Details: Remove preparedness and budget validation, update duration array
-- [ ] **Task 1.3:** Verify TypeScript Compilation
-  - Command: `npm run type-check`
-  - Details: Ensure no type errors after removing fields
+- [x] **Task 1.1:** Update WizardFormData Interface ✓ 2025-12-20
+  - Files: `src/types/wizard.ts` (lines 54-56) ✓
+  - Details: Removed `existingPreparedness` and `budgetTier` fields, reordered to location → homeType → durationDays ✓
+- [x] **Task 1.2:** Update Validation Schema ✓ 2025-12-20
+  - Files: `src/lib/validation/wizard.ts` (lines 89-104) ✓
+  - Details: Removed preparedness enum validation, removed budget enum validation, updated duration array to [3, 7, 30, 90, 365], reordered schema fields ✓
+  - **BONUS:** Updated location validation error messages for better UX:
+    - fullAddress: "Please enter your scenario location to create a plan specific to your area"
+    - placeId: "Please select a location from the dropdown"
+- [x] **Task 1.3:** Verify TypeScript Compilation ✓ 2025-12-20
+  - Command: `npx tsc --noEmit` ✓
+  - Details: Found 23 type errors as expected (guides remaining phases) ✓
 
-### Phase 2: Wizard UI Component Updates
+### Phase 2: Wizard UI Component Updates ✅ COMPLETED 2025-12-20
 **Goal:** Remove UI elements and reorder home type
 
-- [ ] **Task 2.1:** Update LocationStep Constants
-  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` (lines 95-124)
-  - Details: Remove PREPAREDNESS_LEVELS, BUDGET_TIERS, remove 14 from DURATION_OPTIONS
-- [ ] **Task 2.2:** Reorder Home Type Section
-  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` (lines 294-352)
-  - Details: Move home type section to appear after location section (after line 166)
-- [ ] **Task 2.3:** Remove Preparedness UI Section
-  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` (lines 229-289)
-  - Details: Delete entire preparedness level selection UI
-- [ ] **Task 2.4:** Remove Budget UI Section
-  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` (lines 354-413)
-  - Details: Delete entire budget tier selection UI
-- [ ] **Task 2.5:** Update Layout Grid Structure
-  - Files: `src/components/plans/wizard/steps/LocationStep.tsx`
-  - Details: Simplify grid layouts from 2-column to single-column where needed
+- [x] **Task 2.1:** Update LocationStep Constants ✓ 2025-12-20
+  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` (lines 5-12 for imports, 87-102 for constants) ✓
+  - Details: Removed Shield*, DollarSign, Coins, Banknote imports; Removed PREPAREDNESS_LEVELS constant (6 lines); Removed BUDGET_TIERS constant (6 lines); Removed 14-day option from DURATION_OPTIONS ✓
+- [x] **Task 2.2:** Reorder Home Type Section ✓ 2025-12-20
+  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` (lines 146-204) ✓
+  - Details: Moved home type section to appear immediately after location (now lines 146-204), updated to match duration button styling ✓
+  - **BONUS:** Matched home type button sizing to duration buttons (same padding, icon size, text size)
+- [x] **Task 2.3:** Remove Preparedness UI Section ✓ 2025-12-20
+  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` ✓
+  - Details: Deleted entire preparedness level selection UI (~62 lines removed) ✓
+- [x] **Task 2.4:** Remove Budget UI Section ✓ 2025-12-20
+  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` ✓
+  - Details: Deleted entire budget tier selection UI (~62 lines removed) ✓
+- [x] **Task 2.5:** Update Layout Grid Structure ✓ 2025-12-20
+  - Files: `src/components/plans/wizard/steps/LocationStep.tsx` ✓
+  - Details: Simplified from 2-column grids to clean vertical flow; Duration grid now lg:grid-cols-5 for 5 options; Home type grid now md:grid-cols-6 ✓
 
-### Phase 3: Wizard Defaults and Transform Updates
+**Bonus UI Improvements (2025-12-20):**
+- [x] **Location Validation Enhancement:** Added validation to reject broad locations (country/state/city only), requires specific address/neighborhood/landmark ✓
+- [x] **Validation Error Display:** Separate orange alert for location specificity errors vs red text for missing location ✓
+- [x] **Fixed Autocomplete Duplication Bug:** Prevented multiple PlaceAutocompleteElement instances from being created on re-renders ✓
+- [x] **Improved Error Messages:** LocationStep now passes fieldState.error to LocationAutocomplete for proper validation display ✓
+
+### Phase 3: Wizard Defaults and Transform Updates ✅ COMPLETED 2025-12-20
 **Goal:** Update default values and data transformation utilities
 
-- [ ] **Task 3.1:** Update PlanWizard Defaults
-  - Files: `src/components/plans/wizard/PlanWizard.tsx` (lines 103-104)
-  - Details: Remove existingPreparedness and budgetTier from INITIAL_FORM_DATA
-- [ ] **Task 3.2:** Update Transform Utility
-  - Files: `src/lib/wizard/transform-plan-data.ts` (lines 62-78)
-  - Details: Remove preparedness default and budget mapping logic
+- [x] **Task 3.1:** Update PlanWizard Defaults ✓ 2025-12-20
+  - Files: `src/components/plans/wizard/PlanWizard.tsx` (lines 103-104) ✓
+  - Details: Removed existingPreparedness and budgetTier from INITIAL_FORM_DATA ✓
+- [x] **Task 3.2:** Update Transform Utility ✓ 2025-12-20
+  - Files: `src/lib/wizard/transform-plan-data.ts` (lines 62-78) ✓
+  - Details: Removed preparedness default and budget mapping logic, updated isWizardDataComplete validation ✓
+- [x] **Task 3.3:** Verify TypeScript Compilation ✓ 2025-12-20
+  - Command: `npx tsc --noEmit` executed successfully ✓
+  - Details: Found 13 expected type errors in AI prompt files (guides Phase 4) ✓
 
-### Phase 4: AI Prompt System Updates
+### Phase 4: AI Prompt System Updates ✅ COMPLETED 2025-12-20
 **Goal:** Remove budget/preparedness references from all prompt templates
 
-- [ ] **Task 4.1:** Update System Prompt
-  - Files: `prompts/mission-generation/system-prompt.md` (lines 8, 20, 122)
-  - Details: Remove or genericize budget references
-- [ ] **Task 4.2:** Update Scenario Prompts
-  - Files: `prompts/mission-generation/scenarios/*.md`
-  - Details: Remove {{budget_tier}} placeholders from all scenario files
-- [ ] **Task 4.3:** Update Bundle Recommendation Prompts
-  - Files: `prompts/bundle-recommendations/*.md`
-  - Details: Remove budget tier filtering and scoring logic
-- [ ] **Task 4.4:** Verify Prompt Template Syntax
-  - Files: All files in `prompts/` directory
-  - Details: Search for remaining {{budget}}, {{preparedness}} references
+- [x] **Task 4.1:** Update TypeScript Files with Budget/Preparedness References ✓ 2025-12-20
+  - Files: `src/lib/prompts.ts` (9 errors), `src/app/actions/generate-mission-streaming.ts`, `src/app/api/generate-mission/route.ts`, `src/lib/ai/save-mission-report-v2.ts`, `src/lib/ai/save-mission-report.ts` ✓
+  - Details: Removed all references to formData.budgetTier and formData.existingPreparedness, removed budget_amount calculations ✓
+- [x] **Task 4.2:** Update Scenario Prompt Templates ✓ 2025-12-20
+  - Files: `prompts/mission-generation/scenarios/*.md` (6 files) ✓
+  - Details: Changed "Budget Considerations for {{budget_tier}}" to generic "Budget Considerations" headers ✓
+- [x] **Task 4.3:** Update Bundle Recommendation Prompts ✓ 2025-12-20
+  - Files: `prompts/bundle-recommendations/system-prompt.md` ✓
+  - Details: Genericized budget reference from "{{budget_tier}} budget" to "your preparedness investment" ✓
+- [x] **Task 4.4:** Update Email Personalization Prompts ✓ 2025-12-20
+  - Files: `prompts/email-personalization/system-prompt.md` ✓
+  - Details: Removed {{budget_tier}} reference, changed to "preparedness goals" ✓
+- [x] **Task 4.5:** Update Documentation ✓ 2025-12-20
+  - Files: `prompts/README.md` ✓
+  - Details: Removed {{budget_tier}} from documented template variables ✓
+- [x] **Task 4.6:** Verify All References Removed ✓ 2025-12-20
+  - Command: `grep -r "{{budget|{{preparedness|{{existing" prompts/` returned no results ✓
+  - Command: `npx tsc --noEmit` passed with zero errors ✓
 
-### Phase 5: Product Tagging Review (Optional)
+### Phase 5: Product Tagging Review (Optional) ✅ COMPLETED 2025-12-20
 **Goal:** Check if 2-week timeframe is used in product tagging
 
-- [ ] **Task 5.1:** Search Product Timeframes
-  - Files: Database query on `master_items.timeframes` and `specific_products.timeframes`
-  - Details: Check if any products are tagged with "2 weeks" or "14 days"
-- [ ] **Task 5.2:** Update Product Tags (If Found)
-  - Files: Database update if "2 weeks" tags exist
-  - Details: Decide on replacement tag (1 week or 1 month) and update
+- [x] **Task 5.1:** Search Product Timeframes ✓ 2025-12-20
+  - Files: `scripts/seed.ts` (product seed data) ✓
+  - Details: Found 10 instances of '2-week' timeframe tags in master_items seed data ✓
+  - Search Results: Lines 191, 202, 213, 224, 235, 246, 257, 268, 279, 290 ✓
+- [x] **Task 5.2:** Update Product Tags ✓ 2025-12-20
+  - Files: `scripts/seed.ts` (all instances updated) ✓
+  - Details: Replaced all '2-week' tags with '1-week' to maintain timeframe progression (72-hour → 1-week → 1-month) ✓
+  - Method: Used replace_all to update all 10 instances simultaneously ✓
 
-### Phase 6: Basic Code Validation (AI-Only)
+### Phase 6: Basic Code Validation (AI-Only) ✅ COMPLETED 2025-12-20
 **Goal:** Run safe static analysis only
 
-- [ ] **Task 6.1:** Code Quality Verification
-  - Files: All modified files
-  - Details: Run `npm run lint` - NEVER run dev server, build, or start commands
-- [ ] **Task 6.2:** TypeScript Compilation Check
-  - Files: All TypeScript files
-  - Details: Run `npm run type-check` to verify no type errors
-- [ ] **Task 6.3:** Static Logic Review
-  - Files: Modified wizard components
-  - Details: Read code to verify logic, edge cases, validation handling
+- [x] **Task 6.1:** Code Quality Verification ✓ 2025-12-20
+  - Files: All modified files ✓
+  - Details: `npm run lint` executed - found 592 pre-existing issues, resolved 1 new warning (unused `getBudgetTierLabel`) ✓
+  - **BONUS:** Removed all unused `getBudgetAmount` functions and imports from 5 files ✓
+- [x] **Task 6.2:** TypeScript Compilation Check ✓ 2025-12-20
+  - Files: All TypeScript files ✓
+  - Details: `npx tsc --noEmit` passed with zero errors ✓
+- [x] **Task 6.3:** Static Logic Review ✓ 2025-12-20
+  - Files: Modified wizard components, validation schemas, transform utilities ✓
+  - Details: Reviewed validation logic, UI component logic, transform utilities - no logic errors found ✓
+  - Verified duration validation excludes 14-day option ✓
+  - Verified field order (location → homeType → durationDays) ✓
+  - Verified no budget/preparedness references remain ✓
 
 🛑 **CRITICAL WORKFLOW CHECKPOINT**
 After completing Phase 6, you MUST:
@@ -1111,3 +1136,87 @@ None - this is a simplification with minimal risk. All impacts are neutral or po
 *Template Version: 1.3*
 *Last Updated: 12/20/2025*
 *Created By: Claude Sonnet 4.5*
+
+---
+
+## ADDITIONAL IMPROVEMENTS - 2025-12-20
+
+### Personnel UI Enhancements ✅ COMPLETED
+**Goal:** Improve visual design and UX of Personnel step (Step 2)
+
+**Changes Made:**
+1. **Removed Summary Message** (PersonnelStep.tsx)
+   - Deleted "# persons added to your disaster preparedness plan" message
+   - Cleaner UI with less redundant information
+
+2. **Blue Circle Indicators** (CompactPersonCard.tsx)
+   - Replaced "Person {index + 1}" text labels with blue circle badges
+   - 32px diameter circles positioned on left border
+   - Matches step indicator design (primary blue, white text, centered number)
+   - Added left padding (pl-8) to accommodate circles
+
+3. **Single-Line Input Fields** (CompactPersonCard.tsx)
+   - Changed Medical Conditions from Textarea to Input component
+   - Changed Special Needs from Textarea to Input component
+   - Updated KeyboardEvent types from HTMLTextAreaElement to HTMLInputElement
+   - Removed unused textarea refs
+   - Fields now h-8 (32px) matching Name and Age inputs
+
+**Result:** Professional, compact UI with consistent design language throughout wizard
+
+---
+
+### User Profile Pre-population 🔄 IN PROGRESS
+**Goal:** Auto-fill first person in wizard with user's age and gender from profile
+
+**Changes Completed:**
+1. **Updated User Type** (src/types.ts)
+   - Added `gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say'` to User interface
+
+2. **Updated AuthContext** (src/context/AuthContext.tsx)
+   - Modified `createUserFromMetadata()` to include gender from user_metadata
+   - Gender now available via `useAuth()` hook throughout app
+
+3. **Fixed Gender Update Bug** (src/components/profile/ProfileForm.tsx)
+   - Issue: Gender dropdown saved wrong value due to async state updates
+   - Fix: Uses new value directly in save call instead of formData state
+   - Gender now saves correctly to database
+
+4. **Updated PlanWizard** (src/components/plans/wizard/PlanWizard.tsx)
+   - Added gender pre-population in useEffect (lines 162-165)
+   - Updated INITIAL_FORM_DATA to include user's age and gender (lines 96-97)
+   - Ensures age and gender override saved localStorage state
+
+**Current Issue (NEEDS FIX):**
+- Age pre-fills correctly ✅
+- Gender does NOT pre-select in UI ❌
+- Gender value is in database ("male") and in form state
+- Gender buttons not responding to pre-filled value
+- Likely issue with React Hook Form initialization or Controller rendering
+
+**Next Steps:**
+1. Debug why Controller field.value isn't matching button selection
+2. Add console.log to verify form state has gender value
+3. Check if form needs reset() call after setting initial values
+4. Verify timing - ensure user data loads before form initializes
+5. Consider using form.reset() with new defaultValues after user loads
+
+**Files Modified:**
+- src/types.ts
+- src/context/AuthContext.tsx
+- src/components/profile/ProfileForm.tsx
+- src/components/plans/wizard/PlanWizard.tsx
+- src/components/plans/wizard/CompactPersonCard.tsx
+- src/components/plans/wizard/steps/PersonnelStep.tsx
+
+**Related Code Locations:**
+- Gender buttons: CompactPersonCard.tsx lines 108-142
+- GENDER_OPTIONS: CompactPersonCard.tsx lines 40-43
+- Form initialization: PlanWizard.tsx lines 111-133
+- INITIAL_FORM_DATA: PlanWizard.tsx lines 91-104
+
+---
+
+*Last Updated: 2025-12-20 (Session End)*
+*Status: Core field simplification COMPLETE ✅ | Gender pre-population IN PROGRESS 🔄*
+

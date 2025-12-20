@@ -538,7 +538,7 @@ Multi-year preparedness is fundamentally different from short-term survival:
 - Skill development (all aspects of self-sufficiency)
 - Long-term sustainability focus (regenerative practices)
 
-## Budget Considerations for {{budget_tier}}
+## Budget Considerations
 
 **Tight Budget ($500-2,000):**
 - **Seeds:** $200 (3+ years supply, heirloom variety)

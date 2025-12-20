@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Loader2, RotateCcw } from 'lucide-react';
@@ -16,9 +16,10 @@ import {
   locationContextSchema,
   validateStep,
 } from '@/lib/validation/wizard';
-import type { WizardFormData } from '@/types/wizard';
+import type { WizardFormData, LocationData } from '@/types/wizard';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { invalidateCachedProfile } from '@/lib/cache';
 
 const STEP_LABELS = ['Scenarios', 'Personnel', 'Location & Context', 'Generate Plan'];
 const STORAGE_KEY = 'plan-wizard-state';
@@ -83,26 +84,47 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
   const { user } = useAuth();
   const isEditMode = mode === 'edit';
   const storageKey = isEditMode ? EDIT_STORAGE_KEY : STORAGE_KEY;
+  
+  // Force cache refresh on mount if user doesn't have gender (old cached profile)
+  // This ensures users with stale cached profiles get the updated profile data
+  useEffect(() => {
+    if (user && !user.gender && user.id) {
+      invalidateCachedProfile(user.id);
+      window.location.reload();
+    }
+  }, [user]);
 
   // Calculate age from birth year
   const userAge = user?.birthYear ? new Date().getFullYear() - user.birthYear : undefined;
+  const profileName = user?.firstName || '';
+  const profileGender =
+    user?.gender && typeof user.gender === 'string'
+      ? (() => {
+          const g = user.gender.trim().toLowerCase();
+          return g === 'male' || g === 'female' ? (g as 'male' | 'female') : undefined;
+        })()
+      : undefined;
 
   // Initial form data (will be populated with defaults, user profile, or edit data)
-  const INITIAL_FORM_DATA: Partial<WizardFormData> = isEditMode && initialData ? initialData : {
-    scenarios: [],
-    familyMembers: [
-      {
-        name: '',
-        age: 30,
-        medicalConditions: '',
-        specialNeeds: '',
-      },
-    ],
-    durationDays: 7,
-    homeType: 'house',
-    existingPreparedness: 'none',
-    budgetTier: 'MEDIUM',
-  };
+  // Use useMemo to recompute when user changes
+  const INITIAL_FORM_DATA: Partial<WizardFormData> = useMemo(() => {
+    if (isEditMode && initialData) return initialData;
+    
+    return {
+      scenarios: [],
+      familyMembers: [
+        {
+          name: profileName,
+          age: userAge || 30,
+          gender: profileGender,
+          medicalConditions: '',
+          specialNeeds: '',
+        },
+      ],
+      durationDays: 7,
+      homeType: 'house',
+    };
+  }, [isEditMode, initialData, userAge, profileName, profileGender]);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
@@ -145,6 +167,18 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
       Object.entries(savedState.formData).forEach(([key, value]) => {
         setValue(key as keyof WizardFormData, value);
       });
+      // Always override with user profile data for first family member (profile is source of truth)
+      if (user) {
+        if (profileName) {
+          setValue('familyMembers.0.name', profileName);
+        }
+        if (userAge !== undefined) {
+          setValue('familyMembers.0.age', userAge);
+        }
+        if (user.gender && (user.gender === 'male' || user.gender === 'female')) {
+          setValue('familyMembers.0.gender', user.gender);
+        }
+      }
       // Restore current step
       setCurrentStep(savedState.currentStep);
       setIsResuming(true);
@@ -157,13 +191,72 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
       setHasLoadedState(true);
     } else if (user) {
       // No saved state - preload user profile data for first family member
-      // Wait for user data to be available before setting as loaded
-      if (userAge !== undefined) {
-        setValue('familyMembers.0.age', userAge);
-      }
+      // Use reset() to ensure form is properly initialized with user data
+      const currentFormData = watch();
+      const firstMember = currentFormData.familyMembers?.[0] || {
+        name: '',
+        age: 30,
+        medicalConditions: '',
+        specialNeeds: '',
+      };
+      
+      const updatedFormData: WizardFormData = {
+        scenarios: currentFormData.scenarios || [],
+        familyMembers: [
+          {
+            ...firstMember,
+            name: profileName || firstMember.name,
+            age: userAge !== undefined ? userAge : firstMember.age,
+            gender: profileGender ?? firstMember.gender,
+          },
+          ...(currentFormData.familyMembers?.slice(1) || []),
+        ],
+        location: currentFormData.location || {} as LocationData,
+        homeType: currentFormData.homeType || 'house',
+        durationDays: currentFormData.durationDays || 7,
+      };
+      reset(updatedFormData);
       setHasLoadedState(true);
     }
-  }, [user, userAge, hasLoadedState, setValue, isEditMode, initialData, storageKey]);
+  }, [user, userAge, profileName, profileGender, hasLoadedState, setValue, isEditMode, initialData, storageKey, watch, reset]);
+
+  // Separate effect to update profile data when user loads after initial mount
+  // This ensures name, age, and gender are pre-populated even if user loads later
+  useEffect(() => {
+    if (!user || isEditMode || !hasLoadedState) return;
+    
+    // Only update if there's no saved state (saved state takes precedence)
+    const savedState = loadSavedState(storageKey);
+    if (!savedState) {
+      let needsUpdate = false;
+      
+      // Check if name needs updating
+      if (profileName) {
+        const currentName = watch('familyMembers.0.name');
+        if (!currentName || currentName !== profileName) {
+          setValue('familyMembers.0.name', profileName, {
+            shouldValidate: false,
+            shouldDirty: false,
+            shouldTouch: false,
+          });
+          needsUpdate = true;
+        }
+      }
+      
+      // Check if gender needs updating
+      if (profileGender) {
+        const currentGender = watch('familyMembers.0.gender');
+        if (currentGender !== profileGender) {
+          setValue('familyMembers.0.gender', profileGender, {
+            shouldValidate: false,
+            shouldDirty: false,
+            shouldTouch: false,
+          });
+          needsUpdate = true;
+        }
+      }
+    }
+  }, [user, isEditMode, hasLoadedState, profileName, profileGender, watch, setValue, storageKey]);
 
   // Save state to localStorage whenever form data or step changes
   useEffect(() => {
@@ -304,13 +397,6 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
                   </Badge>
                 )}
               </div>
-              <p className="mt-2 text-slate-600 dark:text-slate-400">
-                {isResuming
-                  ? 'Resuming your previous session. Click "Start Over" to begin fresh.'
-                  : isEditMode
-                  ? 'Update your plan details and regenerate with the latest information'
-                  : 'Answer a few questions to generate your personalized preparedness plan'}
-              </p>
             </div>
             {isResuming && (
               <Button

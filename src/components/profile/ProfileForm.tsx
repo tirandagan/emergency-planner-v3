@@ -208,7 +208,25 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
             value={formData.gender}
             onValueChange={(val) => {
               setFormData({ ...formData, gender: val });
-              saveProfile();
+              // Save profile with the new value directly (state update is async)
+              startTransition(async () => {
+                const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+                const result = await updateUserProfile(userId, {
+                  fullName,
+                  firstName: formData.firstName,
+                  lastName: formData.lastName,
+                  birthYear: formData.birthYear ? parseInt(formData.birthYear, 10) : null,
+                  gender: val, // Use the new value directly
+                  location: formData.location,
+                  phone: formData.phone,
+                  timezone: formData.timezone,
+                });
+                if (result.success) {
+                  toast.success('Gender updated');
+                } else {
+                  toast.error(result.error || 'Failed to update gender');
+                }
+              });
             }}
           >
             <SelectTrigger id="gender" className="border-slate-300 dark:border-slate-700 focus-visible:ring-primary">

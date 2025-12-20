@@ -110,7 +110,6 @@ Common variables:
 - `{{location}}` - City/state
 - `{{scenarios}}` - Selected disaster scenarios
 - `{{duration}}` - Plan duration in days
-- `{{budget_tier}}` - Budget category (tight/moderate/premium)
 
 ## Usage Examples
 

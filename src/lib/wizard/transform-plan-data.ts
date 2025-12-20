@@ -58,25 +58,6 @@ export function transformReportToWizardData(report: MissionReport): Partial<Wiza
   // mobilityType is not the same as homeType, so we'll use a default
   wizardData.homeType = 'house'; // Default
 
-  // Existing preparedness level (not stored in report, use default)
-  wizardData.existingPreparedness = 'basic';
-
-  // Budget tier - map from budget amount
-  if (report.budgetAmount) {
-    const budgetNum = parseFloat(report.budgetAmount.replace(/[^0-9.-]+/g, ''));
-    if (!isNaN(budgetNum)) {
-      if (budgetNum < 500) {
-        wizardData.budgetTier = 'LOW';
-      } else if (budgetNum < 1500) {
-        wizardData.budgetTier = 'MEDIUM';
-      } else {
-        wizardData.budgetTier = 'HIGH';
-      }
-    }
-  } else {
-    wizardData.budgetTier = 'MEDIUM'; // Default
-  }
-
   return wizardData;
 }
 
@@ -112,7 +93,6 @@ export function isWizardDataComplete(data: Partial<WizardFormData>): boolean {
     data.familyMembers.length > 0 &&
     data.location &&
     data.durationDays &&
-    data.homeType &&
-    data.budgetTier
+    data.homeType
   );
 }

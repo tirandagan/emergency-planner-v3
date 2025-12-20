@@ -282,6 +282,8 @@ export async function deleteMissionReport(
       .where(eq(missionReports.id, reportId));
 
     revalidatePath('/dashboard', 'page');
+    revalidatePath('/plans', 'page');
+    revalidatePath('/plans/trash', 'page');
 
     return { success: true };
   } catch (error) {

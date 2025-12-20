@@ -61,7 +61,6 @@ export async function saveMissionReport({
         scenarios: formData.scenarios,
         familySize: formData.familyMembers.length,
         durationDays: formData.durationDays,
-        budgetAmount: getBudgetAmount(formData.budgetTier).toString(),
         reportData: {
           content,
           formData,
@@ -121,19 +120,6 @@ function generateReportTitle(formData: WizardFormData): string {
       : 'Custom Location';
 
   return `${scenarioNames} - ${location}`;
-}
-
-/**
- * Get budget amount from tier
- */
-function getBudgetAmount(tier: string): number {
-  const budgetMap = {
-    LOW: 350, // Mid-point of <$500
-    MEDIUM: 1000, // Mid-point of $500-1500
-    HIGH: 2000, // Example premium budget $1500+
-  };
-
-  return budgetMap[tier as keyof typeof budgetMap] || 1000;
 }
 
 /**

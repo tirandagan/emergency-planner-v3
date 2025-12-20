@@ -52,10 +52,8 @@ export interface WizardFormData {
 
   // Step 3: Location & Context
   location: LocationData;
-  durationDays: number; // 3, 7, 14, 30, 90, 365
   homeType: 'apartment' | 'house' | 'condo' | 'rural' | 'mobile' | 'other';
-  existingPreparedness: 'none' | 'basic' | 'moderate' | 'advanced';
-  budgetTier: 'LOW' | 'MEDIUM' | 'HIGH'; // LOW: <$500, MEDIUM: $500-1500, HIGH: $1500+
+  durationDays: number; // 3, 7, 30, 90, 365
 }
 
 /**

@@ -13,6 +13,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   birthYear?: number;
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   role: 'ADMIN' | 'USER';
 }
 

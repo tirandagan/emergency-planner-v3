@@ -51,18 +51,18 @@ export function CompactPersonCard({
 }: CompactPersonCardProps) {
   const [medicalInput, setMedicalInput] = useState('');
   const [needsInput, setNeedsInput] = useState('');
-  const medicalTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const needsTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   return (
-    <div className="relative p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+    <div className="relative p-4 pl-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+      {/* Blue Circle Indicator */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-primary text-primary-foreground border-2 border-primary flex items-center justify-center font-semibold text-sm">
+        {index + 1}
+      </div>
+
       {/* Compact Header with Name */}
       <div className="flex items-center gap-3 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
         {/* Name Field - Optional */}
         <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 shrink-0">
-            Person {index + 1}
-          </span>
           <Controller
             name={`familyMembers.${index}.name`}
             control={control}
@@ -186,7 +186,7 @@ export function CompactPersonCard({
                 field.onChange(newChips.join(','));
               };
 
-              const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+              const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   if (medicalInput.trim()) {
@@ -226,15 +226,14 @@ export function CompactPersonCard({
                       </div>
                     )}
 
-                    {/* 2-line Textarea */}
-                    <Textarea
-                      ref={medicalTextareaRef}
+                    {/* Single-line Input */}
+                    <Input
+                      type="text"
                       value={medicalInput}
                       onChange={(e) => setMedicalInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Type condition and press Enter..."
-                      className="h-[52px] text-sm resize-none"
-                      rows={2}
+                      className="h-8 text-sm"
                     />
                   </div>
 
@@ -285,7 +284,7 @@ export function CompactPersonCard({
                 field.onChange(newChips.join(','));
               };
 
-              const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+              const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   if (needsInput.trim()) {
@@ -325,15 +324,14 @@ export function CompactPersonCard({
                       </div>
                     )}
 
-                    {/* 2-line Textarea */}
-                    <Textarea
-                      ref={needsTextareaRef}
+                    {/* Single-line Input */}
+                    <Input
+                      type="text"
                       value={needsInput}
                       onChange={(e) => setNeedsInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Type special need and press Enter..."
-                      className="h-[52px] text-sm resize-none"
-                      rows={2}
+                      className="h-8 text-sm"
                     />
                   </div>
 

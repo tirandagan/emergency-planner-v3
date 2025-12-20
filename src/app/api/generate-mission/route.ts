@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { streamText, createTextStreamResponse } from 'ai';
 import { createClient } from '@/utils/supabase/server';
 import { openrouter, MODELS } from '@/lib/openrouter';
-import { buildStreamingMegaPrompt, buildStreamingUserMessage, getBudgetAmount } from '@/lib/prompts';
+import { buildStreamingMegaPrompt, buildStreamingUserMessage } from '@/lib/prompts';
 import { getBundlesForScenarios, getAllBundles } from '@/lib/bundles';
 import { buildBundleContext } from '@/lib/ai/bundle-context';
 import type { WizardFormData } from '@/types/wizard';
@@ -43,11 +43,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Pre-filter bundles for this scenario
-    const budgetAmount = getBudgetAmount(formData.budgetTier);
     let bundles = await getBundlesForScenarios({
       scenarios: formData.scenarios,
       familySize: formData.familyMembers.length,
-      maxPrice: budgetAmount * 2, // Allow some flexibility over budget
       limit: 10,
     });
 

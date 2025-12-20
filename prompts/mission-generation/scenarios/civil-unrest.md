@@ -393,7 +393,7 @@ Most threats will move on if your home looks:
 - Supplies others lack (first aid, batteries, water filters)
 - Be discreet (don't advertise what you have)
 
-## Budget Considerations for {{budget_tier}}
+## Budget Considerations
 
 **Tight Budget ($200-500):**
 - **Focus:** Home security improvements
