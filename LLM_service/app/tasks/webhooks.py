@@ -81,6 +81,7 @@ def build_webhook_payload(
             "job_id": str(job.id),
             "status": "completed",
             "workflow_name": job.workflow_name,
+            "user_id": str(job.user_id) if job.user_id else None,
             "result": job.result_data or {},
             "cost_data": {
                 "total_tokens": job.result_data.get("metadata", {}).get("total_tokens", 0) if job.result_data else 0,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { createLLMCallback } from '@/lib/llm-callbacks';
 import { getAdminEmail } from '@/db/queries/system-settings';
+import { handleEmergencyContactsComplete } from '@/lib/ai/webhook-handlers';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -237,7 +238,20 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     console.log('[LLM Webhook] Callback stored successfully:', callbackId);
 
-    // 10. Return 200 OK immediately (<200ms target)
+    // 10. Handle workflow-specific processing (Async - don't block response)
+    // Try to get user_id from payload top-level or result.metadata
+    const userId = payload.user_id || payload.result?.metadata?.user_id;
+
+    if (payload.event === 'workflow.completed' && userId) {
+      if (payload.workflow_name === 'emergency_contacts') {
+        // Trigger processing but don't await to keep webhook response <200ms
+        handleEmergencyContactsComplete(userId, payload.result).catch(err => {
+          console.error('[LLM Webhook] Async processing failed:', err);
+        });
+      }
+    }
+
+    // 11. Return 200 OK immediately (<200ms target)
     return NextResponse.json(
       { received: true, callbackId },
       { status: 200 }
