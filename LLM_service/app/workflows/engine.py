@@ -242,17 +242,20 @@ class WorkflowEngine:
         # Load workflow
         workflow = self.load_workflow(workflow_name)
 
-        # Under eventlet, we should use the existing loop for the thread
-        if RUNNING_UNDER_EVENTLET:
+        # Under eventlet, we must create a NEW loop for every task to avoid 
+        # cross-greenlet loop pollution in the shared thread.
+        loop = asyncio.new_event_loop()
+        # We don't set it as the global default loop via set_event_loop 
+        # because that would affect other greenlets in the same thread.
+        
+        try:
+            # nest_asyncio allows run_until_complete even if the loop 
+            # thinks it's already running (common in some envs)
             try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            # nest_asyncio is required to use run_until_complete if loop is already running
-            import nest_asyncio
-            nest_asyncio.apply()
+                import nest_asyncio
+                nest_asyncio.apply(loop)
+            except ImportError:
+                pass
             
             return loop.run_until_complete(
                 self.execute_workflow(
@@ -262,25 +265,13 @@ class WorkflowEngine:
                     progress_callback=progress_callback
                 )
             )
-        else:
-            # Standard environment: create fresh loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        finally:
             try:
-                return loop.run_until_complete(
-                    self.execute_workflow(
-                        workflow=workflow,
-                        input_data=input_data,
-                        timeout_override=timeout_override,
-                        progress_callback=progress_callback
-                    )
-                )
-            finally:
-                try:
-                    loop.run_until_complete(loop.shutdown_asyncgens())
-                    loop.close()
-                except Exception:
-                    pass
+                # Proper cleanup
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.close()
+            except Exception:
+                pass
 
     async def execute_workflow(
         self,

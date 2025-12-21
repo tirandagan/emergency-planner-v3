@@ -28,12 +28,17 @@ logger = logging.getLogger(__name__)
 
 # Global client instance to be shared across providers to avoid socket exhaustion 
 # and "Bad file descriptor" errors under eventlet/asyncio concurrency.
-# Initialized lazily via _get_client()
+# Initialized lazily via _get_global_client()
 _global_client: Optional[httpx.AsyncClient] = None
-_client_lock = asyncio.Lock()
+_client_lock: Optional[asyncio.Lock] = None
 
 async def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> httpx.AsyncClient:
-    global _global_client
+    global _global_client, _client_lock
+    
+    if _client_lock is None:
+        # Create lock bound to the current running loop
+        _client_lock = asyncio.Lock()
+        
     if _global_client is None:
         async with _client_lock:
             if _global_client is None:

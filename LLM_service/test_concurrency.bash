@@ -33,7 +33,10 @@ for i in $(seq 1 $CONCURRENCY); do
           \"country\": \"USA\",
           \"location\": \"Seattle, WA\",
           \"family_size\": 4,
-          \"scenarios\": [\"earthquake\"]
+          \"scenarios\": [\"earthquake\"],
+          \"duration\": \"72 hours\",
+          \"user_tier\": \"PRO\",
+          \"static_contacts\": \"911, poison control\"
         }
       }")
     
