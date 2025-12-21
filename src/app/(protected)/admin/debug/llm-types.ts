@@ -56,6 +56,7 @@ export interface ServiceHealth {
   type?: string;
   workers?: number;
   error?: string;
+  message?: string;
 }
 
 export interface LLMHealthResponse {
@@ -65,4 +66,6 @@ export interface LLMHealthResponse {
     redis: ServiceHealth;
     celery: ServiceHealth;
   };
+  timestamp?: string;
+  message?: string;
 }

@@ -20,10 +20,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RefreshCw, Loader2, AlertCircle, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { RefreshCw, Loader2, AlertCircle, Trash2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
 import { getLLMServiceURL, fetchLLMHealth, fetchLLMJobs, bulkDeleteLLMJobs } from './actions';
-import { LLMHealthStatus } from './LLMHealthStatus';
 import { LLMJobDetailModal } from './LLMJobDetailModal';
+import { LLMHealthDetailModal } from './LLMHealthDetailModal';
 import type {
   LLMJob,
   LLMJobsResponse,
@@ -58,6 +58,7 @@ export function LLMQueueTab() {
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteResult, setDeleteResult] = useState<{ success: boolean; deleted_count: number; message: string } | null>(null);
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
 
   // Fetch LLM service URL on mount
   useEffect(() => {
@@ -278,16 +279,27 @@ export function LLMQueueTab() {
       <Card className="border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-3">
               <CardTitle className="text-lg">LLM Job Queue</CardTitle>
-              <CardDescription>
-                Monitor and manage LLM workflow jobs
-                {llmServiceURL && (
-                  <span className="block text-xs mt-1">
-                    Service: <span className="font-mono">{llmServiceURL}</span>
-                  </span>
-                )}
-              </CardDescription>
+              {health && (
+                <div className="flex items-center gap-1.5">
+                  <Badge className={
+                    health.status === 'healthy'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                  }>
+                    {health.status === 'healthy' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    <span className="ml-1 capitalize">{health.status || 'unknown'}</span>
+                  </Badge>
+                  <button
+                    onClick={() => setIsHealthModalOpen(true)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title="View service health details"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap">
               {jobs.some(job => job.status === 'processing') && (
@@ -371,9 +383,6 @@ export function LLMQueueTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Health Status Section */}
-          <LLMHealthStatus health={health} isLoading={isLoadingHealth} />
-
           {/* Error Message */}
           {error && (
             <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400">
@@ -522,6 +531,14 @@ export function LLMQueueTab() {
       <LLMJobDetailModal
         jobId={selectedJobId}
         onClose={() => setSelectedJobId(null)}
+      />
+
+      {/* Health Detail Modal */}
+      <LLMHealthDetailModal
+        isOpen={isHealthModalOpen}
+        onClose={() => setIsHealthModalOpen(false)}
+        health={health}
+        serviceUrl={llmServiceURL}
       />
     </>
   );
