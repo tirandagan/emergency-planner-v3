@@ -138,8 +138,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    // 3. Get signature header
-    const signature = request.headers.get('x-webhook-signature');
+    // 3. Get signature header (try both possible header names)
+    const signature = request.headers.get('x-llm-signature') || request.headers.get('x-webhook-signature');
 
     if (!signature) {
       console.error('[LLM Webhook] Missing signature header');
