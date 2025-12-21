@@ -57,19 +57,19 @@ const getStatusIcon = (status: string) => {
 
   switch (status) {
     case 'pending':
-      return <Clock className={`${iconClass} text-gray-500`} title="Pending" />;
+      return <span title="Pending"><Clock className={`${iconClass} text-gray-500`} /></span>;
     case 'queued':
-      return <Clock className={`${iconClass} text-blue-500`} title="Queued" />;
+      return <span title="Queued"><Clock className={`${iconClass} text-blue-500`} /></span>;
     case 'processing':
-      return <Play className={`${iconClass} text-yellow-500 animate-pulse`} title="Processing" />;
+      return <span title="Processing"><Play className={`${iconClass} text-yellow-500 animate-pulse`} /></span>;
     case 'completed':
-      return <CheckCheck className={`${iconClass} text-green-500`} title="Completed" />;
+      return <span title="Completed"><CheckCheck className={`${iconClass} text-green-500`} /></span>;
     case 'failed':
-      return <X className={`${iconClass} text-red-500`} title="Failed" />;
+      return <span title="Failed"><X className={`${iconClass} text-red-500`} /></span>;
     case 'cancelled':
-      return <MinusCircle className={`${iconClass} text-gray-500`} title="Cancelled" />;
+      return <span title="Cancelled"><MinusCircle className={`${iconClass} text-gray-500`} /></span>;
     default:
-      return <HelpCircle className={`${iconClass} text-gray-400`} title="Unknown" />;
+      return <span title="Unknown"><HelpCircle className={`${iconClass} text-gray-400`} /></span>;
   }
 };
 
