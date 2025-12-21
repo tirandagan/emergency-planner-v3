@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { Sidebar, SidebarCollapseProvider, useSidebarCollapse } from '@/components/protected/Sidebar'
+import { SidebarNew, SidebarStateProvider, useSidebarState } from '@/components/protected/SidebarNew'
 import type { SubscriptionTier } from '@/lib/types/subscription'
 
 interface ProtectedLayoutClientProps {
@@ -15,18 +15,35 @@ interface ProtectedLayoutClientProps {
   planLimit: number
 }
 
-function MainContent({ children }: { children: React.ReactNode }) {
-  const { isCollapsed } = useSidebarCollapse()
+function MainContent({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { isOpen } = useSidebarState()
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = (): void => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   return (
     <main
-      className="h-full overflow-auto transition-all duration-200"
+      className="h-full overflow-hidden transition-all duration-200 bg-neutral-50 dark:bg-neutral-900"
       style={{
-        marginLeft: isCollapsed ? '5rem' : '16rem', // 80px : 256px
+        marginLeft: isMobile ? '0' : (isOpen ? '300px' : '60px'),
       }}
     >
-      <div className="p-4 md:p-8">
-        {children}
+      {/* Elevated paper-like content container */}
+      <div className="h-full pl-4 pr-4 py-2 md:pl-6 md:pr-4 md:py-3 lg:pl-8 lg:pr-6 lg:py-4">
+        <div className="h-full bg-white dark:bg-neutral-800 rounded-2xl shadow-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-auto p-6 md:p-8">
+            {children}
+          </div>
+        </div>
       </div>
     </main>
   )
@@ -40,27 +57,19 @@ export function ProtectedLayoutClient({
   planCount,
   planLimit
 }: ProtectedLayoutClientProps): React.JSX.Element {
-  // Always start with false to match server-side rendering
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
-  // Cache invalidation for admin routes to ensure toggle button visibility
+  // Cache invalidation for admin routes
   const pathname = usePathname()
   const { user, refreshProfile } = useAuth()
-
-  // Track last pathname to prevent duplicate refreshes (using ref to avoid re-renders)
   const lastRefreshedPathRef = useRef<string | null>(null)
 
-  // Force profile refresh when navigating to admin or dashboard routes
-  // This ensures the admin toggle button always appears for admin users
   useEffect(() => {
-    // Early return if no user (not authenticated)
     if (!user) return
 
-    // Detect admin routes and dashboard
     const isAdminRoute = pathname?.startsWith('/admin')
     const isDashboard = pathname === '/dashboard' || pathname === '/'
 
-    // Only refresh if we haven't already refreshed for this pathname
     if ((isAdminRoute || isDashboard) && pathname !== lastRefreshedPathRef.current) {
       console.debug('[ProtectedLayoutClient] Admin/dashboard route detected, refreshing profile')
       lastRefreshedPathRef.current = pathname
@@ -68,26 +77,10 @@ export function ProtectedLayoutClient({
     }
   }, [pathname, user, refreshProfile])
 
-  // Load collapsed state from localStorage after hydration
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebar-collapsed')
-    if (savedState === 'true') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsCollapsed(true)
-    }
-  }, [])
-
-  // Toggle collapse and save to localStorage
-  const toggleCollapse = () => {
-    const newState = !isCollapsed
-    setIsCollapsed(newState)
-    localStorage.setItem('sidebar-collapsed', String(newState))
-  }
-
   return (
-    <SidebarCollapseProvider value={{ isCollapsed, toggleCollapse }}>
+    <SidebarStateProvider value={{ isOpen, setIsOpen }}>
       <div className="h-screen overflow-hidden">
-        <Sidebar
+        <SidebarNew
           userName={userName}
           userEmail={userEmail}
           userTier={userTier}
@@ -97,6 +90,6 @@ export function ProtectedLayoutClient({
 
         <MainContent>{children}</MainContent>
       </div>
-    </SidebarCollapseProvider>
+    </SidebarStateProvider>
   )
 }

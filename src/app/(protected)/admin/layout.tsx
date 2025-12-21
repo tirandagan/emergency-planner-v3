@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { profiles } from "@/db/schema/profiles";
 import { eq } from "drizzle-orm";
+import LLMCallbackNotificationPoller from "@/components/admin/LLMCallbackNotificationPoller";
 
 export default async function AdminLayout({
   children,
@@ -37,6 +38,10 @@ export default async function AdminLayout({
     return redirect("/");
   }
 
-  // Just render children - the parent (protected) layout provides the sidebar
-  return <>{children}</>;
+  return (
+    <>
+      <LLMCallbackNotificationPoller />
+      {children}
+    </>
+  );
 }
