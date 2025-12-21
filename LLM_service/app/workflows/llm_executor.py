@@ -90,7 +90,81 @@ class LLMStepExecutor:
         self.provider_name = provider_name
         self._provider = provider  # For testing/dependency injection
 
-    async def execute(
+    def execute_sync(
+        self,
+        step: WorkflowStep,
+        context: WorkflowContext
+    ) -> LLMResponse:
+        """
+        Execute LLM step synchronously.
+        """
+        # Validate step type
+        if step.type != StepType.LLM:
+            raise LLMStepConfigError(
+                f"Step '{step.id}' has type '{step.type}', expected 'llm'"
+            )
+
+        # Parse configuration
+        config = self._parse_config(step.config)
+
+        # Build prompt (using a wrapper to run the async loader synchronously if needed)
+        # But wait, PromptLoader.load_prompt is async.
+        # In eventlet, we can run it in a new loop or use a sync variant.
+        # Since I already changed PromptLoader to use sync open(), 
+        # I can make a load_prompt_sync.
+        prompt = self.prompt_loader.load_prompt_sync(config.prompt_template) if config.prompt_template else config.prompt_text
+        
+        # Build variable substitution map
+        variables = self._resolve_variables(config.variables or {}, context)
+
+        # Substitute variables in prompt
+        prompt = self.prompt_loader.substitute_variables(prompt, variables)
+
+        try:
+            # Get or create LLM provider
+            provider = self._provider or get_llm_provider(self.provider_name)
+
+            # Update timeout if specified in config
+            if config.timeout and hasattr(provider, 'timeout_val'):
+                provider.timeout_val = config.timeout
+
+            try:
+                # Call LLM API synchronously
+                response = provider.generate_sync(
+                    messages=[Message(role="user", content=prompt)],
+                    model=config.model,
+                    temperature=config.temperature,
+                    max_tokens=config.max_tokens,
+                    top_p=config.top_p
+                )
+
+                logger.info(
+                    f"LLM step '{step.id}' completed (sync): "
+                    f"{response.usage.total_tokens} tokens, "
+                    f"${response.cost_usd:.6f} cost, "
+                    f"{response.duration_ms}ms"
+                )
+
+                return response
+
+            finally:
+                # No-op for global client
+                pass
+
+        except Exception as e:
+            # Handle errors according to error_mode
+            if step.error_mode == ErrorMode.FAIL:
+                logger.error(f"LLM step '{step.id}' failed (sync): {e}")
+                raise LLMStepExecutionError(
+                    f"LLM step '{step.id}' execution failed: {e}"
+                ) from e
+            elif step.error_mode == ErrorMode.CONTINUE:
+                logger.warning(
+                    f"LLM step '{step.id}' failed (sync) but continuing: {e}"
+                )
+                return None
+            else:
+                raise
         self,
         step: WorkflowStep,
         context: WorkflowContext

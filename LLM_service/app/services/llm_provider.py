@@ -131,23 +131,22 @@ class LLMProvider(ABC):
         **kwargs
     ) -> LLMResponse:
         """
-        Generate non-streaming text response from LLM.
+        Generate non-streaming text response from LLM (Async).
+        """
+        pass
 
-        Args:
-            messages: List of chat messages (system, user, assistant)
-            model: Model identifier (provider-specific format)
-            temperature: Sampling temperature (0.0-1.0, higher = more random)
-            max_tokens: Maximum tokens to generate
-            **kwargs: Additional provider-specific parameters
-
-        Returns:
-            LLMResponse with content, tokens, cost, and timing
-
-        Raises:
-            LLMProviderTimeout: Request timed out
-            LLMProviderAuthError: Authentication failed
-            LLMProviderRateLimitError: Rate limit exceeded
-            LLMProviderError: Other provider-specific errors
+    @abstractmethod
+    def generate_sync(
+        self,
+        messages: List[Message],
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+        **kwargs
+    ) -> LLMResponse:
+        """
+        Generate non-streaming text response from LLM (Sync).
+        Useful for environments like eventlet where async loops cause issues.
         """
         pass
 

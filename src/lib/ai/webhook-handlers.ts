@@ -4,6 +4,7 @@ import { eq, desc, and, isNull } from 'drizzle-orm';
 import type { ReportDataV2 } from '@/types/mission-report';
 import type { EmergencyContactsSection } from '@/types/emergency-contacts';
 import { revalidatePath } from 'next/cache';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Handle completion of the emergency_contacts workflow
@@ -17,7 +18,6 @@ export async function handleEmergencyContactsComplete(
     console.log(`[Webhook] Processing emergency_contacts for user ${userId}`);
 
     // 1. Find the latest mission report for this user
-    // We update the latest plan since manual curl submissions don't include a reportId
     const [report] = await db
       .select()
       .from(missionReports)
@@ -36,8 +36,6 @@ export async function handleEmergencyContactsComplete(
     }
 
     // 2. Extract structured data from result.output
-    // The LLM service returns the final workflow output in result.output
-    // Based on emergency_contacts.json, this is the JSON result from the parse_contacts step.
     const output = result?.output;
     
     if (!output) {
@@ -56,10 +54,39 @@ export async function handleEmergencyContactsComplete(
     const reportData = report.reportData as ReportDataV2;
     
     // 3. Update the emergencyContacts section
-    // Use the standard EmergencyContactsSection interface
+    // Map snake_case from LLM service to camelCase for Next.js types
     const emergencyContacts: EmergencyContactsSection = {
-      contacts: data.contacts,
-      meetingLocations: data.meeting_locations || data.meetingLocations || [],
+      contacts: data.contacts.map((c: any) => ({
+        id: c.id || uuidv4(),
+        name: c.name,
+        type: c.type || 'professional',
+        category: c.category || 'government',
+        phone: c.phone,
+        website: c.website || undefined,
+        address: c.address || undefined,
+        reasoning: c.reasoning,
+        relevantScenarios: c.relevant_scenarios || c.relevantScenarios || [],
+        priority: c.priority || 'helpful',
+        fitScore: c.fit_score || c.fitScore || 80,
+        region: c.region || 'local',
+        availability24hr: c.available_24hr || c.availability24hr || false,
+        source: c.source || 'ai',
+      })),
+      meetingLocations: (data.meeting_locations || data.meetingLocations || []).map((l: any) => ({
+        id: l.id || uuidv4(),
+        name: l.name,
+        address: l.address,
+        description: l.description,
+        placeId: l.placeId || '',
+        location: l.location || { lat: 0, lng: 0 },
+        placeType: l.placeType || 'meeting_point',
+        reasoning: l.reasoning,
+        scenarioSuitability: l.suitable_for || l.scenarioSuitability || [],
+        priority: l.priority || 'primary',
+        isPublic: l.isPublic ?? true,
+        hasParking: l.has_parking || l.hasParking || false,
+        isAccessible: l.is_accessible || l.isAccessible || false,
+      })),
       generatedAt: new Date().toISOString(),
       locationContext: report.location || 'Unknown',
       googlePlacesUsed: true,

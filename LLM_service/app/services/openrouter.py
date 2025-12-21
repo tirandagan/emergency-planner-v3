@@ -185,6 +185,82 @@ class OpenRouterProvider(LLMProvider):
             logger.error(f"OpenRouter unexpected error: {e}")
             raise LLMProviderError(f"Unexpected error: {e}") from e
 
+    def generate_sync(
+        self,
+        messages: List[Message],
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+        **kwargs
+    ) -> LLMResponse:
+        """
+        Generate non-streaming text response from OpenRouter (Sync).
+        """
+        start_time = time.time()
+
+        try:
+            # Get shared global client (synchronous)
+            client = _get_global_client(
+                self.api_key, 
+                self.site_url, 
+                self.site_name, 
+                self.timeout_val
+            )
+
+            # Make API request (synchronous)
+            response_data = self._make_request(
+                client,
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs
+            )
+
+            # Parse response
+            content = self._extract_content(response_data)
+            usage = self._extract_usage(response_data)
+
+            # Calculate cost
+            cost_usd = self.cost_calculator.calculate(
+                model=model,
+                input_tokens=usage["input_tokens"],
+                output_tokens=usage["output_tokens"]
+            )
+
+            # Calculate duration
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            # Build response
+            return LLMResponse(
+                content=content,
+                model=model,
+                usage=UsageInfo(
+                    input_tokens=usage["input_tokens"],
+                    output_tokens=usage["output_tokens"],
+                    total_tokens=usage["total_tokens"]
+                ),
+                cost_usd=cost_usd,
+                duration_ms=duration_ms,
+                provider="openrouter",
+                metadata={
+                    "response_id": response_data.get("id"),
+                    "model_used": response_data.get("model")
+                }
+            )
+
+        except httpx.TimeoutException as e:
+            logger.error(f"OpenRouter request timed out: {e}")
+            raise LLMProviderTimeout(f"Request timed out after {self.timeout_val}s") from e
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"OpenRouter HTTP error: {e.response.status_code} - {e.response.text}")
+            self._handle_http_error(e)
+
+        except Exception as e:
+            logger.error(f"OpenRouter unexpected error: {e}")
+            raise LLMProviderError(f"Unexpected error: {e}") from e
+
     def _make_request(
         self,
         client: httpx.Client,
