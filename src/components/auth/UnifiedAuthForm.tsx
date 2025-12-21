@@ -395,7 +395,7 @@ export function UnifiedAuthForm({
                 BePrepared.ai is currently in closed beta testing. New account creation is temporarily disabled while we refine the platform. If you already have an account, you can sign in below.
               </p>
               <p className="text-sm text-primary font-medium">
-                Want early access? Email us: <a href="mailto:admin@beprepared.ai" className="underline hover:text-primary/80 transition-colors">admin@beprepared.ai</a>
+                Want early access? Email us: <a href="mailto:admin@beprepared.ai?subject=BePrepared%20Closed%20Beta%20Access%20Request&body=I%20would%20like%20to%20request%20access%20to%20the%20BePrepared%20closed%20beta.%20Here is why I believe I can help you through the beta." className="underline hover:text-primary/80 transition-colors">admin@beprepared.ai</a>
               </p>
             </div>
           </div>
