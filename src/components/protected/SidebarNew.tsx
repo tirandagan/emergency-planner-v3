@@ -208,7 +208,10 @@ function SidebarContent({
                 display: open ? "inline-block" : "none",
                 opacity: open ? 1 : 0,
               }}
-              className="text-xl font-bold text-neutral-900 dark:text-primary transition-colors truncate"
+              className="text-xl font-bold transition-colors truncate"
+              style={{
+                color: theme === 'dark' ? 'hsl(220, 85%, 55%)' : 'rgb(23, 23, 23)'
+              }}
             >
               <BrandText withDomain />
             </motion.span>
@@ -246,6 +249,17 @@ function SidebarContent({
           const Icon = link.icon
           const active = isActive(link.href)
 
+          // Calculate text color based on theme and active state
+          const textColor = active
+            ? 'hsl(220, 85%, 55%)' // primary color for active items
+            : theme === 'dark'
+              ? viewAdminMenu
+                ? 'rgb(241, 245, 249)' // slate-100 for admin dark
+                : 'rgb(245, 245, 245)' // neutral-100 for user dark
+              : viewAdminMenu
+                ? 'rgb(51, 65, 85)' // slate-700 for admin light
+                : 'rgb(64, 64, 64)' // neutral-700 for user light
+
           return (
             <Link
               key={link.href}
@@ -253,27 +267,23 @@ function SidebarContent({
               onClick={onNavigate}
               className={cn(
                 'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 relative',
-                active && 'text-primary dark:text-primary',
-                !active && viewAdminMenu && 'text-slate-700 dark:text-slate-100',
-                !active && !viewAdminMenu && 'text-neutral-700 dark:text-neutral-100',
                 active
                   ? viewAdminMenu
-                    ? 'hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md'
-                    : 'hover:bg-primary/80 dark:hover:bg-primary/80 hover:text-white dark:hover:text-white hover:shadow-md'
+                    ? 'hover:bg-red-600 hover:text-white hover:shadow-md'
+                    : 'hover:bg-primary/80 hover:text-white hover:shadow-md'
                   : viewAdminMenu
-                    ? 'hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md'
-                    : 'hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md'
+                    ? 'hover:bg-red-600 hover:text-white hover:shadow-md'
+                    : 'hover:bg-primary hover:text-white hover:shadow-md'
               )}
+              style={{ color: textColor }}
             >
               {active && (
-                <ChevronRight className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-primary dark:text-primary group-hover:text-white z-20" strokeWidth={3} />
+                <ChevronRight className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 group-hover:text-white z-20" strokeWidth={3} style={{ color: textColor }} />
               )}
               <Icon className={cn(
-                "h-5 w-5 flex-shrink-0 transition-transform",
-                active && "scale-105",
-                !active && viewAdminMenu && "text-slate-700 dark:text-slate-100",
-                !active && !viewAdminMenu && "text-neutral-700 dark:text-neutral-100"
-              )} strokeWidth={active ? 2.5 : 2} />
+                "h-5 w-5 flex-shrink-0 transition-transform group-hover:text-white",
+                active && "scale-105"
+              )} strokeWidth={active ? 2.5 : 2} style={{ color: textColor }} />
               <motion.span
                 animate={{
                   display: open ? "inline-block" : "none",
