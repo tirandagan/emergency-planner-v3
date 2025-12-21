@@ -166,7 +166,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!webhookSecret) {
       console.error('[LLM Webhook] LLM_WEBHOOK_SECRET not configured - sending alert');
       await sendSecretMissingAlert();
-      // ...
+      return NextResponse.json(
+        { error: 'Webhook secret not configured' },
+        { status: 500 }
+      );
     }
 
     // LOG REQUEST INFO (Safe)
