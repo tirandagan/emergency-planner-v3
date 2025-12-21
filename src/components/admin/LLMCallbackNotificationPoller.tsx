@@ -98,14 +98,16 @@ export default function LLMCallbackNotificationPoller(): React.JSX.Element | nul
       const data: PollingResponse = await response.json();
 
       if (data.items && data.items.length > 0) {
+        // Show notifications for all new callbacks
         for (const callback of data.items) {
           showCallbackNotification(callback);
         }
 
-        if (data.nextCursor) {
-          localStorage.setItem(STORAGE_KEY, data.nextCursor);
-          lastCursorRef.current = data.nextCursor;
-        }
+        // Update cursor to NOW (not the last item's timestamp)
+        // This prevents showing the same notifications again
+        const now = new Date().toISOString();
+        localStorage.setItem(STORAGE_KEY, now);
+        lastCursorRef.current = now;
       }
     } catch (error) {
       console.error('[LLM Poller] Polling error:', error);
