@@ -70,16 +70,16 @@ export function ColumnVisibilityDropdown<TData>({
               const canToggle = !isVisible || visibleColumns.length > 3;
 
               return (
-                <button
+                <div
                   key={column.id}
-                  onClick={() => {
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent
+                             rounded-sm cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (canToggle) {
                       column.toggleVisibility();
                     }
                   }}
-                  disabled={!canToggle}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent
-                             rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   title={
                     !canToggle
                       ? 'Must keep at least 3 columns visible'
@@ -89,14 +89,18 @@ export function ColumnVisibilityDropdown<TData>({
                   <Checkbox
                     checked={isVisible}
                     disabled={!canToggle}
-                    className="pointer-events-none"
+                    onChange={() => {
+                      if (canToggle) {
+                        column.toggleVisibility();
+                      }
+                    }}
                   />
-                  <span className="flex-1 text-left">
+                  <span className="flex-1 text-left cursor-pointer">
                     {typeof column.columnDef.header === 'string'
                       ? column.columnDef.header
                       : column.id}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>

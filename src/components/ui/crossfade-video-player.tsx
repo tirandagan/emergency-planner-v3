@@ -20,8 +20,9 @@ export const CrossfadeVideoPlayer: React.FC<CrossfadeVideoPlayerProps> = ({
   const video1Ref = useRef<HTMLVideoElement>(null);
   const video2Ref = useRef<HTMLVideoElement>(null);
 
-  // Video dimensions for dynamic scaling
-  const [videoDims, setVideoDims] = useState({ w: 0, h: 0 });
+  // Video dimensions for dynamic scaling - track both videos separately
+  const [video1Dims, setVideo1Dims] = useState({ w: 0, h: 0 });
+  const [video2Dims, setVideo2Dims] = useState({ w: 0, h: 0 });
   const [containerDims, setContainerDims] = useState({ w: 0, h: 0 });
 
   // Monitor container size changes
@@ -49,26 +50,47 @@ export const CrossfadeVideoPlayer: React.FC<CrossfadeVideoPlayerProps> = ({
     return () => observer.disconnect();
   }, [containerRef]);
 
-  // Get video dimensions from the first video
+  // Get video dimensions from both videos
   useEffect(() => {
-    const video = video1Ref.current;
-    if (!video) return;
+    const video1 = video1Ref.current;
+    const video2 = video2Ref.current;
 
-    const updateVideoMetadata = () => {
-      if (video.videoWidth && video.videoHeight) {
-        setVideoDims({
-          w: video.videoWidth,
-          h: video.videoHeight,
+    if (!video1 || !video2) return;
+
+    const updateVideo1Metadata = () => {
+      if (video1.videoWidth && video1.videoHeight) {
+        setVideo1Dims({
+          w: video1.videoWidth,
+          h: video1.videoHeight,
         });
       }
     };
 
-    if (video.readyState >= 1) {
-      updateVideoMetadata();
+    const updateVideo2Metadata = () => {
+      if (video2.videoWidth && video2.videoHeight) {
+        setVideo2Dims({
+          w: video2.videoWidth,
+          h: video2.videoHeight,
+        });
+      }
+    };
+
+    // Check if metadata is already loaded
+    if (video1.readyState >= 1) {
+      updateVideo1Metadata();
+    }
+    if (video2.readyState >= 1) {
+      updateVideo2Metadata();
     }
 
-    video.addEventListener('loadedmetadata', updateVideoMetadata);
-    return () => video.removeEventListener('loadedmetadata', updateVideoMetadata);
+    // Listen for metadata load events
+    video1.addEventListener('loadedmetadata', updateVideo1Metadata);
+    video2.addEventListener('loadedmetadata', updateVideo2Metadata);
+
+    return () => {
+      video1.removeEventListener('loadedmetadata', updateVideo1Metadata);
+      video2.removeEventListener('loadedmetadata', updateVideo2Metadata);
+    };
   }, []);
 
   // Handle video transitions
@@ -110,7 +132,9 @@ export const CrossfadeVideoPlayer: React.FC<CrossfadeVideoPlayerProps> = ({
     return () => clearInterval(syncInterval);
   }, [activeVideoIndex]);
 
-  const getDynamicVideoStyle = (): React.CSSProperties => {
+  const getDynamicVideoStyle = (videoIndex: 0 | 1): React.CSSProperties => {
+    const videoDims = videoIndex === 0 ? video1Dims : video2Dims;
+
     if (!videoDims.w || !videoDims.h || !containerDims.w || !containerDims.h) {
       return {
         width: '100%',
@@ -172,7 +196,7 @@ export const CrossfadeVideoPlayer: React.FC<CrossfadeVideoPlayerProps> = ({
         <video
           ref={video1Ref}
           style={{
-            ...getDynamicVideoStyle(),
+            ...getDynamicVideoStyle(0),
             transition: `opacity ${transitionDuration}s ease-in-out, filter ${transitionDuration}s ease-in-out`,
           }}
           autoPlay
@@ -191,7 +215,7 @@ export const CrossfadeVideoPlayer: React.FC<CrossfadeVideoPlayerProps> = ({
         <video
           ref={video2Ref}
           style={{
-            ...getDynamicVideoStyle(),
+            ...getDynamicVideoStyle(1),
             transition: `opacity ${transitionDuration}s ease-in-out, filter ${transitionDuration}s ease-in-out`,
           }}
           autoPlay

@@ -49,7 +49,7 @@ export function SmartTable<TData>({
   tableInstanceRef,
   onResetPreferences,
 }: SmartTableProps<TData>) {
-  const { preferences, updateColumnWidths, updateSorting, updateColumnVisibility, resetPreferences } =
+  const { preferences, updateColumnWidths, updateSorting, updateColumnVisibility, updateColumnOrder, resetPreferences } =
     useTablePreferences(localStorageKey);
 
   const [contextMenu, setContextMenu] = useState<{
@@ -60,6 +60,17 @@ export function SmartTable<TData>({
 
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
   const [columnFilters] = useState<ColumnFiltersState>([]);
+
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  // Initialize column order from preferences or use default order
+  const initialColumnOrder = useMemo(() => {
+    if (preferences.columnOrder && preferences.columnOrder.length > 0) {
+      return preferences.columnOrder;
+    }
+    return columnDefs.map(c => c.id);
+  }, [preferences.columnOrder, columnDefs]);
 
   // Convert SmartColumnDef to TanStack ColumnDef
   const columns = useMemo<ColumnDef<TData>[]>(
@@ -76,7 +87,7 @@ export function SmartTable<TData>({
           // Add accessor if provided
           ...(col.accessorKey ? { accessorKey: col.accessorKey as keyof TData } : {}),
           // Add custom cell renderer if provided
-          ...(col.cell ? { cell: ({ row }: { row: { original: TData } }) => col.cell!(row.original) } : {}),
+          ...(col.cell ? { cell: ({ row, column }: { row: { original: TData }; column: any }) => col.cell!(row.original, column.getSize()) } : {}),
         };
 
         return baseColumn;
@@ -118,6 +129,7 @@ export function SmartTable<TData>({
       sorting: initialSorting,
       columnVisibility: initialVisibility,
       columnFilters,
+      columnOrder: initialColumnOrder,
     },
     onSortingChange: (updater) => {
       const newSorting = typeof updater === 'function' ? updater(initialSorting) : updater;
@@ -127,6 +139,10 @@ export function SmartTable<TData>({
       const newVisibility =
         typeof updater === 'function' ? updater(initialVisibility) : updater;
       updateColumnVisibility(newVisibility);
+    },
+    onColumnOrderChange: (updater) => {
+      const newOrder = typeof updater === 'function' ? updater(initialColumnOrder) : updater;
+      updateColumnOrder(newOrder);
     },
   });
 
@@ -148,6 +164,55 @@ export function SmartTable<TData>({
     []
   );
 
+  // Handle column drag start
+  const handleDragStart = useCallback((e: React.DragEvent, columnId: string) => {
+    setDraggedColumn(columnId);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  // Handle drag over
+  const handleDragOver = useCallback((e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(columnId);
+  }, []);
+
+  // Handle drag leave
+  const handleDragLeave = useCallback(() => {
+    setDragOverColumn(null);
+  }, []);
+
+  // Handle drop
+  const handleDrop = useCallback((e: React.DragEvent, targetColumnId: string) => {
+    e.preventDefault();
+
+    if (!draggedColumn || draggedColumn === targetColumnId) {
+      setDraggedColumn(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    const currentOrder = table.getState().columnOrder;
+    const draggedIndex = currentOrder.indexOf(draggedColumn);
+    const targetIndex = currentOrder.indexOf(targetColumnId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedColumn(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    const newOrder = [...currentOrder];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedColumn);
+
+    table.setColumnOrder(newOrder);
+    updateColumnOrder(newOrder);
+
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  }, [draggedColumn, table, updateColumnOrder]);
+
   // Handle reset preferences
   const handleReset = useCallback(() => {
     resetPreferences();
@@ -166,22 +231,33 @@ export function SmartTable<TData>({
 
   return (
     <div className={`relative overflow-x-auto ${className}`}>
-      <Table>
+      <Table style={{ tableLayout: 'fixed', width: '100%' }}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  style={{ width: header.getSize() }}
-                  className="relative group select-none"
-                  onContextMenu={(e) => handleContextMenu(e, header.id)}
-                >
-                  {/* Column header content */}
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    onClick={header.column.getToggleSortingHandler()}
+              {headerGroup.headers.map((header) => {
+                const isDragging = draggedColumn === header.id;
+                const isDragOver = dragOverColumn === header.id;
+
+                return (
+                  <TableHead
+                    key={header.id}
+                    draggable
+                    style={{ width: `${header.getSize()}px`, position: 'relative' }}
+                    className={`relative group select-none overflow-hidden transition-colors ${
+                      isDragging ? 'opacity-50' : ''
+                    } ${isDragOver ? 'bg-primary/10' : ''}`}
+                    onContextMenu={(e) => handleContextMenu(e, header.id)}
+                    onDragStart={(e) => handleDragStart(e, header.id)}
+                    onDragOver={(e) => handleDragOver(e, header.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, header.id)}
                   >
+                    {/* Column header content */}
+                    <div
+                      className="flex items-center gap-2 cursor-move overflow-hidden"
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -194,7 +270,7 @@ export function SmartTable<TData>({
                     )}
                   </div>
 
-                  {/* Resize handle (invisible by default, visible on hover) */}
+                  {/* Resize handle (visible on hover for better discoverability) */}
                   {header.column.getCanResize() && (
                     <div
                       onMouseDown={header.getResizeHandler()}
@@ -202,17 +278,18 @@ export function SmartTable<TData>({
                       onMouseUp={handleResizeEnd}
                       onTouchEnd={handleResizeEnd}
                       className="absolute right-0 top-0 h-full w-1 cursor-col-resize
-                                 opacity-0 group-hover:opacity-100 bg-border
-                                 hover:bg-primary transition-all duration-150"
+                                 bg-border/30 group-hover:bg-border
+                                 hover:!bg-primary active:!bg-primary transition-all duration-150"
                       style={{
                         transform: header.column.getIsResizing()
-                          ? 'scaleX(2)'
+                          ? 'scaleX(3)'
                           : 'scaleX(1)',
                       }}
                     />
                   )}
-                </TableHead>
-              ))}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           ))}
         </TableHeader>
@@ -234,7 +311,11 @@ export function SmartTable<TData>({
                 className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="text-sm">
+                  <TableCell
+                    key={cell.id}
+                    className="text-sm overflow-hidden"
+                    style={{ width: `${cell.column.getSize()}px` }}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

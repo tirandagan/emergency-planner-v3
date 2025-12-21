@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RefreshCw, Loader2, AlertCircle, Trash2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { RefreshCw, Loader2, AlertCircle, Trash2, CheckCircle2, XCircle, HelpCircle, Clock, Play, CheckCheck, X, MinusCircle } from 'lucide-react';
 import { SmartTable, TableControls } from '@/components/admin/smart-table';
 import type { SmartColumnDef } from '@/components/admin/smart-table';
 import { getLLMServiceURL, fetchLLMHealth, fetchLLMJobs, bulkDeleteLLMJobs } from './actions';
@@ -25,24 +25,52 @@ import type {
   JobStatusFilter,
 } from './llm-types';
 
-const statusColors = {
-  pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  queued: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  processing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-};
-
-const formatDate = (date: string | null) => {
+const formatDate = (date: string | null, width?: number) => {
   if (!date) return 'N/A';
-  return new Date(date).toLocaleString();
+
+  const dateObj = new Date(date);
+
+  // If width is less than 120px, use abbreviated format: m/d h:m PM
+  if (width && width < 120) {
+    const month = dateObj.getMonth() + 1;
+    const day = dateObj.getDate();
+    const hours = dateObj.getHours();
+    const minutes = dateObj.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+
+    return `${month}/${day} ${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+  }
+
+  // Otherwise use full format
+  return dateObj.toLocaleString();
 };
 
 const formatDuration = (ms: number | null) => {
   if (ms === null) return 'N/A';
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(2)}s`;
+};
+
+const getStatusIcon = (status: string) => {
+  const iconClass = "w-3.5 h-3.5 flex-shrink-0";
+
+  switch (status) {
+    case 'pending':
+      return <Clock className={`${iconClass} text-gray-500`} title="Pending" />;
+    case 'queued':
+      return <Clock className={`${iconClass} text-blue-500`} title="Queued" />;
+    case 'processing':
+      return <Play className={`${iconClass} text-yellow-500 animate-pulse`} title="Processing" />;
+    case 'completed':
+      return <CheckCheck className={`${iconClass} text-green-500`} title="Completed" />;
+    case 'failed':
+      return <X className={`${iconClass} text-red-500`} title="Failed" />;
+    case 'cancelled':
+      return <MinusCircle className={`${iconClass} text-gray-500`} title="Cancelled" />;
+    default:
+      return <HelpCircle className={`${iconClass} text-gray-400`} title="Unknown" />;
+  }
 };
 
 export function LLMQueueTab() {
@@ -228,16 +256,18 @@ export function LLMQueueTab() {
       cell: (job) => (
         <button
           onClick={() => setSelectedJobId(job.job_id)}
-          className="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline"
-          title="Click to view details"
+          className="flex items-center gap-2 font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline w-full text-left"
+          title={job.job_id}
         >
-          {job.job_id.slice(0, 8)}...
+          {getStatusIcon(job.status)}
+          <span className="truncate">{job.job_id}</span>
         </button>
       ),
       sortable: true,
       filterable: true,
       filterType: 'text',
-      defaultWidth: 100,
+      defaultWidth: 120,
+      minWidth: 100,
     },
     {
       id: 'workflow_name',
@@ -261,21 +291,11 @@ export function LLMQueueTab() {
       defaultWidth: 200,
     },
     {
-      id: 'status',
-      accessorKey: 'status',
-      header: 'Status',
-      cell: (job) => <Badge className={statusColors[job.status]}>{job.status}</Badge>,
-      sortable: true,
-      filterable: true,
-      filterType: 'enum',
-      defaultWidth: 120,
-    },
-    {
       id: 'created_at',
       accessorKey: 'created_at',
       header: 'Created',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.created_at)}</span>
+      cell: (job, width) => (
+        <span className="text-muted-foreground">{formatDate(job.created_at, width)}</span>
       ),
       sortable: true,
       filterable: true,
@@ -286,8 +306,8 @@ export function LLMQueueTab() {
       id: 'started_at',
       accessorKey: 'started_at',
       header: 'Started',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.started_at)}</span>
+      cell: (job, width) => (
+        <span className="text-muted-foreground">{formatDate(job.started_at, width)}</span>
       ),
       sortable: true,
       filterable: true,
@@ -298,8 +318,8 @@ export function LLMQueueTab() {
       id: 'completed_at',
       accessorKey: 'completed_at',
       header: 'Completed',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.completed_at)}</span>
+      cell: (job, width) => (
+        <span className="text-muted-foreground">{formatDate(job.completed_at, width)}</span>
       ),
       sortable: true,
       filterable: true,
@@ -408,8 +428,8 @@ export function LLMQueueTab() {
       id: 'queued_at',
       accessorKey: 'queued_at',
       header: 'Queued At',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.queued_at || null)}</span>
+      cell: (job, width) => (
+        <span className="text-muted-foreground">{formatDate(job.queued_at || null, width)}</span>
       ),
       sortable: true,
       filterable: true,
@@ -421,8 +441,8 @@ export function LLMQueueTab() {
       id: 'updated_at',
       accessorKey: 'updated_at',
       header: 'Updated At',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.updated_at || null)}</span>
+      cell: (job, width) => (
+        <span className="text-muted-foreground">{formatDate(job.updated_at || null, width)}</span>
       ),
       sortable: true,
       filterable: true,
@@ -491,45 +511,6 @@ export function LLMQueueTab() {
                   <span className="font-medium">Auto-refreshing</span>
                 </div>
               )}
-              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as JobStatusFilter)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Filter status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="running">Running</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={limitResults} onValueChange={setLimitResults}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Limit results" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="25">25 records</SelectItem>
-                  <SelectItem value="50">50 records</SelectItem>
-                  <SelectItem value="100">100 records</SelectItem>
-                  <SelectItem value="200">200 records</SelectItem>
-                  <SelectItem value="Today">Last 24 Hours</SelectItem>
-                  <SelectItem value="7 Days">Last 7 Days</SelectItem>
-                  <SelectItem value="30 Days">Last 30 Days</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleRefresh}
-                disabled={isLoadingHealth || isLoadingJobs || isDeleting}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                {isLoadingHealth || isLoadingJobs ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                Refresh
-              </Button>
               {selectedJobIds.size > 0 && (
                 <Button
                   onClick={handleBulkDelete}
@@ -546,6 +527,31 @@ export function LLMQueueTab() {
                   Delete Selected ({selectedJobIds.size})
                 </Button>
               )}
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as JobStatusFilter)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="running">Running</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={limitResults} onValueChange={setLimitResults}>
+                <SelectTrigger className="w-[70px]">
+                  <SelectValue placeholder="Limit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="Today">24h</SelectItem>
+                  <SelectItem value="7 Days">7d</SelectItem>
+                  <SelectItem value="30 Days">30d</SelectItem>
+                </SelectContent>
+              </Select>
               {tableRef.current && (
                 <TableControls
                   table={tableRef.current}
@@ -593,6 +599,31 @@ export function LLMQueueTab() {
               </div>
             </div>
           )}
+
+          {/* Status Legend */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1.5 bg-muted/30 rounded-md mb-2">
+            <span className="font-medium">Status:</span>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3 text-gray-500" />
+              <span>Pending</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3 text-blue-500" />
+              <span>Queued</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Play className="w-3 h-3 text-yellow-500" />
+              <span>Processing</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCheck className="w-3 h-3 text-green-500" />
+              <span>Done</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <X className="w-3 h-3 text-red-500" />
+              <span>Failed</span>
+            </div>
+          </div>
 
           {/* SmartTable */}
           <div className="border rounded-lg overflow-hidden">

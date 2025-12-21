@@ -12,7 +12,7 @@ export interface SmartColumnDef<TData> {
   id: string;
   header: string | ((props: { table: unknown }) => ReactNode);
   accessorKey?: keyof TData;
-  cell?: (row: TData) => ReactNode;
+  cell?: (row: TData, width?: number) => ReactNode;
   sortable?: boolean;
   filterable?: boolean;
   filterType?: 'text' | 'date' | 'number' | 'enum';
@@ -60,6 +60,7 @@ export interface ColumnSort {
 export interface TablePreferences {
   columnWidths: Record<string, number>;
   columnVisibility: Record<string, boolean>;
+  columnOrder: string[];
   sorting: ColumnSort[];
   filters: ColumnFilter[];
   version: string;
@@ -71,6 +72,7 @@ export interface TablePreferences {
 export const DEFAULT_PREFERENCES: TablePreferences = {
   columnWidths: {},
   columnVisibility: {},
+  columnOrder: [],
   sorting: [],
   filters: [],
   version: '1.0.0',

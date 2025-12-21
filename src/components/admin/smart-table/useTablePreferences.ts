@@ -65,6 +65,14 @@ export function useTablePreferences(storageKey: string) {
     [preferences, savePreferences]
   );
 
+  const updateColumnOrder = useCallback(
+    (order: string[]) => {
+      const updated = { ...preferences, columnOrder: order };
+      savePreferences(updated);
+    },
+    [preferences, savePreferences]
+  );
+
   const updateSorting = useCallback(
     (sorting: TablePreferences['sorting']) => {
       const updated = { ...preferences, sorting };
@@ -97,6 +105,7 @@ export function useTablePreferences(storageKey: string) {
     savePreferences,
     updateColumnWidths,
     updateColumnVisibility,
+    updateColumnOrder,
     updateSorting,
     updateFilters,
     resetPreferences,
