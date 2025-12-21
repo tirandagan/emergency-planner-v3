@@ -27,9 +27,9 @@ interface PollingResponse {
  * Runs on all admin pages to provide real-time callback alerts
  */
 export default function LLMCallbackNotificationPoller(): React.JSX.Element | null {
-  const [lastCursor, setLastCursor] = useState<string | null>(null);
   const [selectedCallbackId, setSelectedCallbackId] = useState<string | null>(null);
   const isPollingRef = useRef(false);
+  const lastCursorRef = useRef<string | null>(null);
 
   /**
    * Initialize cursor from localStorage or use current timestamp
@@ -37,11 +37,11 @@ export default function LLMCallbackNotificationPoller(): React.JSX.Element | nul
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      setLastCursor(stored);
+      lastCursorRef.current = stored;
     } else {
       const now = new Date().toISOString();
       localStorage.setItem(STORAGE_KEY, now);
-      setLastCursor(now);
+      lastCursorRef.current = now;
     }
   }, []);
 
@@ -79,12 +79,12 @@ export default function LLMCallbackNotificationPoller(): React.JSX.Element | nul
    * Poll for new callbacks
    */
   const pollForCallbacks = useCallback(async (): Promise<void> => {
-    if (isPollingRef.current || !lastCursor) return;
+    if (isPollingRef.current || !lastCursorRef.current) return;
 
     isPollingRef.current = true;
 
     try {
-      const url = `/api/admin/llm-callbacks/check?after=${encodeURIComponent(lastCursor)}&limit=10`;
+      const url = `/api/admin/llm-callbacks/check?after=${encodeURIComponent(lastCursorRef.current)}&limit=10`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -104,7 +104,7 @@ export default function LLMCallbackNotificationPoller(): React.JSX.Element | nul
 
         if (data.nextCursor) {
           localStorage.setItem(STORAGE_KEY, data.nextCursor);
-          setLastCursor(data.nextCursor);
+          lastCursorRef.current = data.nextCursor;
         }
       }
     } catch (error) {
@@ -112,14 +112,12 @@ export default function LLMCallbackNotificationPoller(): React.JSX.Element | nul
     } finally {
       isPollingRef.current = false;
     }
-  }, [lastCursor, showCallbackNotification]);
+  }, [showCallbackNotification]);
 
   /**
    * Start polling on mount - only set up interval once
    */
   useEffect(() => {
-    if (!lastCursor) return;
-
     // Set up interval for polling
     const intervalId = setInterval(() => {
       void pollForCallbacks();
@@ -131,8 +129,7 @@ export default function LLMCallbackNotificationPoller(): React.JSX.Element | nul
     return () => {
       clearInterval(intervalId);
     };
-    // Only re-run if pollForCallbacks changes (when lastCursor or showCallbackNotification changes)
-  }, [pollForCallbacks, lastCursor]);
+  }, [pollForCallbacks]);
 
   return (
     <>
