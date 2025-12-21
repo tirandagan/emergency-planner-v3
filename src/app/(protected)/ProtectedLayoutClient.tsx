@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { useTheme } from '@/context/ThemeContext'
 import { SidebarNew, SidebarStateProvider, useSidebarState } from '@/components/protected/SidebarNew'
 import type { SubscriptionTier } from '@/lib/types/subscription'
 import { Loader2 } from 'lucide-react'
@@ -19,6 +20,7 @@ interface ProtectedLayoutClientProps {
 
 function MainContent({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { isOpen } = useSidebarState()
+  const { theme } = useTheme()
   const [isMobile, setIsMobile] = useState(false)
   const pathname = usePathname()
   const isAdminRoute = pathname?.startsWith('/admin')
@@ -34,16 +36,21 @@ function MainContent({ children }: { children: React.ReactNode }): React.JSX.Ele
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // Direct background color based on theme and route
+  const backgroundColor = theme === 'dark'
+    ? isAdminRoute
+      ? 'rgb(14, 18, 26)' // slate-800 for admin dark mode
+      : 'rgb(10, 10, 10)' // Near-black for user dark mode
+    : isAdminRoute
+      ? 'rgb(241, 245, 249)' // slate-100 for admin light mode
+      : 'hsl(220, 15%, 96%)' // background for user light mode
+
   return (
     <main
-      className={cn(
-        "h-full overflow-hidden transition-all duration-200",
-        isAdminRoute
-          ? "bg-slate-200 dark:bg-slate-900"
-          : "bg-background"
-      )}
+      className="h-full overflow-hidden transition-all duration-200"
       style={{
         marginLeft: isMobile ? '0' : (isOpen ? '300px' : '60px'),
+        backgroundColor,
       }}
     >
       {/* Elevated paper-like content container */}

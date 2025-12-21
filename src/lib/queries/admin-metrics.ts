@@ -10,8 +10,10 @@
  * - Recent user activity log
  *
  * All functions return structured data with proper error handling.
+ * Uses React cache() for request deduplication and performance.
  */
 
+import { cache } from 'react';
 import { db } from '@/db';
 import { profiles } from '@/db/schema/profiles';
 import { missionReports } from '@/db/schema/mission-reports';
@@ -83,36 +85,31 @@ export interface AdminDashboardMetrics {
  * - Engagement stats: 4 queries → 1 query
  * - Conversion stats: 4 queries → 1 query
  * - Scenario stats: 1 query (unchanged)
+ *
+ * PERFORMANCE: Uses React cache() for request deduplication within a single request
  * @returns Complete dashboard metrics object
  */
-export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
+export const getAdminDashboardMetrics = cache(async (): Promise<AdminDashboardMetrics> => {
   const overallStart = Date.now();
   console.log('[Admin Metrics] Starting optimized metrics fetch...');
 
   try {
-    // CRITICAL: Add global timeout to prevent entire dashboard from hanging
-    // Reduced to 10s due to query optimizations (expected time: 2-5s on WSL2, <2s on production)
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Admin metrics fetch timeout after 10 seconds")), 10000)
-    );
-
     // Fetch all metrics in parallel for performance
     // NOTE: Each function now executes a single optimized query using CTEs and FILTER
+    // NO TIMEOUT: Let Next.js route timeout handle it (default 60s for dynamic routes)
     const metricsStart = Date.now();
-    const metricsPromise = Promise.all([
-      getUserDistributionByTier(), // 1 query (was 2)
-      getMonthlyRecurringRevenue(), // 1 query (was 3)
-      getPlansCreatedThisMonth(), // 1 query (was 4)
-      getTopScenarios(10), // 1 query (unchanged)
-      getConversionRates(), // 1 query (was 4)
-      // TEMPORARILY DISABLED: Activity log query timing out (>5s even without JOIN)
-      // Database performance issue - need to check table size and run ANALYZE
-      // getRecentActivity(20),
-      Promise.resolve([]), // Return empty array to unblock admin page
-    ]);
-
     const [userStats, revenueStats, engagementStats, scenarioStats, conversionStats, recentActivity] =
-      await Promise.race([metricsPromise, timeoutPromise]);
+      await Promise.all([
+        getUserDistributionByTier(), // 1 query (was 2)
+        getMonthlyRecurringRevenue(), // 1 query (was 3)
+        getPlansCreatedThisMonth(), // 1 query (was 4)
+        getTopScenarios(10), // 1 query (unchanged)
+        getConversionRates(), // 1 query (was 4)
+        // TEMPORARILY DISABLED: Activity log query timing out (>5s even without JOIN)
+        // Database performance issue - need to check table size and run ANALYZE
+        // getRecentActivity(20),
+        Promise.resolve([]), // Return empty array to unblock admin page
+      ]);
 
     const metricsDuration = Date.now() - metricsStart;
     console.log(`[Admin Metrics] All metrics fetched in ${metricsDuration}ms`);
@@ -167,7 +164,7 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
       lastUpdated: new Date(),
     };
   }
-}
+});
 
 // ==================== USER METRICS ====================
 

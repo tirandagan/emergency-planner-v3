@@ -21,8 +21,14 @@ import ConversionFunnel from '@/components/admin/ConversionFunnel';
 import ActivityFeed from '@/components/admin/ActivityFeed';
 import QuickActions from '@/components/admin/QuickActions';
 
+// Route segment config for optimal performance
+export const dynamic = 'force-dynamic'; // Always fetch fresh data
+export const revalidate = 0; // Never cache (admin dashboard needs real-time data)
+export const fetchCache = 'force-no-store'; // Bypass fetch cache
+
 export default async function AdminDashboard() {
   // Fetch all metrics server-side (type-safe Drizzle queries)
+  // Uses React cache() for request deduplication within this single render
   const metrics = await getAdminDashboardMetrics();
 
   return (

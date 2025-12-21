@@ -145,6 +145,10 @@ textarea::-moz-selection,
 
   /* Radius */
   --radius: 0.5rem;
+
+  /* Sidebar colors for light mode */
+  --sidebar-admin: 241 245 249; /* slate-100 */
+  --sidebar-user: 245 245 245;  /* neutral-100 */
 }
 
 /* Dark Mode - Blue-Tinted Neutrals for Brand Cohesion */
@@ -152,19 +156,19 @@ textarea::-moz-selection,
   /* Primary Brand Color - Trust Blue (Nearly Identical) */
   --primary: 220 75% 65%;
   --primary-foreground: 0 0% 96%;
-  
-  /* Custom Blue-Tinted Dark Mode Neutrals */
-  --background: 220 15% 8%;
+
+  /* Custom Blue-Tinted Dark Mode Neutrals - Near Black */
+  --background: 0 0% 4%;
   --foreground: 0 0% 96%;
-  
+
   /* Secondary Backgrounds */
   --muted: 220 12% 15%;
   --muted-foreground: 220 8% 64%;
-  
-  /* Component Surfaces */
-  --card: 220 15% 8%;
+
+  /* Component Surfaces - Near Black */
+  --card: 0 0% 4%;
   --card-foreground: 0 0% 96%;
-  --popover: 220 15% 8%;
+  --popover: 0 0% 4%;
   --popover-foreground: 0 0% 96%;
   
   /* Secondary Actions */
@@ -205,6 +209,10 @@ textarea::-moz-selection,
   --tier-pro: 260 80% 68%;
   --tier-pro-foreground: 0 0% 98%;
   --tier-pro-bg: 260 60% 20%;
+
+  /* Sidebar colors for dark mode - near black */
+  --sidebar-admin: 0 0% 4%; /* zinc-950 equivalent */
+  --sidebar-user: 0 0% 4%;  /* neutral-950 equivalent */
 }
 
 /* Base layer - Apply background colors after Tailwind base */
@@ -220,11 +228,11 @@ textarea::-moz-selection,
   }
 
   html.dark {
-    background-color: hsl(220 15% 8%);
+    background-color: hsl(0 0% 4%);
   }
 
   html.dark body {
-    background-color: hsl(220 15% 8%);
+    background-color: hsl(0 0% 4%);
     color: hsl(0 0% 96%);
   }
 }
@@ -239,11 +247,11 @@ body {
 }
 
 html.dark {
-  background: hsl(220 15% 8%) !important;
+  background: hsl(0 0% 4%) !important;
 }
 
 html.dark body {
-  background: hsl(220 15% 8%) !important;
+  background: hsl(0 0% 4%) !important;
 }
 
 /* Expose CSS Variables as Tailwind Utilities */
@@ -309,6 +317,10 @@ html.dark body {
   --color-tactical-green: hsl(var(--success));
   --color-tactical-accent: hsl(var(--warning));
   --color-danger: hsl(var(--destructive));
+
+  /* Sidebar Colors */
+  --color-sidebar-admin: hsl(var(--sidebar-admin));
+  --color-sidebar-user: hsl(var(--sidebar-user));
 
   /* Border Radius */
   --radius: 0.5rem;

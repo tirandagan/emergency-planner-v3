@@ -176,13 +176,20 @@ function SidebarContent({
 
   const navigationLinks = viewAdminMenu ? adminNavigationLinks : userNavigationLinks
 
+  // Direct background color based on theme and view mode
+  const backgroundColor = theme === 'dark'
+    ? viewAdminMenu
+      ? 'rgb(14, 18, 26)' // slate-800 for admin dark mode
+      : 'rgb(10, 10, 10)' // Near-black for user dark mode
+    : viewAdminMenu
+      ? 'rgb(241, 245, 249)' // slate-100 for admin light mode
+      : 'rgb(245, 245, 245)' // neutral-100 for user light mode
+
   return (
-    <div className={cn(
-      "flex flex-col h-full transition-colors duration-200",
-      viewAdminMenu
-        ? "bg-slate-200 dark:bg-slate-800"
-        : "bg-neutral-100 dark:bg-neutral-800"
-    )}>
+    <div
+      className="flex flex-col h-full transition-colors duration-200"
+      style={{ backgroundColor }}
+    >
       {/* Header with Logo and Lock Button */}
       <div className="flex items-center justify-between px-4 pt-5 pb-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -201,7 +208,7 @@ function SidebarContent({
                 display: open ? "inline-block" : "none",
                 opacity: open ? 1 : 0,
               }}
-              className="text-xl font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-primary transition-colors truncate"
+              className="text-xl font-bold text-neutral-900 dark:text-primary transition-colors truncate"
             >
               <BrandText withDomain />
             </motion.span>
@@ -247,8 +254,8 @@ function SidebarContent({
               className={cn(
                 'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 relative',
                 active && 'text-primary dark:text-primary',
-                !active && viewAdminMenu && 'text-slate-700 dark:text-slate-300',
-                !active && !viewAdminMenu && 'text-neutral-700 dark:text-neutral-300',
+                !active && viewAdminMenu && 'text-slate-700 dark:text-slate-100',
+                !active && !viewAdminMenu && 'text-neutral-700 dark:text-neutral-100',
                 active
                   ? viewAdminMenu
                     ? 'hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md'
@@ -259,11 +266,13 @@ function SidebarContent({
               )}
             >
               {active && (
-                <ChevronRight className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-primary group-hover:text-white z-20" strokeWidth={3} />
+                <ChevronRight className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-primary dark:text-primary group-hover:text-white z-20" strokeWidth={3} />
               )}
               <Icon className={cn(
                 "h-5 w-5 flex-shrink-0 transition-transform",
-                active && "scale-105"
+                active && "scale-105",
+                !active && viewAdminMenu && "text-slate-700 dark:text-slate-100",
+                !active && !viewAdminMenu && "text-neutral-700 dark:text-neutral-100"
               )} strokeWidth={active ? 2.5 : 2} />
               <motion.span
                 animate={{
