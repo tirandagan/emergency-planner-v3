@@ -23,7 +23,6 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Dict, Any, Set, Optional
-import aiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -124,15 +123,20 @@ class PromptLoader:
 
         # Check if file exists
         if not full_path.exists():
+            logger.error(f"Prompt file NOT FOUND at: {full_path}")
             raise PromptNotFoundError(
-                f"Prompt file not found: {relative_path} (base dir: {self.base_dir})"
+                f"Prompt file not found: {relative_path} (resolved to {full_path})"
             )
 
-        # Read file async
+        # Read file
         try:
-            async with aiofiles.open(full_path, 'r', encoding='utf-8') as f:
-                content = await f.read()
+            logger.debug(f"Opening prompt file: {full_path}")
+            # Use synchronous open as it's more reliable in eventlet environments
+            # and file sizes are small. eventlet will handle the yield.
+            with open(full_path, 'r', encoding='utf-8') as f:
+                content = f.read()
         except Exception as e:
+            logger.error(f"Failed to read prompt file {full_path}: {e}")
             raise PromptLoadError(f"Failed to read prompt file: {relative_path}") from e
 
         # Resolve includes if requested
@@ -242,8 +246,8 @@ class PromptLoader:
                         continue
 
                 # Read included file
-                async with aiofiles.open(include_path, 'r', encoding='utf-8') as f:
-                    included_content = await f.read()
+                with open(include_path, 'r', encoding='utf-8') as f:
+                    included_content = f.read()
 
                 # Recursively resolve includes in included file
                 included_content = await self._resolve_includes(

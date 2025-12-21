@@ -274,9 +274,12 @@ async def execute_external_api_step(
     try:
         # Use synchronous context manager
         with service_class() as service:
-            # Use shared executor and get_running_loop to avoid "different loop" errors
-            # get_running_loop() ensures we use the loop that is actually running this task
-            loop = asyncio.get_running_loop()
+            # Use shared executor and get loop safely to avoid "different loop" errors
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.get_event_loop()
+                
             response: ExternalServiceResponse = await loop.run_in_executor(
                 _executor,
                 service.call,

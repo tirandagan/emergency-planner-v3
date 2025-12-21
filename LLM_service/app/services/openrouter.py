@@ -40,6 +40,9 @@ async def _get_global_client(api_key: str, site_url: str, site_name: str, timeou
                 logger.info("Initializing global httpx.AsyncClient for OpenRouter")
                 _global_client = httpx.AsyncClient(
                     timeout=httpx.Timeout(timeout),
+                    # Disable pooling/keep-alive to avoid socket conflicts in eventlet
+                    # when multiple greenlets share the same client.
+                    limits=httpx.Limits(max_connections=100, max_keepalive_connections=0),
                     headers={
                         "Authorization": f"Bearer {api_key}",
                         "HTTP-Referer": site_url,
