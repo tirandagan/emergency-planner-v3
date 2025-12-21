@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { PlanCard } from "./PlanCard";
+import { EmergencyPlanCard } from "./EmergencyPlanCard";
 import { EmptyPlansState } from "./EmptyPlansState";
 import { Badge } from "@/components/ui/badge";
 import type { MissionReport } from "@/lib/mission-reports";
@@ -16,7 +16,6 @@ interface PlanGridProps {
 export function PlanGrid({
   plans,
   onEditPlan,
-  onDeletePlan,
   onCreatePlan,
 }: PlanGridProps) {
   if (plans.length === 0) {
@@ -45,14 +44,13 @@ export function PlanGrid({
         </Badge>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+      {/* Plans Grid - Wider cards for better title visibility */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
         {plans.map((plan) => (
-          <PlanCard
+          <EmergencyPlanCard
             key={plan.id}
             plan={plan}
             onEdit={onEditPlan}
-            onDelete={onDeletePlan}
           />
         ))}
       </div>
