@@ -313,6 +313,8 @@ class BulkDeleteRequest(BaseModel):
 class BulkDeleteResponse(BaseModel):
     """Response schema for bulk job deletion."""
     deleted_count: int
+    tasks_revoked: int
+    redis_removed: int
     job_ids: List[str]
     message: str
 
@@ -320,8 +322,10 @@ class BulkDeleteResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "deleted_count": 2,
+                "tasks_revoked": 1,
+                "redis_removed": 2,
                 "job_ids": ["123e4567-e89b-12d3-a456-426614174000"],
-                "message": "Successfully deleted 2 jobs"
+                "message": "Successfully deleted 2 jobs, revoked 1 running task, removed 2 from queue"
             }
         }
 
@@ -406,7 +410,73 @@ def bulk_delete_jobs(
 
     logger.info(f"Bulk delete request for {len(job_uuids)} jobs")
 
-    # Delete jobs from database
+    # ============================================================================
+    # STEP 1: Revoke Celery tasks (terminate running tasks)
+    # ============================================================================
+    tasks_revoked = 0
+    revoke_errors = []
+    try:
+        from app.celery_app import celery_app
+
+        for job_uuid in job_uuids:
+            try:
+                # Celery task ID format: f"workflow-{job_id}"
+                task_id = f"workflow-{str(job_uuid)}"
+
+                # Revoke with terminate=True to kill running tasks
+                # signal='SIGKILL' ensures immediate termination
+                celery_app.control.revoke(
+                    task_id,
+                    terminate=True,
+                    signal='SIGKILL'
+                )
+                tasks_revoked += 1
+                logger.debug(f"Revoked Celery task: {task_id}")
+            except Exception as task_error:
+                revoke_errors.append(f"{job_uuid}: {str(task_error)}")
+                logger.warning(f"Failed to revoke task {task_id}: {task_error}")
+
+        logger.info(f"Successfully revoked {tasks_revoked}/{len(job_uuids)} Celery tasks")
+        if revoke_errors:
+            logger.warning(f"Revocation errors: {revoke_errors}")
+    except ImportError as e:
+        logger.error(f"Failed to import celery_app for task revocation: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error during task revocation: {e}", exc_info=True)
+
+    # ============================================================================
+    # STEP 2: Remove from Redis queue (prevent queued tasks from executing)
+    # ============================================================================
+    redis_removed = 0
+    redis_errors = []
+    try:
+        from app.celery_app import celery_app
+
+        for job_uuid in job_uuids:
+            try:
+                task_id = f"workflow-{str(job_uuid)}"
+
+                # Revoke without terminate flag removes from queue only
+                # This prevents queued (not yet running) tasks from executing
+                celery_app.control.revoke(task_id)
+                redis_removed += 1
+                logger.debug(f"Removed from Redis queue: {task_id}")
+            except Exception as redis_error:
+                redis_errors.append(f"{job_uuid}: {str(redis_error)}")
+                logger.warning(f"Failed to remove task {task_id} from Redis: {redis_error}")
+
+        logger.info(f"Successfully removed {redis_removed}/{len(job_uuids)} tasks from Redis queue")
+        if redis_errors:
+            logger.warning(f"Redis removal errors: {redis_errors}")
+    except ImportError as e:
+        logger.error(f"Failed to import celery_app for Redis cleanup: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error during Redis cleanup: {e}", exc_info=True)
+
+    # ============================================================================
+    # STEP 3: Delete from PostgreSQL database
+    # ============================================================================
+    deleted_count = 0
     try:
         deleted_count = (
             db.query(WorkflowJob)
@@ -414,7 +484,7 @@ def bulk_delete_jobs(
             .delete(synchronize_session=False)
         )
         db.commit()
-        logger.info(f"Successfully deleted {deleted_count} jobs out of {len(job_uuids)} requested")
+        logger.info(f"Successfully deleted {deleted_count}/{len(job_uuids)} jobs from database")
     except Exception as e:
         db.rollback()
         logger.error("Database error during bulk delete", exc_info=e)
@@ -422,12 +492,29 @@ def bulk_delete_jobs(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "DatabaseError",
-                "message": f"Failed to delete jobs: {str(e)}"
+                "message": f"Failed to delete jobs from database: {str(e)}"
             }
         )
 
+    # ============================================================================
+    # Return detailed cleanup statistics
+    # ============================================================================
+    cleanup_parts = []
+    if deleted_count > 0:
+        cleanup_parts.append(f"{deleted_count} job{'s' if deleted_count != 1 else ''}")
+    if tasks_revoked > 0:
+        cleanup_parts.append(f"{tasks_revoked} running task{'s' if tasks_revoked != 1 else ''} terminated")
+    if redis_removed > 0:
+        cleanup_parts.append(f"{redis_removed} queued task{'s' if redis_removed != 1 else ''} removed")
+
+    message = f"Successfully deleted {', '.join(cleanup_parts)}" if cleanup_parts else "No jobs deleted"
+
+    logger.info(f"Bulk delete complete: {message}")
+
     return BulkDeleteResponse(
         deleted_count=deleted_count,
+        tasks_revoked=tasks_revoked,
+        redis_removed=redis_removed,
         job_ids=[str(job_id) for job_id in job_uuids[:deleted_count]],
-        message=f"Successfully deleted {deleted_count} job{'s' if deleted_count != 1 else ''}"
+        message=message
     )

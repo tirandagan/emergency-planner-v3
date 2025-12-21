@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { InteractiveFrostedTestimonial } from './interactive-frosted-glass-card';
+import { CrossfadeVideoPlayer } from './crossfade-video-player';
 
 // --- HELPER COMPONENTS (ICONS) ---
 
@@ -68,98 +69,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   isProcessing = false,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
-  
-  // Hero video dynamic scaling logic
-  const [videoDims, setVideoDims] = useState({ w: 0, h: 0 });
-  const [containerDims, setContainerDims] = useState({ w: 0, h: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    const container = containerRef.current;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerDims({
-          w: entry.contentRect.width,
-          h: entry.contentRect.height,
-        });
-      }
-    });
-    
-    observer.observe(container);
-
-    // Initial container dims
-    setContainerDims({
-      w: container.offsetWidth,
-      h: container.offsetHeight,
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    
-    const updateVideoMetadata = () => {
-      if (video.videoWidth && video.videoHeight) {
-        setVideoDims({
-          w: video.videoWidth,
-          h: video.videoHeight,
-        });
-      }
-    };
-
-    if (video.readyState >= 1) { // HAVE_METADATA
-      updateVideoMetadata();
-    }
-
-    video.addEventListener('loadedmetadata', updateVideoMetadata);
-    return () => video.removeEventListener('loadedmetadata', updateVideoMetadata);
-  }, []);
-
-  const getDynamicVideoStyle = (): React.CSSProperties => {
-    if (!videoDims.w || !videoDims.h || !containerDims.w || !containerDims.h) {
-      return { 
-        width: '100%', 
-        height: '100%', 
-        objectFit: 'cover',
-        position: 'absolute',
-        top: 0,
-        left: 0
-      };
-    }
-
-    // CONTENT_ASPECT_RATIO is the ratio of the "useful" area of the video.
-    // Based on the screenshots, the blue map is portrait (approx 9:16).
-    const CONTENT_ASPECT_RATIO = 9 / 16;
-    
-    // We need to find a scale factor that ensures the 'useful' content area 
-    // covers the entire container without showing the black bars at the sides.
-    
-    // Scale needed to cover height: containerHeight / videoHeight
-    // Scale needed to cover width with useful content: containerWidth / (videoHeight * CONTENT_ASPECT_RATIO)
-    
-    const scale = Math.max(
-      containerDims.h / videoDims.h,
-      containerDims.w / (videoDims.h * CONTENT_ASPECT_RATIO)
-    );
-
-    return {
-      width: `${videoDims.w * scale}px`,
-      height: `${videoDims.h * scale}px`,
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      maxWidth: 'none',
-      objectFit: 'fill', // Disable 'cover' since we are managing size manually
-      boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 -2px 8px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.2)',
-      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
-    };
-  };
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-[100dvw] bg-slate-200 dark:bg-slate-900 flex items-center justify-center z-50 p-2 sm:p-3">
@@ -300,25 +210,15 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             <section className="hidden md:block flex-1 p-4 lg:p-6 xl:p-8">
               <div ref={containerRef} className="relative h-full w-full overflow-hidden rounded-3xl shadow-xl bg-slate-900">
                 <div className="animate-video-fade-in absolute inset-0 w-full h-full overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    style={getDynamicVideoStyle()}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    poster="/images/signin-image.png"
-                    aria-label="Emergency preparedness hero video"
-                  >
-                    <source src={heroImageSrc?.endsWith('.mp4') ? heroImageSrc : "/images/signin-video.mp4"} type="video/mp4" />
-                    {/* Fallback for browsers that don't support video or if source is not mp4 */}
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${heroImageSrc && !heroImageSrc.endsWith('.mp4') ? heroImageSrc : "/images/signin-image.png"})` }}
-                      role="img"
-                      aria-label="Emergency preparedness hero image"
-                    />
-                  </video>
+                  <CrossfadeVideoPlayer
+                    videoSources={[
+                      "/images/signin_video_01.mp4",
+                      "/images/signin_video_02.mp4"
+                    ]}
+                    transitionDuration={1.5}
+                    videoDuration={10}
+                    containerRef={containerRef}
+                  />
                 </div>
                 {testimonials.length > 0 && (
                   <div className="absolute inset-x-0 top-24 flex gap-4 justify-center z-10 pointer-events-none">

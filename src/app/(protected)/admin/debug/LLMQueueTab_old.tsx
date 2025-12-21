@@ -1,7 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,8 +21,6 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RefreshCw, Loader2, AlertCircle, Trash2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
-import { SmartTable, TableControls } from '@/components/admin/smart-table';
-import type { SmartColumnDef } from '@/components/admin/smart-table';
 import { getLLMServiceURL, fetchLLMHealth, fetchLLMJobs, bulkDeleteLLMJobs } from './actions';
 import { LLMJobDetailModal } from './LLMJobDetailModal';
 import { LLMHealthDetailModal } from './LLMHealthDetailModal';
@@ -23,6 +29,8 @@ import type {
   LLMJobsResponse,
   LLMHealthResponse,
   JobStatusFilter,
+  SortField,
+  SortDirection,
 } from './llm-types';
 
 const statusColors = {
@@ -32,17 +40,6 @@ const statusColors = {
   completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-};
-
-const formatDate = (date: string | null) => {
-  if (!date) return 'N/A';
-  return new Date(date).toLocaleString();
-};
-
-const formatDuration = (ms: number | null) => {
-  if (ms === null) return 'N/A';
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
 };
 
 export function LLMQueueTab() {
@@ -55,13 +52,13 @@ export function LLMQueueTab() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<JobStatusFilter>('all');
   const [limitResults, setLimitResults] = useState<string>('25');
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteResult, setDeleteResult] = useState<{ success: boolean; deleted_count: number; tasks_revoked?: number; redis_removed?: number; message: string } | null>(null);
+  const [deleteResult, setDeleteResult] = useState<{ success: boolean; deleted_count: number; message: string } | null>(null);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
-
-  const tableRef = useRef<any>(null);
 
   // Fetch LLM service URL on mount
   useEffect(() => {
@@ -71,7 +68,7 @@ export function LLMQueueTab() {
         setLLMServiceURL(url);
       } catch {
         setError('Failed to fetch LLM service URL from settings');
-        setLLMServiceURL('https://llm-service-api.onrender.com');
+        setLLMServiceURL('https://llm-service-api.onrender.com'); // Fallback
       } finally {
         setIsLoadingURL(false);
       }
@@ -124,7 +121,9 @@ export function LLMQueueTab() {
 
     if (!hasProcessingJobs) return;
 
+    // Poll in the background without showing loading state
     const pollInterval = setInterval(() => {
+      // Silently fetch jobs without triggering loading state
       fetchLLMJobs(statusFilter, limitResults)
         .then((data: LLMJobsResponse) => {
           setJobs(data.jobs);
@@ -132,8 +131,9 @@ export function LLMQueueTab() {
         })
         .catch((err) => {
           console.error('Background poll failed:', err);
+          // Don't update error state to avoid UI flicker
         });
-    }, 2000);
+    }, 2000); // Poll every 2 seconds
 
     return () => {
       clearInterval(pollInterval);
@@ -161,10 +161,10 @@ export function LLMQueueTab() {
 
   // Toggle all jobs selection
   const toggleAllJobs = () => {
-    if (selectedJobIds.size === jobs.length) {
+    if (selectedJobIds.size === sortedJobs.length) {
       setSelectedJobIds(new Set());
     } else {
-      setSelectedJobIds(new Set(jobs.map(job => job.job_id)));
+      setSelectedJobIds(new Set(sortedJobs.map(job => job.job_id)));
     }
   };
 
@@ -183,6 +183,7 @@ export function LLMQueueTab() {
       setDeleteResult(result);
 
       if (result.success) {
+        // Clear selection and refresh jobs list
         setSelectedJobIds(new Set());
         await fetchJobs();
       }
@@ -197,255 +198,71 @@ export function LLMQueueTab() {
     }
   };
 
-  // Define columns for SmartTable
-  const columns: SmartColumnDef<LLMJob>[] = useMemo(() => [
-    {
-      id: 'select',
-      header: ({ table }: { table: any }) => (
-        <Checkbox
-          checked={jobs.length > 0 && selectedJobIds.size === jobs.length}
-          onChange={toggleAllJobs}
-          aria-label="Select all jobs"
-        />
-      ),
-      cell: (job) => (
-        <Checkbox
-          checked={selectedJobIds.has(job.job_id)}
-          onChange={() => toggleJobSelection(job.job_id)}
-          aria-label={`Select job ${job.job_id}`}
-        />
-      ),
-      sortable: false,
-      filterable: false,
-      defaultWidth: 48,
-      minWidth: 48,
-      maxWidth: 48,
-    },
-    {
-      id: 'job_id',
-      accessorKey: 'job_id',
-      header: 'Job ID',
-      cell: (job) => (
-        <button
-          onClick={() => setSelectedJobId(job.job_id)}
-          className="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline"
-          title="Click to view details"
-        >
-          {job.job_id.slice(0, 8)}...
-        </button>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'text',
-      defaultWidth: 100,
-    },
-    {
-      id: 'workflow_name',
-      accessorKey: 'workflow_name',
-      header: 'Workflow',
-      sortable: true,
-      filterable: true,
-      filterType: 'text',
-      defaultWidth: 180,
-    },
-    {
-      id: 'user_email',
-      accessorKey: 'user_email',
-      header: 'User',
-      cell: (job) => (
-        <span className="text-muted-foreground">{job.user_email || 'N/A'}</span>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'text',
-      defaultWidth: 200,
-    },
-    {
-      id: 'status',
-      accessorKey: 'status',
-      header: 'Status',
-      cell: (job) => <Badge className={statusColors[job.status]}>{job.status}</Badge>,
-      sortable: true,
-      filterable: true,
-      filterType: 'enum',
-      defaultWidth: 120,
-    },
-    {
-      id: 'created_at',
-      accessorKey: 'created_at',
-      header: 'Created',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.created_at)}</span>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'date',
-      defaultWidth: 180,
-    },
-    {
-      id: 'started_at',
-      accessorKey: 'started_at',
-      header: 'Started',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.started_at)}</span>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'date',
-      defaultWidth: 180,
-    },
-    {
-      id: 'completed_at',
-      accessorKey: 'completed_at',
-      header: 'Completed',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.completed_at)}</span>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'date',
-      defaultWidth: 180,
-    },
-    {
-      id: 'duration_ms',
-      accessorKey: 'duration_ms',
-      header: 'Duration',
-      cell: (job) => (
-        <span className="text-muted-foreground">{formatDuration(job.duration_ms)}</span>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-      defaultWidth: 100,
-    },
-    // NEW COLUMNS (hidden by default)
-    {
-      id: 'priority',
-      accessorKey: 'priority',
-      header: 'Priority',
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-      defaultVisible: false,
-      defaultWidth: 90,
-    },
-    {
-      id: 'username',
-      accessorKey: 'username',
-      header: 'Username',
-      sortable: true,
-      filterable: true,
-      filterType: 'text',
-      defaultVisible: false,
-      defaultWidth: 150,
-    },
-    {
-      id: 'action',
-      accessorKey: 'action',
-      header: 'Action',
-      sortable: false,
-      filterable: true,
-      filterType: 'text',
-      defaultVisible: false,
-      defaultWidth: 200,
-    },
-    {
-      id: 'retry_count',
-      accessorKey: 'retry_count',
-      header: 'Retries',
-      cell: (job) => `${job.retry_count || 0}/${job.max_retries || 3}`,
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-      defaultVisible: false,
-      defaultWidth: 100,
-    },
-    {
-      id: 'is_stale',
-      accessorKey: 'is_stale',
-      header: 'Is Stale',
-      cell: (job) => job.is_stale ? <Badge variant="destructive">Stale</Badge> : null,
-      sortable: true,
-      filterable: false,
-      defaultVisible: false,
-      defaultWidth: 100,
-    },
-    {
-      id: 'stale_reason',
-      accessorKey: 'stale_reason',
-      header: 'Stale Reason',
-      sortable: false,
-      filterable: true,
-      filterType: 'text',
-      defaultVisible: false,
-      defaultWidth: 200,
-    },
-    {
-      id: 'current_step',
-      accessorKey: 'current_step',
-      header: 'Current Step',
-      sortable: false,
-      filterable: true,
-      filterType: 'text',
-      defaultVisible: false,
-      defaultWidth: 150,
-    },
-    {
-      id: 'steps_progress',
-      header: 'Steps',
-      cell: (job) => {
-        if (job.steps_completed !== null && job.total_steps !== null) {
-          return `${job.steps_completed}/${job.total_steps}`;
-        }
-        return 'N/A';
-      },
-      sortable: false,
-      filterable: false,
-      defaultVisible: false,
-      defaultWidth: 100,
-    },
-    {
-      id: 'queued_at',
-      accessorKey: 'queued_at',
-      header: 'Queued At',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.queued_at || null)}</span>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'date',
-      defaultVisible: false,
-      defaultWidth: 180,
-    },
-    {
-      id: 'updated_at',
-      accessorKey: 'updated_at',
-      header: 'Updated At',
-      cell: (job) => (
-        <span className="text-muted-foreground whitespace-nowrap">{formatDate(job.updated_at || null)}</span>
-      ),
-      sortable: true,
-      filterable: true,
-      filterType: 'date',
-      defaultVisible: false,
-      defaultWidth: 180,
-    },
-    {
-      id: 'celery_task_id',
-      accessorKey: 'celery_task_id',
-      header: 'Celery Task ID',
-      cell: (job) => (
-        <span className="font-mono text-xs text-muted-foreground">
-          {job.celery_task_id ? `${job.celery_task_id.slice(0, 8)}...` : 'N/A'}
-        </span>
-      ),
-      sortable: false,
-      filterable: true,
-      filterType: 'text',
-      defaultVisible: false,
-      defaultWidth: 130,
-    },
-  ], [jobs.length, selectedJobIds]);
+  // Handle delete all jobs (all visible jobs matching current filter)
+  const handleDeleteAll = async () => {
+    if (sortedJobs.length === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ALL ${sortedJobs.length} job${sortedJobs.length !== 1 ? 's' : ''} matching the current filter? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) return;
+
+    setIsDeleting(true);
+    setDeleteResult(null);
+
+    try {
+      const allJobIds = sortedJobs.map(job => job.job_id);
+      const result = await bulkDeleteLLMJobs(allJobIds);
+      setDeleteResult(result);
+
+      if (result.success) {
+        // Clear selection and refresh jobs list
+        setSelectedJobIds(new Set());
+        await fetchJobs();
+      }
+    } catch (error) {
+      setDeleteResult({
+        success: false,
+        deleted_count: 0,
+        message: error instanceof Error ? error.message : 'Failed to delete jobs'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Sort jobs
+  const sortedJobs = [...jobs].sort((a, b) => {
+    const aValue: string | number | null = a[sortField];
+    const bValue: string | number | null = b[sortField];
+
+    if (aValue === null) return 1;
+    if (bValue === null) return -1;
+
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  const formatDate = (date: string | null) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString();
+  };
+
+  const formatDuration = (ms: number | null) => {
+    if (ms === null) return 'N/A';
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
 
   if (isLoadingURL) {
     return (
@@ -546,14 +363,6 @@ export function LLMQueueTab() {
                   Delete Selected ({selectedJobIds.size})
                 </Button>
               )}
-              {tableRef.current && (
-                <TableControls
-                  table={tableRef.current}
-                  onReset={() => {
-                    // Reset will be handled by SmartTable
-                  }}
-                />
-              )}
             </div>
           </div>
         </CardHeader>
@@ -594,19 +403,109 @@ export function LLMQueueTab() {
             </div>
           )}
 
-          {/* SmartTable */}
+          {/* Jobs Table */}
           <div className="border rounded-lg overflow-hidden">
             {isLoadingJobs ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
+            ) : sortedJobs.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>No jobs found</p>
+                <p className="text-sm mt-2">
+                  {statusFilter !== 'all' && `Try changing the filter to see ${statusFilter === 'failed' ? 'other' : 'different'} jobs`}
+                </p>
+              </div>
             ) : (
-              <SmartTable
-                data={jobs}
-                columns={columns}
-                localStorageKey="llm-queue-table-prefs"
-                tableInstanceRef={tableRef}
-              />
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={sortedJobs.length > 0 && selectedJobIds.size === sortedJobs.length}
+                          onChange={toggleAllJobs}
+                          aria-label="Select all jobs"
+                        />
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => toggleSort('job_id')}
+                      >
+                        Job ID {sortField === 'job_id' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => toggleSort('workflow_name')}
+                      >
+                        Workflow {sortField === 'workflow_name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => toggleSort('status')}
+                      >
+                        Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => toggleSort('created_at')}
+                      >
+                        Created {sortField === 'created_at' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead>Started</TableHead>
+                      <TableHead>Completed</TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => toggleSort('duration_ms')}
+                      >
+                        Duration {sortField === 'duration_ms' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedJobs.map((job) => (
+                      <TableRow key={job.job_id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedJobIds.has(job.job_id)}
+                            onChange={() => toggleJobSelection(job.job_id)}
+                            aria-label={`Select job ${job.job_id}`}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => setSelectedJobId(job.job_id)}
+                            className="font-mono text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                            title="Click to view details"
+                          >
+                            {job.job_id.slice(0, 8)}...
+                          </button>
+                        </TableCell>
+                        <TableCell className="text-sm">{job.workflow_name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {job.user_email || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[job.status]}>{job.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {formatDate(job.created_at)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {formatDate(job.started_at)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {formatDate(job.completed_at)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDuration(job.duration_ms)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </div>
         </CardContent>

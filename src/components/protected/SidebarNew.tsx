@@ -270,18 +270,21 @@ function SidebarContent({
                 active
                   ? viewAdminMenu
                     ? 'bg-slate-200 dark:bg-slate-700 border-l-4 border-primary'
-                    : 'hover:bg-primary/80 hover:text-white hover:shadow-md'
+                    : 'hover:bg-primary/80 hover:shadow-md'
                   : '',
                 viewAdminMenu
-                  ? 'hover:bg-red-600'
-                  : 'hover:bg-primary hover:shadow-md'
+                  ? 'hover:bg-red-600 hover:text-white'
+                  : 'hover:bg-primary hover:shadow-md hover:text-white'
               )}
+              style={!viewAdminMenu && !active ? {
+                color: textColor
+              } : undefined}
             >
               {active && (
                 <ChevronRight
                   className={cn(
                     "absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 z-20 transition-colors",
-                    "text-primary group-hover:text-white"
+                    active && !viewAdminMenu ? "text-primary group-hover:text-white" : "text-primary"
                   )}
                   strokeWidth={3}
                 />
@@ -292,11 +295,10 @@ function SidebarContent({
                   active ? "scale-105 text-primary" :
                     viewAdminMenu
                       ? theme === 'dark' ? "text-slate-100" : "text-slate-700"
-                      : "",
+                      : "[color:inherit]",
                   "group-hover:text-white"
                 )}
                 strokeWidth={active ? 2.5 : 2}
-                style={!viewAdminMenu ? { color: textColor } : {}}
               />
               <motion.span
                 animate={{
@@ -308,10 +310,9 @@ function SidebarContent({
                   active ? "text-primary" :
                     viewAdminMenu
                       ? theme === 'dark' ? "text-slate-100" : "text-slate-700"
-                      : "",
+                      : "[color:inherit]",
                   "group-hover:text-white"
                 )}
-                style={!viewAdminMenu ? { color: textColor } : {}}
               >
                 {link.label}
               </motion.span>
@@ -382,9 +383,7 @@ function SidebarContent({
         >
           <div className={cn(
             "flex-shrink-0 -ml-1 flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 font-semibold transition-colors",
-            viewAdminMenu
-              ? "text-primary group-hover:bg-transparent group-hover:text-white"
-              : "text-primary group-hover:bg-transparent group-hover:text-white"
+            "text-primary group-hover:bg-transparent group-hover:text-white"
           )}>
             <span className="text-sm">{userName.charAt(0).toUpperCase()}</span>
           </div>
@@ -395,8 +394,8 @@ function SidebarContent({
             }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "ml-3 overflow-hidden whitespace-nowrap",
-              viewAdminMenu && "group-hover:text-white"
+              "ml-3 overflow-hidden whitespace-nowrap [color:inherit]",
+              "group-hover:text-white"
             )}
           >
             {userName}
@@ -410,7 +409,9 @@ function SidebarContent({
             className={cn(
               'group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 hover:shadow-md',
               viewAdminMenu
-                ? 'bg-primary/10 text-primary hover:bg-red-600 hover:text-white'
+                ? theme === 'dark'
+                  ? 'text-slate-100 hover:bg-red-600 hover:text-white'
+                  : 'text-slate-700 hover:bg-red-600 hover:text-white'
                 : 'hover:bg-primary hover:text-white'
             )}
             style={!viewAdminMenu ? {
@@ -418,8 +419,8 @@ function SidebarContent({
             } : {}}
           >
             <ArrowLeftRight className={cn(
-              "h-5 w-5 flex-shrink-0 transition-colors",
-              viewAdminMenu && "group-hover:text-white"
+              "h-5 w-5 flex-shrink-0 transition-colors [color:inherit]",
+              "group-hover:text-white"
             )} strokeWidth={2.5} />
             <motion.span
               animate={{
@@ -428,8 +429,8 @@ function SidebarContent({
               }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "ml-3 overflow-hidden whitespace-nowrap",
-                viewAdminMenu && "group-hover:text-white"
+                "ml-3 overflow-hidden whitespace-nowrap [color:inherit]",
+                "group-hover:text-white"
               )}
             >
               {viewAdminMenu ? 'Switch to User' : 'Switch to Admin'}
@@ -457,8 +458,8 @@ function SidebarContent({
           {theme === 'light' ? (
             <>
               <Moon className={cn(
-                "h-5 w-5 flex-shrink-0 transition-colors",
-                viewAdminMenu && "group-hover:text-white"
+                "h-5 w-5 flex-shrink-0 transition-colors [color:inherit]",
+                "group-hover:text-white"
               )} strokeWidth={2.5} />
               <motion.span
                 animate={{
@@ -467,8 +468,8 @@ function SidebarContent({
                 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                  "ml-3 overflow-hidden whitespace-nowrap",
-                  viewAdminMenu && "group-hover:text-white"
+                  "ml-3 overflow-hidden whitespace-nowrap [color:inherit]",
+                  "group-hover:text-white"
                 )}
               >
                 Dark Mode
@@ -477,8 +478,8 @@ function SidebarContent({
           ) : (
             <>
               <Sun className={cn(
-                "h-5 w-5 flex-shrink-0 transition-colors",
-                viewAdminMenu && "group-hover:text-white"
+                "h-5 w-5 flex-shrink-0 transition-colors [color:inherit]",
+                "group-hover:text-white"
               )} strokeWidth={2.5} />
               <motion.span
                 animate={{
@@ -487,8 +488,8 @@ function SidebarContent({
                 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                  "ml-3 overflow-hidden whitespace-nowrap",
-                  viewAdminMenu && "group-hover:text-white"
+                  "ml-3 overflow-hidden whitespace-nowrap [color:inherit]",
+                  "group-hover:text-white"
                 )}
               >
                 Light Mode
@@ -501,19 +502,19 @@ function SidebarContent({
         <button
           onClick={handleLogout}
           className={cn(
-            "group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 hover:bg-red-600 hover:text-white hover:shadow-md",
+            "group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150",
             viewAdminMenu
               ? theme === 'dark'
-                ? "text-slate-100"
-                : "text-slate-700"
-              : ""
+                ? "text-slate-100 hover:bg-red-600 hover:text-white hover:shadow-md"
+                : "text-slate-700 hover:bg-red-600 hover:text-white hover:shadow-md"
+              : "hover:bg-primary hover:text-white hover:shadow-md"
           )}
           style={!viewAdminMenu ? {
             color: theme === 'dark' ? 'rgb(245, 245, 245)' : 'rgb(64, 64, 64)'
           } : {}}
         >
           <LogOut className={cn(
-            "h-5 w-5 flex-shrink-0 transition-colors",
+            "h-5 w-5 flex-shrink-0 transition-colors [color:inherit]",
             "group-hover:text-white"
           )} strokeWidth={2.5} />
           <motion.span
@@ -523,7 +524,7 @@ function SidebarContent({
             }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "ml-3 overflow-hidden whitespace-nowrap",
+              "ml-3 overflow-hidden whitespace-nowrap [color:inherit]",
               "group-hover:text-white"
             )}
           >

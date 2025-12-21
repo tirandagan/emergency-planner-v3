@@ -1337,10 +1337,13 @@ export async function fetchLLMJobDetails(jobId: string): Promise<any> {
 
 /**
  * Bulk delete LLM jobs by IDs (server-side proxy)
+ * Deletes jobs from database, terminates running tasks, and removes from Redis queue
  */
 export async function bulkDeleteLLMJobs(jobIds: string[]): Promise<{
   success: boolean
   deleted_count: number
+  tasks_revoked?: number
+  redis_removed?: number
   message: string
 }> {
   await checkAdmin()
@@ -1371,6 +1374,8 @@ export async function bulkDeleteLLMJobs(jobIds: string[]): Promise<{
     return {
       success: true,
       deleted_count: data.deleted_count,
+      tasks_revoked: data.tasks_revoked,
+      redis_removed: data.redis_removed,
       message: data.message
     }
   } catch (error) {

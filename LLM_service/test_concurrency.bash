@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-CONCURRENCY=5
+CONCURRENCY=1 #or up to 5
 SERVICE_URL="https://llm-service-api-6vrk.onrender.com"
 # Load secret from .env.local if available, else use provided value
 if [ -f ".env.local" ]; then

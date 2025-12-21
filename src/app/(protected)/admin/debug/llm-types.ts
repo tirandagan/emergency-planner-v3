@@ -18,6 +18,18 @@ export interface LLMJob {
   completed_at: string | null;
   duration_ms: number | null;
   error_message: string | null;
+
+  // Additional fields for enhanced smart table columns
+  retry_count?: number;
+  max_retries?: number;
+  is_stale?: boolean;
+  stale_reason?: string | null;
+  current_step?: string | null;
+  steps_completed?: number | null;
+  total_steps?: number | null;
+  queued_at?: string; // ISO 8601
+  updated_at?: string; // ISO 8601
+  celery_task_id?: string;
 }
 
 export interface LLMJobsResponse {
