@@ -16,7 +16,7 @@ interface ScenarioStatsCardProps {
 
 export default function ScenarioStatsCard({ stats }: ScenarioStatsCardProps) {
   return (
-    <Card className="bg-card border-border lg:col-span-2">
+    <Card className="bg-card border-2 border-border shadow-sm lg:col-span-2">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Top Scenarios

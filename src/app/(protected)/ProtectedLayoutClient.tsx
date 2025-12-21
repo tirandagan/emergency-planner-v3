@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { SidebarNew, SidebarStateProvider, useSidebarState } from '@/components/protected/SidebarNew'
 import type { SubscriptionTier } from '@/lib/types/subscription'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface ProtectedLayoutClientProps {
   children: React.ReactNode
@@ -19,6 +20,8 @@ interface ProtectedLayoutClientProps {
 function MainContent({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { isOpen } = useSidebarState()
   const [isMobile, setIsMobile] = useState(false)
+  const pathname = usePathname()
+  const isAdminRoute = pathname?.startsWith('/admin')
 
   useEffect(() => {
     const checkMobile = (): void => {
@@ -33,14 +36,19 @@ function MainContent({ children }: { children: React.ReactNode }): React.JSX.Ele
 
   return (
     <main
-      className="h-full overflow-hidden transition-all duration-200 bg-neutral-50 dark:bg-neutral-900"
+      className={cn(
+        "h-full overflow-hidden transition-all duration-200",
+        isAdminRoute
+          ? "bg-slate-200 dark:bg-slate-900"
+          : "bg-background"
+      )}
       style={{
         marginLeft: isMobile ? '0' : (isOpen ? '300px' : '60px'),
       }}
     >
       {/* Elevated paper-like content container */}
       <div className="h-full pl-4 pr-4 py-2 md:pl-6 md:pr-4 md:py-3 lg:pl-8 lg:pr-6 lg:py-4">
-        <div className="h-full bg-white dark:bg-neutral-800 rounded-2xl shadow-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col">
+        <div className="h-full bg-card rounded-2xl shadow-lg border border-border overflow-hidden flex flex-col">
           <div className="flex-1 overflow-auto p-6 md:p-8">
             {children}
           </div>

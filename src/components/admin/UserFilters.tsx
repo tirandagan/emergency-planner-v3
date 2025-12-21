@@ -75,7 +75,7 @@ export default function UserFilters() {
     searchInput || selectedTiers.length > 0 || highValueOnly;
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 mb-6">
+    <div className="bg-card border-2 border-border rounded-lg shadow-sm p-4 mb-6">
       <div className="flex flex-col gap-4">
         {/* Search input */}
         <form onSubmit={handleSearchSubmit} className="flex gap-2">

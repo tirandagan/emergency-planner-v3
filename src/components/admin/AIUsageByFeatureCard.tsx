@@ -37,7 +37,7 @@ export default function AIUsageByFeatureCard({ byFeature }: AIUsageByFeatureCard
   const totalCost = byFeature.reduce((sum, f) => sum + f.cost, 0);
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-2 border-border shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Usage by Feature

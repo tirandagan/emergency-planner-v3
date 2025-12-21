@@ -15,7 +15,7 @@ interface EngagementCardProps {
 
 export default function EngagementCard({ stats }: EngagementCardProps) {
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-2 border-border shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Plans Created

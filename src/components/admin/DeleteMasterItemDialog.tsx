@@ -119,7 +119,7 @@ export function DeleteMasterItemDialog({
               <p className="text-sm font-semibold text-destructive mb-2">
                 ⚠️ Warning: {products.length} product{products.length !== 1 ? 's' : ''} will be permanently deleted:
               </p>
-              <div className="max-h-[200px] overflow-y-auto space-y-1 bg-card border border-border rounded p-3">
+              <div className="max-h-[200px] overflow-y-auto space-y-1 bg-card border-2 border-border rounded shadow-sm p-3">
                 {products.map((product) => (
                   <div key={product.id} className="text-sm text-foreground">
                     • {product.name} {product.asin ? `(${product.asin})` : ''}

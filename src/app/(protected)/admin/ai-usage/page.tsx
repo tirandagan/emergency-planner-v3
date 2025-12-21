@@ -23,7 +23,7 @@ export default async function AIUsagePage() {
   const dashboard = await getAIUsageDashboard(30);
 
   return (
-    <div className="p-8 space-y-8 bg-background">
+    <div className="p-8 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

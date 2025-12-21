@@ -89,14 +89,14 @@ export default function UserListView({
           ))}
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-lg mb-6">
+        <div className="bg-card border-2 border-border rounded-lg shadow-sm mb-6">
           <UserListTable users={users} onUserClick={handleUserClick} />
         </div>
       )}
 
       {/* Empty state */}
       {users.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-lg">
+        <div className="text-center py-12 text-muted-foreground bg-card border-2 border-border rounded-lg shadow-sm">
           <p className="text-lg font-medium mb-2">No users found</p>
           <p className="text-sm">Try adjusting your filters or search criteria</p>
         </div>

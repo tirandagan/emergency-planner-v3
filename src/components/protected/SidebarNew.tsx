@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/ThemeContext'
 import { useAuth } from '@/context/AuthContext'
 import { signOut } from '@/app/actions/auth'
+import { BrandText } from '@/components/ui/brand-text'
 
 // Context for sidebar state (open/closed)
 const SidebarStateContext = createContext<{
@@ -178,16 +179,18 @@ function SidebarContent({
   return (
     <div className={cn(
       "flex flex-col h-full transition-colors duration-200",
-      "bg-neutral-100 dark:bg-neutral-800"
+      viewAdminMenu
+        ? "bg-slate-200 dark:bg-slate-800"
+        : "bg-neutral-100 dark:bg-neutral-800"
     )}>
-      {/* Header with Logo, Admin Badge, and Lock Button */}
+      {/* Header with Logo and Lock Button */}
       <div className="flex items-center justify-between px-4 pt-5 pb-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Link href="/dashboard" className="flex items-center gap-3 group min-w-0">
             <div className="relative w-8 h-8 flex-shrink-0 transition-transform duration-150 group-hover:scale-105">
               <Image
                 src="/logo.png"
-                alt="beprepared.ai logo"
+                alt="BePrepared.ai logo"
                 fill
                 className="object-contain"
                 sizes="32px"
@@ -200,24 +203,10 @@ function SidebarContent({
               }}
               className="text-xl font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-primary transition-colors truncate"
             >
-              beprepared.ai
+              <BrandText withDomain />
             </motion.span>
           </Link>
         </div>
-
-        {/* Admin Mode Badge (when in admin view and expanded) */}
-        {viewAdminMenu && open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20"
-          >
-            <Shield className="w-3 h-3 text-primary" strokeWidth={2.5} />
-            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
-              Admin
-            </span>
-          </motion.div>
-        )}
 
         {/* Lock/Unlock Button (desktop only, when expanded) */}
         {open && (
@@ -229,7 +218,9 @@ function SidebarContent({
               "p-1.5 rounded-md transition-colors ml-2",
               isLocked
                 ? "bg-primary/10 text-primary hover:bg-primary/20"
-                : "text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                : viewAdminMenu
+                  ? "text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-700"
+                  : "text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
             )}
             title={isLocked ? "Unlock sidebar (auto-collapse)" : "Lock sidebar (keep open)"}
           >
@@ -258,9 +249,13 @@ function SidebarContent({
                 active && 'text-primary dark:text-primary',
                 !active && viewAdminMenu && 'text-slate-700 dark:text-slate-300',
                 !active && !viewAdminMenu && 'text-neutral-700 dark:text-neutral-300',
-                active 
-                  ? 'hover:bg-primary/80 dark:hover:bg-primary/80 hover:text-white dark:hover:text-white hover:shadow-md'
-                  : 'hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md'
+                active
+                  ? viewAdminMenu
+                    ? 'hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md'
+                    : 'hover:bg-primary/80 dark:hover:bg-primary/80 hover:text-white dark:hover:text-white hover:shadow-md'
+                  : viewAdminMenu
+                    ? 'hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md'
+                    : 'hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md'
               )}
             >
               {active && (
@@ -337,7 +332,9 @@ function SidebarContent({
             viewAdminMenu
               ? "text-slate-700 dark:text-slate-300"
               : "text-neutral-700 dark:text-neutral-300",
-            "hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md"
+            viewAdminMenu
+              ? "hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md"
+              : "hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md"
           )}
         >
           <div className="flex-shrink-0 -ml-1">
@@ -391,7 +388,9 @@ function SidebarContent({
             viewAdminMenu
               ? "text-slate-700 dark:text-slate-300"
               : "text-neutral-700 dark:text-neutral-300",
-            "hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md"
+            viewAdminMenu
+              ? "hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md"
+              : "hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md"
           )}
         >
           {theme === 'light' ? (

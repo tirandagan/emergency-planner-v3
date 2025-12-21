@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { BrandText } from '@/components/ui/brand-text';
 
 const Footer: React.FC = () => {
   const pathname = usePathname();
@@ -22,14 +23,14 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-3 mb-4">
-               <Image 
-                 src="/logo.png" 
-                 alt="beprepared.ai logo" 
-                 width={24} 
-                 height={24} 
+               <Image
+                 src="/logo.png"
+                 alt="BePrepared.ai logo"
+                 width={24}
+                 height={24}
                  className="h-6 w-6"
                />
-               <span className="text-lg font-semibold text-foreground">beprepared.ai</span>
+               <BrandText className="text-foreground text-lg" withDomain />
             </div>
             <p className="text-muted-foreground text-sm max-w-xs">
               Professional emergency preparedness planning powered by AI. Be ready for anything.
@@ -80,7 +81,7 @@ const Footer: React.FC = () => {
         </div>
         <div className="border-t border-border mt-12 pt-8 text-center text-xs text-muted-foreground">
           <span suppressHydrationWarning>
-            &copy; {new Date().getFullYear()} beprepared.ai. Professional Emergency Preparedness.
+            &copy; {new Date().getFullYear()} <BrandText className="text-xs" withDomain />. Professional Emergency Preparedness.
           </span>
         </div>
       </div>

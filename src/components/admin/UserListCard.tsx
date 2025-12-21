@@ -50,7 +50,7 @@ export default function UserListCard({ user, onClick }: UserListCardProps) {
   return (
     <div
       onClick={() => onClick(user.id)}
-      className="relative p-6 bg-card border border-border rounded-lg hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+      className="relative p-6 bg-card border-2 border-border rounded-lg shadow-sm hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
     >
       {/* High-value indicator */}
       {user.isHighValue && (

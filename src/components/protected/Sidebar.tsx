@@ -49,6 +49,7 @@ import { useAuth } from '@/context/AuthContext'
 import { signOut } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { BrandText } from '@/components/ui/brand-text'
 
 // Context for sidebar collapse state
 const SidebarCollapseContext = createContext<{
@@ -180,16 +181,14 @@ function SidebarContent({
             <div className="relative w-8 h-8 flex-shrink-0 transition-transform duration-150 group-hover:scale-105">
               <Image
                 src="/logo.png"
-                alt="beprepared.ai logo"
+                alt="BePrepared.ai logo"
                 fill
                 className="object-contain"
                 sizes="32px"
               />
             </div>
             {!isCollapsed && (
-              <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors truncate">
-                beprepared.ai
-              </span>
+              <BrandText className="text-xl font-bold text-foreground group-hover:text-primary transition-colors truncate" withDomain />
             )}
           </Link>
           {viewAdminMenu && !isCollapsed && (

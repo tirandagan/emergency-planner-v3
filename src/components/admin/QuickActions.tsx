@@ -17,7 +17,7 @@ export default function QuickActions() {
   ];
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
+    <div className="bg-card border-2 border-border rounded-lg shadow-sm p-6">
       <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {actions.map((action) => {

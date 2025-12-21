@@ -8,6 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { Menu, X, LogOut, User as UserIcon, LayoutDashboard, Sun, Moon } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { signOut } from '@/app/actions/auth';
+import { BrandText } from '@/components/ui/brand-text';
 
 const Navbar: React.FC = () => {
   const pathname = usePathname();
@@ -57,14 +58,14 @@ const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-3 group">
-              <Image 
-                src="/logo.png" 
-                alt="beprepared.ai logo" 
-                width={32} 
-                height={32} 
+              <Image
+                src="/logo.png"
+                alt="BePrepared.ai logo"
+                width={32}
+                height={32}
                 className="h-8 w-8 group-hover:opacity-80 transition-opacity"
               />
-              <span className="text-foreground font-semibold text-xl">beprepared.ai</span>
+              <BrandText className="text-foreground text-xl" withDomain />
             </Link>
           </div>
 
