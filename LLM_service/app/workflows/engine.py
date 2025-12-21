@@ -292,8 +292,7 @@ class WorkflowEngine:
                 elif step.type == StepType.EXTERNAL_API:
                     # USE PURE SYNC PATH FOR EXTERNAL API
                     from .external_api_executor import execute_external_api_step_sync
-                    result = execute_external_api_step_sync(step, context)
-                    step_result = result.get("data")
+                    step_result = execute_external_api_step_sync(step, context)
                 
                 step_duration = int((time.time() - step_start) * 1000)
                 step_info = {
@@ -329,7 +328,10 @@ class WorkflowEngine:
                 if progress_callback:
                     progress_callback(step.id, i, len(workflow.steps), step_result)
 
+            logger.info(f"Workflow '{workflow.name}' all steps completed. Building final output...")
             final_output = self._build_final_output(workflow, context)
+            
+            logger.info(f"Workflow '{workflow.name}' execution successful. Returning result.")
             return WorkflowResult(
                 workflow_name=workflow.name,
                 success=True,

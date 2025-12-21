@@ -18,6 +18,8 @@ import {
   X as CloseIcon,
   Copy,
   Check,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import type { LLMJobDetail } from './llm-types';
 import { fetchLLMJobDetails } from './actions';
@@ -53,6 +55,8 @@ export function LLMJobDetailModal({ jobId, onClose }: LLMJobDetailModalProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [copiedResult, setCopiedResult] = useState(false);
   const [copiedError, setCopiedError] = useState(false);
+  const [copiedRawJson, setCopiedRawJson] = useState(false);
+  const [isRawJsonExpanded, setIsRawJsonExpanded] = useState(false);
 
   // Window state
   const [windowSize, setWindowSize] = useState({ width: 900, height: 750 });
@@ -393,6 +397,58 @@ export function LLMJobDetailModal({ jobId, onClose }: LLMJobDetailModalProps) {
                   </div>
                   </>
                 )) || null) as ReactNode}
+
+                {/* Raw JSON Section - Always visible for debugging */}
+                <div className="bg-muted/30 rounded-lg border border-border overflow-hidden">
+                  <button
+                    onClick={() => setIsRawJsonExpanded(!isRawJsonExpanded)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border hover:bg-muted/70 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      {isRawJsonExpanded ? (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" strokeWidth={2.5} />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" strokeWidth={2.5} />
+                      )}
+                      <span className="text-sm font-semibold text-foreground">Raw JSON</span>
+                      <Badge variant="outline" className="text-xs">
+                        Debug
+                      </Badge>
+                    </div>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(JSON.stringify(jobDetail, null, 2), setCopiedRawJson);
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8"
+                    >
+                      {copiedRawJson ? (
+                        <>
+                          <Check className="!w-4 !h-4 text-green-600" strokeWidth={2.5} />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="!w-4 !h-4" strokeWidth={2.5} />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </button>
+                  {isRawJsonExpanded && (
+                    <div className="p-4 overflow-auto max-h-96 bg-muted/30">
+                      <div className="json-viewer-container text-sm font-mono">
+                        <JsonView
+                          data={jobDetail as Record<string, unknown>}
+                          shouldExpandNode={allExpanded}
+                          style={defaultStyles}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

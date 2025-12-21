@@ -252,6 +252,7 @@ def execute_workflow(self, job_id: str) -> Dict[str, Any]:
             logger.info(f"Stored {len(result.metadata['llm_calls'])} LLM usage records")
 
         # Step 6: Update job with results
+        logger.info(f"Workflow execution finished for job {job_id}. Updating database...")
         job.status = JobStatus.COMPLETED.value if result.success else JobStatus.FAILED.value
         job.result_data = result.to_dict()
 
@@ -271,7 +272,7 @@ def execute_workflow(self, job_id: str) -> Dict[str, Any]:
             else:
                 # Fallback to plain error string
                 job.error_message = result.metadata.get("error")
-
+        
         job.completed_at = datetime.now(timezone.utc)
 
         # Calculate duration
@@ -279,7 +280,9 @@ def execute_workflow(self, job_id: str) -> Dict[str, Any]:
             duration = (job.completed_at - job.started_at).total_seconds() * 1000
             job.duration_ms = int(duration)
 
+        logger.info(f"Committing final results for job {job_id}...")
         db.commit()
+        logger.info(f"Final commit successful for job {job_id}")
 
         execution_time = time.time() - start_time
         logger.info(f"Job completed: {job_id} ({execution_time:.2f}s)")
