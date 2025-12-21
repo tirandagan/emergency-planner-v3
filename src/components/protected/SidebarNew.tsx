@@ -269,27 +269,49 @@ function SidebarContent({
                 'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 relative',
                 active
                   ? viewAdminMenu
-                    ? 'hover:bg-red-600 hover:text-white hover:shadow-md'
+                    ? 'bg-slate-200 dark:bg-slate-700 border-l-4 border-primary'
                     : 'hover:bg-primary/80 hover:text-white hover:shadow-md'
-                  : viewAdminMenu
-                    ? 'hover:bg-red-600 hover:text-white hover:shadow-md'
-                    : 'hover:bg-primary hover:text-white hover:shadow-md'
+                  : '',
+                viewAdminMenu
+                  ? 'hover:bg-red-600'
+                  : 'hover:bg-primary hover:shadow-md'
               )}
-              style={{ color: textColor }}
             >
               {active && (
-                <ChevronRight className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 group-hover:text-white z-20" strokeWidth={3} style={{ color: textColor }} />
+                <ChevronRight
+                  className={cn(
+                    "absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 z-20 transition-colors",
+                    "text-primary group-hover:text-white"
+                  )}
+                  strokeWidth={3}
+                />
               )}
-              <Icon className={cn(
-                "h-5 w-5 flex-shrink-0 transition-transform group-hover:text-white",
-                active && "scale-105"
-              )} strokeWidth={active ? 2.5 : 2} style={{ color: textColor }} />
+              <Icon
+                className={cn(
+                  "h-5 w-5 flex-shrink-0 transition-all",
+                  active ? "scale-105 text-primary" :
+                    viewAdminMenu
+                      ? theme === 'dark' ? "text-slate-100" : "text-slate-700"
+                      : "",
+                  "group-hover:text-white"
+                )}
+                strokeWidth={active ? 2.5 : 2}
+                style={!viewAdminMenu ? { color: textColor } : {}}
+              />
               <motion.span
                 animate={{
                   display: open ? "inline-block" : "none",
                   opacity: open ? 1 : 0,
                 }}
-                className="whitespace-nowrap ml-3"
+                className={cn(
+                  "whitespace-nowrap ml-3 transition-colors",
+                  active ? "text-primary" :
+                    viewAdminMenu
+                      ? theme === 'dark' ? "text-slate-100" : "text-slate-700"
+                      : "",
+                  "group-hover:text-white"
+                )}
+                style={!viewAdminMenu ? { color: textColor } : {}}
               >
                 {link.label}
               </motion.span>
@@ -347,23 +369,24 @@ function SidebarContent({
         <button
           onClick={handleProfileClick}
           className={cn(
-            "group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150",
+            "group w-full flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150",
             viewAdminMenu
-              ? "hover:bg-red-600 hover:text-white hover:shadow-md"
+              ? theme === 'dark'
+                ? "text-slate-100 hover:bg-red-600 hover:text-white hover:shadow-md"
+                : "text-slate-700 hover:bg-red-600 hover:text-white hover:shadow-md"
               : "hover:bg-primary hover:text-white hover:shadow-md"
           )}
-          style={{
-            color: theme === 'dark'
-              ? viewAdminMenu
-                ? 'rgb(241, 245, 249)' // slate-100 for admin dark
-                : 'rgb(245, 245, 245)' // neutral-100 for user dark
-              : viewAdminMenu
-                ? 'rgb(51, 65, 85)' // slate-700 for admin light
-                : 'rgb(64, 64, 64)' // neutral-700 for user light
-          }}
+          style={!viewAdminMenu ? {
+            color: theme === 'dark' ? 'rgb(245, 245, 245)' : 'rgb(64, 64, 64)'
+          } : {}}
         >
-          <div className="flex-shrink-0 -ml-1">
-            <UserAvatar name={userName} email={userEmail} />
+          <div className={cn(
+            "flex-shrink-0 -ml-1 flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 font-semibold transition-colors",
+            viewAdminMenu
+              ? "text-primary group-hover:bg-transparent group-hover:text-white"
+              : "text-primary group-hover:bg-transparent group-hover:text-white"
+          )}>
+            <span className="text-sm">{userName.charAt(0).toUpperCase()}</span>
           </div>
           <motion.span
             animate={{
@@ -371,7 +394,10 @@ function SidebarContent({
               opacity: open ? 1 : 0,
             }}
             transition={{ duration: 0.2 }}
-            className="ml-3 overflow-hidden whitespace-nowrap"
+            className={cn(
+              "ml-3 overflow-hidden whitespace-nowrap",
+              viewAdminMenu && "group-hover:text-white"
+            )}
           >
             {userName}
           </motion.span>
@@ -384,25 +410,27 @@ function SidebarContent({
             className={cn(
               'group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 hover:shadow-md',
               viewAdminMenu
-                ? 'bg-primary/10 hover:bg-primary/80 hover:text-white'
+                ? 'bg-primary/10 text-primary hover:bg-red-600 hover:text-white'
                 : 'hover:bg-primary hover:text-white'
             )}
-            style={{
-              color: viewAdminMenu
-                ? 'hsl(220, 85%, 55%)' // primary for admin mode
-                : theme === 'dark'
-                  ? 'rgb(245, 245, 245)' // neutral-100 for user dark
-                  : 'rgb(64, 64, 64)' // neutral-700 for user light
-            }}
+            style={!viewAdminMenu ? {
+              color: theme === 'dark' ? 'rgb(245, 245, 245)' : 'rgb(64, 64, 64)'
+            } : {}}
           >
-            <ArrowLeftRight className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
+            <ArrowLeftRight className={cn(
+              "h-5 w-5 flex-shrink-0 transition-colors",
+              viewAdminMenu && "group-hover:text-white"
+            )} strokeWidth={2.5} />
             <motion.span
               animate={{
                 width: open ? "auto" : 0,
                 opacity: open ? 1 : 0,
               }}
               transition={{ duration: 0.2 }}
-              className="ml-3 overflow-hidden whitespace-nowrap"
+              className={cn(
+                "ml-3 overflow-hidden whitespace-nowrap",
+                viewAdminMenu && "group-hover:text-white"
+              )}
             >
               {viewAdminMenu ? 'Switch to User' : 'Switch to Admin'}
             </motion.span>
@@ -417,43 +445,51 @@ function SidebarContent({
           className={cn(
             "group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150",
             viewAdminMenu
-              ? "hover:bg-red-600 hover:text-white hover:shadow-md"
+              ? theme === 'dark'
+                ? "text-slate-100 hover:bg-red-600 hover:text-white hover:shadow-md"
+                : "text-slate-700 hover:bg-red-600 hover:text-white hover:shadow-md"
               : "hover:bg-primary hover:text-white hover:shadow-md"
           )}
-          style={{
-            color: theme === 'dark'
-              ? viewAdminMenu
-                ? 'rgb(241, 245, 249)' // slate-100 for admin dark
-                : 'rgb(245, 245, 245)' // neutral-100 for user dark
-              : viewAdminMenu
-                ? 'rgb(51, 65, 85)' // slate-700 for admin light
-                : 'rgb(64, 64, 64)' // neutral-700 for user light
-          }}
+          style={!viewAdminMenu ? {
+            color: theme === 'dark' ? 'rgb(245, 245, 245)' : 'rgb(64, 64, 64)'
+          } : {}}
         >
           {theme === 'light' ? (
             <>
-              <Moon className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
+              <Moon className={cn(
+                "h-5 w-5 flex-shrink-0 transition-colors",
+                viewAdminMenu && "group-hover:text-white"
+              )} strokeWidth={2.5} />
               <motion.span
                 animate={{
                   width: open ? "auto" : 0,
                   opacity: open ? 1 : 0,
                 }}
                 transition={{ duration: 0.2 }}
-                className="ml-3 overflow-hidden whitespace-nowrap"
+                className={cn(
+                  "ml-3 overflow-hidden whitespace-nowrap",
+                  viewAdminMenu && "group-hover:text-white"
+                )}
               >
                 Dark Mode
               </motion.span>
             </>
           ) : (
             <>
-              <Sun className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
+              <Sun className={cn(
+                "h-5 w-5 flex-shrink-0 transition-colors",
+                viewAdminMenu && "group-hover:text-white"
+              )} strokeWidth={2.5} />
               <motion.span
                 animate={{
                   width: open ? "auto" : 0,
                   opacity: open ? 1 : 0,
                 }}
                 transition={{ duration: 0.2 }}
-                className="ml-3 overflow-hidden whitespace-nowrap"
+                className={cn(
+                  "ml-3 overflow-hidden whitespace-nowrap",
+                  viewAdminMenu && "group-hover:text-white"
+                )}
               >
                 Light Mode
               </motion.span>
@@ -464,25 +500,32 @@ function SidebarContent({
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 hover:bg-red-600 hover:text-white hover:shadow-md"
-          style={{
-            color: theme === 'dark'
-              ? viewAdminMenu
-                ? 'rgb(241, 245, 249)' // slate-100 for admin dark
-                : 'rgb(245, 245, 245)' // neutral-100 for user dark
-              : viewAdminMenu
-                ? 'rgb(51, 65, 85)' // slate-700 for admin light
-                : 'rgb(64, 64, 64)' // neutral-700 for user light
-          }}
+          className={cn(
+            "group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 hover:bg-red-600 hover:text-white hover:shadow-md",
+            viewAdminMenu
+              ? theme === 'dark'
+                ? "text-slate-100"
+                : "text-slate-700"
+              : ""
+          )}
+          style={!viewAdminMenu ? {
+            color: theme === 'dark' ? 'rgb(245, 245, 245)' : 'rgb(64, 64, 64)'
+          } : {}}
         >
-          <LogOut className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
+          <LogOut className={cn(
+            "h-5 w-5 flex-shrink-0 transition-colors",
+            "group-hover:text-white"
+          )} strokeWidth={2.5} />
           <motion.span
             animate={{
               width: open ? "auto" : 0,
               opacity: open ? 1 : 0,
             }}
             transition={{ duration: 0.2 }}
-            className="ml-3 overflow-hidden whitespace-nowrap"
+            className={cn(
+              "ml-3 overflow-hidden whitespace-nowrap",
+              "group-hover:text-white"
+            )}
           >
             Logout
           </motion.span>
