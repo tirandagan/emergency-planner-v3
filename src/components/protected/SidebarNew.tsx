@@ -349,12 +349,18 @@ function SidebarContent({
           className={cn(
             "group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150",
             viewAdminMenu
-              ? "text-slate-700 dark:text-slate-300"
-              : "text-neutral-700 dark:text-neutral-300",
-            viewAdminMenu
-              ? "hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md"
-              : "hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md"
+              ? "hover:bg-red-600 hover:text-white hover:shadow-md"
+              : "hover:bg-primary hover:text-white hover:shadow-md"
           )}
+          style={{
+            color: theme === 'dark'
+              ? viewAdminMenu
+                ? 'rgb(241, 245, 249)' // slate-100 for admin dark
+                : 'rgb(245, 245, 245)' // neutral-100 for user dark
+              : viewAdminMenu
+                ? 'rgb(51, 65, 85)' // slate-700 for admin light
+                : 'rgb(64, 64, 64)' // neutral-700 for user light
+          }}
         >
           <div className="flex-shrink-0 -ml-1">
             <UserAvatar name={userName} email={userEmail} />
@@ -376,14 +382,20 @@ function SidebarContent({
           <button
             onClick={toggleAdminView}
             className={cn(
-              'group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150',
+              'group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 hover:shadow-md',
               viewAdminMenu
-                ? 'bg-primary/10 text-primary dark:bg-primary/20 hover:bg-primary/80 dark:hover:bg-primary/80 hover:text-white dark:hover:text-white'
-                : 'text-neutral-700 dark:text-neutral-300 hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white',
-              'hover:shadow-md'
+                ? 'bg-primary/10 hover:bg-primary/80 hover:text-white'
+                : 'hover:bg-primary hover:text-white'
             )}
+            style={{
+              color: viewAdminMenu
+                ? 'hsl(220, 85%, 55%)' // primary for admin mode
+                : theme === 'dark'
+                  ? 'rgb(245, 245, 245)' // neutral-100 for user dark
+                  : 'rgb(64, 64, 64)' // neutral-700 for user light
+            }}
           >
-            <ArrowLeftRight className="h-5 w-5 flex-shrink-0" strokeWidth={2.5} />
+            <ArrowLeftRight className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
             <motion.span
               animate={{
                 width: open ? "auto" : 0,
@@ -405,16 +417,22 @@ function SidebarContent({
           className={cn(
             "group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150",
             viewAdminMenu
-              ? "text-slate-700 dark:text-slate-300"
-              : "text-neutral-700 dark:text-neutral-300",
-            viewAdminMenu
-              ? "hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md"
-              : "hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white hover:shadow-md"
+              ? "hover:bg-red-600 hover:text-white hover:shadow-md"
+              : "hover:bg-primary hover:text-white hover:shadow-md"
           )}
+          style={{
+            color: theme === 'dark'
+              ? viewAdminMenu
+                ? 'rgb(241, 245, 249)' // slate-100 for admin dark
+                : 'rgb(245, 245, 245)' // neutral-100 for user dark
+              : viewAdminMenu
+                ? 'rgb(51, 65, 85)' // slate-700 for admin light
+                : 'rgb(64, 64, 64)' // neutral-700 for user light
+          }}
         >
           {theme === 'light' ? (
             <>
-              <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={2.5} />
+              <Moon className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
               <motion.span
                 animate={{
                   width: open ? "auto" : 0,
@@ -428,7 +446,7 @@ function SidebarContent({
             </>
           ) : (
             <>
-              <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={2.5} />
+              <Sun className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
               <motion.span
                 animate={{
                   width: open ? "auto" : 0,
@@ -446,9 +464,18 @@ function SidebarContent({
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 text-neutral-700 dark:text-neutral-300 hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-md"
+          className="group w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 hover:bg-red-600 hover:text-white hover:shadow-md"
+          style={{
+            color: theme === 'dark'
+              ? viewAdminMenu
+                ? 'rgb(241, 245, 249)' // slate-100 for admin dark
+                : 'rgb(245, 245, 245)' // neutral-100 for user dark
+              : viewAdminMenu
+                ? 'rgb(51, 65, 85)' // slate-700 for admin light
+                : 'rgb(64, 64, 64)' // neutral-700 for user light
+          }}
         >
-          <LogOut className="h-5 w-5 flex-shrink-0" strokeWidth={2.5} />
+          <LogOut className="h-5 w-5 flex-shrink-0 group-hover:text-white" strokeWidth={2.5} />
           <motion.span
             animate={{
               width: open ? "auto" : 0,
