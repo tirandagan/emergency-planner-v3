@@ -735,13 +735,18 @@ export const getProductDetailsFromAmazon = async (query: string) => {
 };
 
 export const getProductDetailsFromWeb = async (url: string) => {
-    await checkAdmin();
+    const user = await checkAdmin();
     try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/firecrawl/extract`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url }),
+            body: JSON.stringify({ url, userId: user.id }),
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API error: ${response.status} - ${errorText}`);
+        }
 
         const result = await response.json();
 
@@ -752,7 +757,8 @@ export const getProductDetailsFromWeb = async (url: string) => {
             message: result.message,
         };
     } catch (error: any) {
-        console.error('Firecrawl Error:', error);
+        console.error('[Product Scraper] Error:', error.message);
+
         return {
             success: false,
             data: null,

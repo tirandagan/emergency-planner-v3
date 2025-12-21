@@ -408,6 +408,10 @@ export async function sendAdminErrorNotification(data: ErrorNotificationData): P
     // Fetch user details if userId is provided
     const user = await getUserDetails(data.userId);
 
+    if (data.userId && !user) {
+      console.warn('[AdminNotifications] Failed to fetch user details for userId:', data.userId);
+    }
+
     // Generate email content
     const html = generateErrorEmailHtml(data, user);
     const text = generateErrorEmailText(data, user);

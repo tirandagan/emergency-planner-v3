@@ -1,4 +1,5 @@
 import Firecrawl from '@mendable/firecrawl-js';
+import { sendAdminErrorNotification, type ErrorNotificationData } from './admin-notifications';
 
 const firecrawl = new Firecrawl({
   apiKey: process.env.FIRECRAWL_API_KEY!,
@@ -46,7 +47,7 @@ export interface FirecrawlResponse {
   message: string;
 }
 
-export async function extractProductFromUrl(url: string): Promise<FirecrawlResponse> {
+export async function extractProductFromUrl(url: string, userId?: string): Promise<FirecrawlResponse> {
   try {
     const result = await firecrawl.extract({
       urls: [url],
@@ -56,10 +57,13 @@ export async function extractProductFromUrl(url: string): Promise<FirecrawlRespo
     });
 
     if (!result.success) {
+      const errorDetails = JSON.stringify(result, null, 2);
+      console.error('[Firecrawl] Extraction failed:', errorDetails);
+
       return {
         success: false,
         data: null,
-        errors: ['Firecrawl extraction failed'],
+        errors: [`Firecrawl extraction failed. Response: ${errorDetails}`],
         message: 'Could not extract product data',
       };
     }
@@ -79,10 +83,61 @@ export async function extractProductFromUrl(url: string): Promise<FirecrawlRespo
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    // Check if this is a configuration/service issue that requires admin attention
+    const isConfigIssue = errorMessage.toLowerCase().includes('insufficient credits') ||
+                         errorMessage.toLowerCase().includes('api key') ||
+                         errorMessage.toLowerCase().includes('unauthorized') ||
+                         errorMessage.toLowerCase().includes('authentication') ||
+                         errorMessage.toLowerCase().includes('quota exceeded');
+
+    if (isConfigIssue) {
+      console.error('[Firecrawl] Configuration error - admin notified. UserId:', userId || 'not provided');
+
+      // Send admin notification for configuration issues
+      const notificationData: ErrorNotificationData = {
+        logId: `firecrawl-${Date.now().toString(36)}`,
+        severity: 'error',
+        category: 'external_service',
+        errorCode: 'FIRECRAWL_CONFIG_ERROR',
+        errorName: 'Firecrawl Service Configuration Error',
+        message: errorMessage,
+        userId: userId, // Include the user who triggered the error
+        component: 'Firecrawl Product Scraper',
+        route: '/api/firecrawl/extract',
+        userAction: 'Attempted to scrape product from URL',
+        stackTrace: errorStack,
+        suggestion: errorMessage.toLowerCase().includes('insufficient credits')
+          ? 'The Firecrawl API has insufficient credits. Please visit https://firecrawl.dev/pricing to upgrade your plan or add credits.'
+          : 'Check Firecrawl API configuration and credentials in environment variables.',
+        metadata: {
+          url,
+          apiKeyConfigured: !!process.env.FIRECRAWL_API_KEY,
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      // Send notification asynchronously (don't wait for it)
+      sendAdminErrorNotification(notificationData).catch((err) => {
+        console.error('[Firecrawl] Failed to send admin notification:', err);
+      });
+
+      // Return user-friendly error message (no technical details)
+      return {
+        success: false,
+        data: null,
+        errors: [], // Empty errors array - admin gets details via email
+        message: 'Service temporarily unavailable. Administrator has been notified.',
+      };
+    }
+
+    console.error('[Firecrawl] Extraction error:', errorMessage);
+
     return {
       success: false,
       data: null,
-      errors: [errorMessage],
+      errors: [errorMessage, errorStack ? `Stack: ${errorStack}` : ''].filter(Boolean),
       message: 'Extraction failed',
     };
   }

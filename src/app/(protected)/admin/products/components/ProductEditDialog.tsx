@@ -76,7 +76,7 @@ export default function ProductEditDialog({
     const [fetchContext, setFetchContext] = useState<{ method: 'url' | 'asin'; value: string }>({ method: 'url', value: '' });
     const [webScrapeUrl, setWebScrapeUrl] = useState<string>('');
     const [decodoError, setDecodoError] = useState<string | null>(null);
-    const [webScrapeError, setWebScrapeError] = useState<string | null>(null);
+    const [webScrapeError, setWebScrapeError] = useState<{ message: string; errors?: string[] } | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
     
     // Inheritance Warning State
@@ -725,11 +725,16 @@ export default function ProductEditDialog({
             if (res.success && res.data) {
                 applyWebScrapeData(res.data, res.errors);
             } else {
-                setWebScrapeError(res.message || 'Unknown error');
+                setWebScrapeError({
+                    message: res.message || 'Unknown error',
+                    errors: res.errors
+                });
             }
         } catch (error: any) {
-            console.error(error);
-            setWebScrapeError('Error fetching details: ' + error.message);
+            setWebScrapeError({
+                message: 'Error fetching details: ' + error.message,
+                errors: [error.stack].filter(Boolean)
+            });
         } finally {
             setIsFetchingDetails(false);
         }
@@ -864,7 +869,7 @@ export default function ProductEditDialog({
                             {productSuggestions && Object.keys(productSuggestions).length > 0 && (
                                 <div className="flex justify-between items-center p-4 rounded-xl border bg-primary/10 border-primary/50">
                                     <div className="text-xs text-muted-foreground">
-                                        {Object.keys(productSuggestions).length} field(s) ready to update from Amazon
+                                        {Object.keys(productSuggestions).length} field(s) ready to update
                                     </div>
                                     <div className="flex gap-2">
                                         <button
@@ -1360,32 +1365,54 @@ export default function ProductEditDialog({
                         onClick={() => {
                             if (!productSuggestions) return;
                             const keys = Object.keys(productSuggestions);
-                            const fieldLabels: Record<string, string> = {
-                                'name': 'Product Name',
-                                'imageUrl': 'Image URL',
-                                'asin': 'ASIN',
-                                'sku': 'SKU',
-                                'price': 'Price',
-                                'productUrl': 'Product URL',
-                                'description': 'Description',
-                                'metadata_brand': 'Brand',
-                                'metadata_quantity': 'Quantity',
-                                'metadata_dimensions': 'Dimensions',
-                                'metadata_color': 'Color',
-                                'metadata_size': 'Size',
-                                'metadata_upc': 'UPC',
-                                'metadata_model_number': 'Model Number',
-                                'metadata_weight': 'Weight',
-                                'metadata_weight_unit': 'Weight Unit'
-                            };
 
-                            const pendingFields = keys.map(k => fieldLabels[k] || k).join(', ');
-                            alert(`Please resolve suggestions for: ${pendingFields}`);
+                            // Define field order and their refs for focusing
+                            const fieldOrder = [
+                                'name', 'productUrl', 'imageUrl', 'description',
+                                'price', 'asin', 'sku',
+                                'metadata_brand', 'metadata_quantity', 'metadata_upc', 'metadata_model_number',
+                                'metadata_dimensions', 'metadata_weight', 'metadata_weight_unit',
+                                'metadata_color', 'metadata_size'
+                            ];
+
+                            // Find the first field with a suggestion (in display order)
+                            const firstFieldKey = fieldOrder.find(field => keys.includes(field));
+
+                            if (firstFieldKey) {
+                                // Map field keys to input names/refs
+                                const fieldInputs: Record<string, string> = {
+                                    'name': 'name',
+                                    'imageUrl': 'imageUrl',
+                                    'productUrl': 'productUrl',
+                                    'description': 'description',
+                                    'price': 'price',
+                                    'asin': 'asin',
+                                    'sku': 'asin', // ASIN field handles both
+                                    'metadata_brand': 'meta_brand',
+                                    'metadata_quantity': 'meta_quantity',
+                                    'metadata_dimensions': 'meta_dimensions',
+                                    'metadata_color': 'meta_color',
+                                    'metadata_size': 'meta_size',
+                                    'metadata_upc': 'meta_upc',
+                                    'metadata_model_number': 'meta_model_number',
+                                    'metadata_weight': 'meta_weight',
+                                    'metadata_weight_unit': 'meta_weight_unit'
+                                };
+
+                                const inputName = fieldInputs[firstFieldKey];
+                                if (inputName) {
+                                    const inputElement = document.querySelector(`[name="${inputName}"]`) as HTMLElement;
+                                    if (inputElement) {
+                                        inputElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        setTimeout(() => inputElement.focus(), 300);
+                                    }
+                                }
+                            }
                         }}
                         className="flex items-center gap-2 px-3 py-2 bg-warning/20 border border-warning/50 text-foreground rounded-lg text-xs font-medium mr-auto animate-pulse hover:bg-warning/30 transition-all"
                     >
                         <AlertCircle className="w-4 h-4 shrink-0 text-warning" strokeWidth={2.5} />
-                        <span>Please accept or ignore all Amazon suggestions above.</span>
+                        <span>Please accept or ignore all product suggestions above.</span>
                     </button>
                 )}
                 <button type="button" onClick={onClose} className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-medium transition-colors ml-auto">
@@ -1484,7 +1511,8 @@ export default function ProductEditDialog({
             <DecodoErrorModal
                 isOpen={!!webScrapeError}
                 onClose={() => setWebScrapeError(null)}
-                message={webScrapeError || ""}
+                message={webScrapeError?.message || ""}
+                errors={webScrapeError?.errors}
             />
 
             <ProductErrorModal
