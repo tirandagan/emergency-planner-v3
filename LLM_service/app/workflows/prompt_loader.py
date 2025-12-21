@@ -95,6 +95,150 @@ class PromptLoader:
 
         logger.info(f"PromptLoader initialized with base_dir: {self.base_dir}")
 
+    def load_prompt_sync(self, relative_path: str, resolve_includes: bool = True) -> str:
+        """
+        Synchronous version of load_prompt for eventlet/worker compatibility.
+        """
+        # Validate and resolve path
+        full_path = self._validate_path(relative_path)
+
+        # Check cache
+        if relative_path in self._cache:
+            return self._cache[relative_path][0]
+
+        # Read file
+        try:
+            with open(full_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            raise PromptLoadError(f"Failed to read prompt file: {relative_path}") from e
+
+        # Resolve includes if requested (synchronously)
+        if resolve_includes:
+            content = self._resolve_includes_sync(
+                content,
+                full_path.parent,
+                depth=0,
+                visited=set()
+            )
+
+        # Cache result
+        self._add_to_cache(relative_path, content)
+        return content
+
+    def _resolve_includes_sync(
+        self,
+        content: str,
+        current_dir: Path,
+        depth: int,
+        visited: Set[Path]
+    ) -> str:
+        """Synchronous include resolution."""
+        if depth > self.max_include_depth:
+            raise MaxDepthExceededError(f"Maximum include depth exceeded")
+
+        include_pattern = r'\{\{include:([^}]+)\}\}'
+        matches = list(re.finditer(include_pattern, content))
+
+        if not matches:
+            return content
+
+        for match in matches:
+            include_path_str = match.group(1).strip()
+            try:
+                include_path = (current_dir / include_path_str).resolve()
+                if not self._is_safe_path(include_path) or include_path in visited:
+                    continue
+                if not include_path.exists():
+                    continue
+
+                with open(include_path, 'r', encoding='utf-8') as f:
+                    included_content = f.read()
+
+                included_content = self._resolve_includes_sync(
+                    included_content,
+                    include_path.parent,
+                    depth + 1,
+                    visited | {include_path}
+                )
+                content = content.replace(match.group(0), included_content)
+            except Exception:
+                continue
+
+        return content
+
+    def load_prompt_sync(self, relative_path: str, resolve_includes: bool = True) -> str:
+        """
+        Synchronous version of load_prompt for eventlet/worker compatibility.
+        """
+        # Validate and resolve path
+        full_path = self._validate_path(relative_path)
+
+        # Check cache
+        if relative_path in self._cache:
+            return self._cache[relative_path][0]
+
+        # Read file
+        try:
+            with open(full_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            raise PromptLoadError(f"Failed to read prompt file: {relative_path}") from e
+
+        # Resolve includes if requested (synchronously)
+        if resolve_includes:
+            content = self._resolve_includes_sync(
+                content,
+                full_path.parent,
+                depth=0,
+                visited=set()
+            )
+
+        # Cache result
+        self._add_to_cache(relative_path, content)
+        return content
+
+    def _resolve_includes_sync(
+        self,
+        content: str,
+        current_dir: Path,
+        depth: int,
+        visited: Set[Path]
+    ) -> str:
+        """Synchronous include resolution."""
+        if depth > self.max_include_depth:
+            raise MaxDepthExceededError(f"Maximum include depth exceeded")
+
+        include_pattern = r'\{\{include:([^}]+)\}\}'
+        matches = list(re.finditer(include_pattern, content))
+
+        if not matches:
+            return content
+
+        for match in matches:
+            include_path_str = match.group(1).strip()
+            try:
+                include_path = (current_dir / include_path_str).resolve()
+                if not self._is_safe_path(include_path) or include_path in visited:
+                    continue
+                if not include_path.exists():
+                    continue
+
+                with open(include_path, 'r', encoding='utf-8') as f:
+                    included_content = f.read()
+
+                included_content = self._resolve_includes_sync(
+                    included_content,
+                    include_path.parent,
+                    depth + 1,
+                    visited | {include_path}
+                )
+                content = content.replace(match.group(0), included_content)
+            except Exception:
+                continue
+
+        return content
+
     async def load_prompt(self, relative_path: str, resolve_includes: bool = True) -> str:
         """
         Load prompt with includes resolved.

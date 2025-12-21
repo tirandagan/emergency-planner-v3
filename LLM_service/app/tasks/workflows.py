@@ -191,7 +191,8 @@ def execute_workflow(self, job_id: str) -> Dict[str, Any]:
         logger.info(f"Executing workflow: {job.workflow_name}")
 
         try:
-            result: WorkflowResult = engine.execute(
+            # USE SYNC EXECUTION FOR WORKERS to avoid anyio/eventlet conflicts
+            result: WorkflowResult = engine.execute_sync(
                 workflow_name=job.workflow_name,
                 input_data=job.input_data,
                 progress_callback=progress_callback

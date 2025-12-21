@@ -13,6 +13,7 @@ Integration:
 """
 
 import logging
+import time
 from typing import Dict, Any, Optional
 from pathlib import Path
 
@@ -46,30 +47,6 @@ class LLMStepExecutor:
 
     Handles prompt loading, variable substitution, and LLM API calls.
     Supports both template-based prompts (.md files) and inline prompts.
-
-    Example usage:
-        executor = LLMStepExecutor(
-            prompt_loader=PromptLoader(base_dir="workflows/prompts"),
-            provider_name="openrouter"
-        )
-
-        step = WorkflowStep(
-            id="generate_analysis",
-            type=StepType.LLM,
-            config={
-                "model": "anthropic/claude-3.5-sonnet",
-                "prompt_template": "emergency-contacts/system-prompt.md",
-                "temperature": 0.7,
-                "max_tokens": 4000,
-                "variables": {
-                    "location": "${input.location}",
-                    "family_size": "${input.family_size}"
-                }
-            }
-        )
-
-        response = await executor.execute(step, context)
-        # response is LLMResponse with content, tokens, cost
     """
 
     def __init__(
@@ -107,11 +84,7 @@ class LLMStepExecutor:
         # Parse configuration
         config = self._parse_config(step.config)
 
-        # Build prompt (using a wrapper to run the async loader synchronously if needed)
-        # But wait, PromptLoader.load_prompt is async.
-        # In eventlet, we can run it in a new loop or use a sync variant.
-        # Since I already changed PromptLoader to use sync open(), 
-        # I can make a load_prompt_sync.
+        # Build prompt synchronously
         prompt = self.prompt_loader.load_prompt_sync(config.prompt_template) if config.prompt_template else config.prompt_text
         
         # Build variable substitution map
@@ -128,28 +101,23 @@ class LLMStepExecutor:
             if config.timeout and hasattr(provider, 'timeout_val'):
                 provider.timeout_val = config.timeout
 
-            try:
-                # Call LLM API synchronously
-                response = provider.generate_sync(
-                    messages=[Message(role="user", content=prompt)],
-                    model=config.model,
-                    temperature=config.temperature,
-                    max_tokens=config.max_tokens,
-                    top_p=config.top_p
-                )
+            # Call LLM API synchronously
+            response = provider.generate_sync(
+                messages=[Message(role="user", content=prompt)],
+                model=config.model,
+                temperature=config.temperature,
+                max_tokens=config.max_tokens,
+                top_p=config.top_p
+            )
 
-                logger.info(
-                    f"LLM step '{step.id}' completed (sync): "
-                    f"{response.usage.total_tokens} tokens, "
-                    f"${response.cost_usd:.6f} cost, "
-                    f"{response.duration_ms}ms"
-                )
+            logger.info(
+                f"LLM step '{step.id}' completed (sync): "
+                f"{response.usage.total_tokens} tokens, "
+                f"${response.cost_usd:.6f} cost, "
+                f"{response.duration_ms}ms"
+            )
 
-                return response
-
-            finally:
-                # No-op for global client
-                pass
+            return response
 
         except Exception as e:
             # Handle errors according to error_mode
@@ -165,33 +133,14 @@ class LLMStepExecutor:
                 return None
             else:
                 raise
+
+    async def execute(
         self,
         step: WorkflowStep,
         context: WorkflowContext
     ) -> LLMResponse:
         """
         Execute LLM step with proper error handling.
-
-        Process:
-        1. Validate step type and configuration
-        2. Load prompt (template or inline)
-        3. Resolve variables from workflow context
-        4. Call LLM provider
-        5. Return standardized response
-
-        Args:
-            step: Workflow step with type="llm" and LLMStepConfig
-            context: Workflow execution context for variable resolution
-
-        Returns:
-            LLMResponse with content, tokens, cost, and metadata
-
-        Raises:
-            LLMStepConfigError: Invalid step configuration
-            LLMStepExecutionError: Error during execution (if error_mode="fail")
-
-        Note:
-            If error_mode="continue", logs error and returns None instead of raising
         """
         # Validate step type
         if step.type != StepType.LLM:
@@ -199,17 +148,15 @@ class LLMStepExecutor:
                 f"Step '{step.id}' has type '{step.type}', expected 'llm'"
             )
 
-        # Parse and validate LLM configuration (don't catch config errors)
+        # Parse configuration
         config = self._parse_config(step.config)
 
-        # Build final prompt (don't catch config errors)
+        # Build final prompt
         prompt = await self._build_prompt(config, context)
 
         try:
             # Get or create LLM provider
-            # Pass timeout from config if provided
-            provider_kwargs = {"provider_name": self.provider_name}
-            provider = self._provider or get_llm_provider(**provider_kwargs)
+            provider = self._provider or get_llm_provider(self.provider_name)
 
             # Update timeout if specified in config
             if config.timeout and hasattr(provider, 'timeout_val'):
@@ -229,9 +176,8 @@ class LLMStepExecutor:
                 return response
 
             finally:
-                # Clean up provider if we created it
-                if not self._provider:
-                    await provider.close()
+                # No cleanup needed for shared global client
+                pass
 
         except Exception as e:
             # Handle errors according to error_mode
@@ -248,10 +194,9 @@ class LLMStepExecutor:
                 return None  # Signal to workflow engine to continue
 
             elif step.error_mode == ErrorMode.RETRY:
-                # Phase 3: Retry not implemented yet
                 logger.error(
                     f"LLM step '{step.id}' failed. "
-                    f"Retry mode not implemented in Phase 3."
+                    f"Retry mode not implemented."
                 )
                 raise LLMStepExecutionError(
                     f"Retry mode not supported (step '{step.id}')"
@@ -260,27 +205,14 @@ class LLMStepExecutor:
     def _parse_config(self, config_dict: Dict[str, Any]) -> LLMStepConfig:
         """
         Parse and validate LLM step configuration.
-
-        Args:
-            config_dict: Raw configuration dictionary from workflow JSON
-
-        Returns:
-            Validated LLMStepConfig instance
-
-        Raises:
-            LLMStepConfigError: Invalid configuration
         """
         try:
             config = LLMStepConfig(**config_dict)
-
-            # Validate at least one prompt source
             if not config.prompt_template and not config.prompt_text:
                 raise ValueError(
                     "Must provide either 'prompt_template' or 'prompt_text'"
                 )
-
             return config
-
         except Exception as e:
             raise LLMStepConfigError(
                 f"Invalid LLM step configuration: {e}"
@@ -293,21 +225,6 @@ class LLMStepExecutor:
     ) -> str:
         """
         Build final prompt from template or inline text.
-
-        Process:
-        1. Load template file OR use inline text
-        2. Resolve {{include:...}} directives (if template)
-        3. Substitute ${...} variables from context
-
-        Args:
-            config: LLM step configuration
-            context: Workflow execution context
-
-        Returns:
-            Final prompt text with all includes and variables resolved
-
-        Raises:
-            LLMStepConfigError: Error loading or processing prompt
         """
         try:
             # Load prompt template or use inline text
@@ -344,32 +261,6 @@ class LLMStepExecutor:
     ) -> Dict[str, Any]:
         """
         Resolve variable references from workflow context.
-
-        Handles variable references like:
-        - "${input.location}" -> context.get_value("input.location")
-        - "${steps.fetch.output.count}" -> context.get_value("steps.fetch.output.count")
-        - "Seattle" -> "Seattle" (literal string, no substitution)
-
-        Args:
-            variable_map: Variable name -> reference mapping from config
-            context: Workflow execution context
-
-        Returns:
-            Dict mapping variable names to resolved values
-
-        Example:
-            config.variables = {
-                "location": "${input.location}",
-                "count": "${steps.fetch.output.count}",
-                "static_value": "Seattle"
-            }
-
-            # Resolves to:
-            {
-                "location": "Seattle, WA",
-                "count": 10,
-                "static_value": "Seattle"
-            }
         """
         resolved = {}
 
@@ -396,17 +287,6 @@ class LLMStepExecutor:
     ) -> LLMResponse:
         """
         Call LLM provider with proper configuration.
-
-        Args:
-            provider: LLM provider instance
-            prompt: Final prompt text (variables substituted)
-            config: LLM step configuration
-
-        Returns:
-            LLMResponse with content, tokens, cost, and metadata
-
-        Raises:
-            LLMProviderError: API call failed
         """
         # Build message list (currently single user message)
         messages = [Message(role="user", content=prompt)]

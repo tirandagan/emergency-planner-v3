@@ -76,6 +76,61 @@ def resolve_string_variables(value: str, context: WorkflowContext) -> str:
     return re.sub(pattern, replace_var, value)
 
 
+def execute_external_api_step_sync(
+    step: WorkflowStep,
+    context: WorkflowContext
+) -> Dict[str, Any]:
+    """
+    Synchronous execution of external API step.
+    Completely avoids asyncio for worker stability.
+    """
+    service_name = step.config.get('service')
+    operation = step.config.get('operation') or step.config.get('method')
+    params = step.config.get('config', {}) or step.config.get('parameters', {})
+    cache_ttl = step.config.get('cache_ttl')
+    error_mode = step.config.get('error_mode', 'fail')
+
+    if not service_name or not operation:
+        return {'success': False, 'error': 'Missing service or operation'}
+
+    # Resolve variables in params
+    resolved_params = {}
+    for key, value in params.items():
+        if isinstance(value, str):
+            resolved_params[key] = resolve_string_variables(value, context)
+        else:
+            resolved_params[key] = value
+
+    # Get service class
+    service_class = service_registry._services.get(service_name)
+    if not service_class:
+        return {'success': False, 'error': f'Service {service_name} not found'}
+
+    # Execute synchronous service call directly
+    try:
+        with service_class() as service:
+            response: ExternalServiceResponse = service.call(
+                operation,
+                resolved_params,
+                None, # user_id
+                cache_ttl
+            )
+            
+            if response.success:
+                return {
+                    'success': True,
+                    'data': response.data,
+                    'metadata': response.metadata
+                }
+            else:
+                if error_mode == 'fail':
+                    raise ExternalServiceError(response.error)
+                return {'success': False, 'error': response.error}
+    except Exception as e:
+        if error_mode == 'fail':
+            raise
+        return {'success': False, 'error': str(e)}
+
 async def execute_external_api_step(
     step: WorkflowStep,
     context: WorkflowContext

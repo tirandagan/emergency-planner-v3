@@ -229,6 +229,131 @@ class WorkflowEngine:
                 f"Error loading workflow '{workflow_name}': {e}"
             ) from e
 
+    def execute_sync(
+        self,
+        workflow_name: str,
+        input_data: Dict[str, Any],
+        progress_callback: Optional[Callable] = None,
+        timeout_override: Optional[int] = None
+    ) -> WorkflowResult:
+        """
+        Pure synchronous execution path for workflow.
+        COMPLETELY AVOIDS ANYIO/ASYNCIO for heavy I/O.
+        Best for eventlet Celery workers.
+        """
+        start_time = time.time()
+        workflow = self.load_workflow(workflow_name)
+        timeout = timeout_override or workflow.timeout_seconds
+        context = WorkflowContext(input_data)
+        steps_executed = []
+        total_cost = 0.0
+        total_tokens = 0
+        llm_calls = []
+
+        try:
+            for i, step in enumerate(workflow.steps, start=1):
+                elapsed = time.time() - start_time
+                if elapsed > timeout:
+                    raise WorkflowTimeoutError(f"Workflow timeout")
+
+                step_start = time.time()
+                
+                # EXECUTE STEP SYNC
+                step_result = None
+                if step.type == StepType.LLM:
+                    step_result = self.llm_executor.execute_sync(step, context)
+                elif step.type == StepType.TRANSFORM:
+                    # Pure sync execution for transforms to avoid loop issues
+                    from .transformations import execute_transformation
+                    
+                    config_dict = step.config or {}
+                    operation = config_dict.get('operation')
+                    transform_config = config_dict.get('config', {})
+                    
+                    # Resolve input
+                    input_path = config_dict.get('input')
+                    if input_path:
+                        if input_path.startswith("${") and input_path.endswith("}"):
+                            input_path = input_path[2:-1]
+                        input_data_for_transform = context.get_value(input_path)
+                    else:
+                        input_data_for_transform = context.get_all_data()
+                        
+                    # Resolve config variables
+                    from .transform_executor import _resolve_config_variables
+                    resolved_transform_config = _resolve_config_variables(transform_config, context)
+                    
+                    step_result = execute_transformation(
+                        operation=operation,
+                        input_data=input_data_for_transform,
+                        config=resolved_transform_config,
+                        error_mode=ErrorMode.CONTINUE if step.error_mode == ErrorMode.CONTINUE else ErrorMode.FAIL
+                    )
+                elif step.type == StepType.EXTERNAL_API:
+                    # USE PURE SYNC PATH FOR EXTERNAL API
+                    from .external_api_executor import execute_external_api_step_sync
+                    result = execute_external_api_step_sync(step, context)
+                    step_result = result.get("data")
+                
+                step_duration = int((time.time() - step_start) * 1000)
+                step_info = {
+                    "step_id": step.id,
+                    "step_type": step.type.value,
+                    "duration_ms": step_duration,
+                    "success": step_result is not None,
+                }
+
+                if step_result is not None:
+                    if isinstance(step_result, LLMResponse):
+                        context.set_step_output(step.id, step_result.model_dump())
+                        step_info["tokens"] = step_result.usage.total_tokens
+                        step_info["cost_usd"] = step_result.cost_usd
+                        total_cost += step_result.cost_usd
+                        total_tokens += step_result.usage.total_tokens
+                        llm_calls.append({
+                            "provider": step_result.provider,
+                            "model": step_result.model,
+                            "input_tokens": step_result.usage.input_tokens,
+                            "output_tokens": step_result.usage.output_tokens,
+                            "total_tokens": step_result.usage.total_tokens,
+                            "cost_usd": step_result.cost_usd,
+                            "duration_ms": step_result.duration_ms,
+                            "metadata": {"step_id": step.id}
+                        })
+                    else:
+                        context.set_step_output(step.id, step_result)
+                    
+                    step_info["output"] = self._serialize_output(step_result)
+
+                steps_executed.append(step_info)
+                if progress_callback:
+                    progress_callback(step.id, i, len(workflow.steps), step_result)
+
+            final_output = self._build_final_output(workflow, context)
+            return WorkflowResult(
+                workflow_name=workflow.name,
+                success=True,
+                output=final_output,
+                steps_executed=steps_executed,
+                metadata={
+                    "workflow_version": workflow.version,
+                    "total_steps": len(workflow.steps),
+                    "duration_ms": int((time.time() - start_time) * 1000),
+                    "total_tokens": total_tokens,
+                    "total_cost_usd": round(total_cost, 6),
+                    "llm_calls": llm_calls
+                }
+            )
+        except Exception as e:
+            logger.error(f"Sync workflow failed: {e}")
+            return WorkflowResult(
+                workflow_name=workflow.name,
+                success=False,
+                output=None,
+                steps_executed=steps_executed,
+                metadata={"error": str(e)}
+            )
+
     def execute(
         self,
         workflow_name: str,
@@ -237,13 +362,13 @@ class WorkflowEngine:
         timeout_override: Optional[int] = None
     ) -> WorkflowResult:
         """
-        Synchronous wrapper for workflow execution (for Celery tasks).
+        Synchronous execution path for workflow.
+        Safely handles loop management for both eventlet and standard environments.
         """
         # Load workflow
         workflow = self.load_workflow(workflow_name)
 
-        # Under eventlet, we should use the thread-local loop if it exists,
-        # otherwise create one. 
+        # Get the correct loop for the current thread/greenlet
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
@@ -252,8 +377,11 @@ class WorkflowEngine:
         
         # nest_asyncio is required to allow loop.run_until_complete()
         # when the loop is already running (common in eventlet).
-        import nest_asyncio
-        nest_asyncio.apply(loop)
+        try:
+            import nest_asyncio
+            nest_asyncio.apply(loop)
+        except ImportError:
+            pass
             
         return loop.run_until_complete(
             self.execute_workflow(
