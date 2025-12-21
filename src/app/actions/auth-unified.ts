@@ -16,6 +16,7 @@ interface AuthResult {
 interface UserExistsResult {
   exists: boolean;
   needsVerification?: boolean;
+  requiresOtp?: boolean;
 }
 
 interface ValidateCredentialsResult {
@@ -31,7 +32,7 @@ const OTP_RATE_LIMIT_ATTEMPTS = 3;
 const OTP_RATE_LIMIT_WINDOW_MINUTES = 15;
 
 /**
- * Check if a user exists in the system
+ * Check if a user exists in the system and if OTP is required
  * Note: We use a sign-in attempt with a dummy password to check existence
  * This prevents email enumeration while still allowing us to detect new users
  */
@@ -49,6 +50,7 @@ export async function checkUserExists(email: string): Promise<UserExistsResult> 
       columns: {
         id: true,
         email: true,
+        passwordLoginsSinceOtp: true,
       },
     });
 
@@ -64,9 +66,13 @@ export async function checkUserExists(email: string): Promise<UserExistsResult> 
       return { exists: false };
     }
 
+    // Check if OTP is required based on threshold
+    const requiresOtp = (profile.passwordLoginsSinceOtp ?? 0) >= OTP_REQUIREMENT_THRESHOLD;
+
     return {
       exists: true,
       needsVerification: false, // Verified status checked during password validation
+      requiresOtp,
     };
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -78,7 +84,31 @@ export async function checkUserExists(email: string): Promise<UserExistsResult> 
 }
 
 /**
- * Validate user credentials and determine if OTP is required
+ * Check if OTP is required for a user based on login threshold
+ */
+export async function checkOTPRequired(email: string): Promise<boolean> {
+  try {
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.email, email),
+      columns: {
+        passwordLoginsSinceOtp: true,
+      },
+    });
+
+    if (!profile) {
+      return false;
+    }
+
+    return (profile.passwordLoginsSinceOtp ?? 0) >= OTP_REQUIREMENT_THRESHOLD;
+  } catch (error) {
+    console.error("Exception in checkOTPRequired:", error);
+    return false;
+  }
+}
+
+/**
+ * Validate user credentials (password only, does not check OTP threshold)
+ * Note: OTP threshold should be checked BEFORE calling this function
  */
 export async function validateCredentials(
   email: string,
@@ -101,25 +131,13 @@ export async function validateCredentials(
       };
     }
 
-    // Check if OTP is required based on login counter
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, authData.user.id),
-      columns: {
-        passwordLoginsSinceOtp: true,
-      },
-    });
-
-    const requiresOtp = (profile?.passwordLoginsSinceOtp ?? 0) >= OTP_REQUIREMENT_THRESHOLD;
-
-    // If OTP is required, sign out immediately (don't create session yet)
-    if (requiresOtp) {
-      await supabase.auth.signOut();
-    }
+    // Password is valid - sign out immediately (we'll create session after final auth step)
+    await supabase.auth.signOut();
 
     return {
       success: true,
       userId: authData.user.id,
-      requiresOtp,
+      requiresOtp: false, // This is now always false - threshold checked separately
     };
   } catch (error) {
     console.error("Exception in validateCredentials:", error);

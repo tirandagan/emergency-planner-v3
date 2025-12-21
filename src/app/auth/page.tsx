@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AuthLayout } from "@/components/auth/AuthLayout";
 import { UnifiedAuthForm } from "@/components/auth/UnifiedAuthForm";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,7 +14,7 @@ interface AuthPageProps {
   searchParams: Promise<{ redirect?: string }>;
 }
 
-export default async function AuthPage({ searchParams }: AuthPageProps) {
+export default async function AuthPage({ searchParams }: AuthPageProps): Promise<React.JSX.Element> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const params = await searchParams;
@@ -26,10 +25,6 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
     redirect(redirectUrl);
   }
 
-  return (
-    <AuthLayout title="Welcome">
-      <UnifiedAuthForm redirectUrl={redirectUrl} />
-    </AuthLayout>
-  );
+  return <UnifiedAuthForm redirectUrl={redirectUrl} />;
 }
 

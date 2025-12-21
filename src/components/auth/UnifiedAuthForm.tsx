@@ -1,36 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
 import {
   checkUserExists,
-  validateCredentials,
   generateAndSendOTP,
   completePasswordLogin,
 } from "@/app/actions/auth-unified";
 import { OTPVerification } from "./OTPVerification";
 import { SignupFormSimplified } from "./SignupFormSimplified";
+import { SignInPage } from "@/components/ui/sign-in";
+import VaporizeTextCycle, { Tag } from "@/components/ui/vapour-text-effect";
 
 type AuthStep =
   | "email_entry"
   | "password_entry"
   | "signup"
   | "otp_verification"
-  | "loading";
+  | "loading"
+  | "redirecting";
 
 interface UnifiedAuthFormProps {
   redirectUrl?: string;
 }
 
 export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormProps) {
-  const router = useRouter();
-  const { refreshUser } = useAuth();
   
   // Form state
   const [email, setEmail] = useState("");
@@ -40,7 +38,8 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auth flow state (managed through currentStep)
+  // Auth flow state
+  const [otpEnforced, setOtpEnforced] = useState(false); // True when OTP threshold is met
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +53,7 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
     setIsProcessing(true);
 
     try {
-      // Check if user exists
+      // Check if user exists and if OTP is required
       const userCheck = await checkUserExists(email);
 
       if (!userCheck.exists) {
@@ -64,9 +63,29 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
         return;
       }
 
-      // Existing user - send OTP immediately
+      // Check if OTP threshold has been met
+      if (userCheck.requiresOtp) {
+        // OTP is enforced - send OTP immediately and skip password option
+        setOtpEnforced(true);
+
+        const otpResult = await generateAndSendOTP(email);
+
+        if (!otpResult.success) {
+          setError(otpResult.error || "Failed to send verification code");
+          setIsProcessing(false);
+          return;
+        }
+
+        toast.success("Verification code sent! Check your email.");
+        setCurrentStep("otp_verification");
+        setIsProcessing(false);
+        return;
+      }
+
+      // OTP not required - send OTP but allow password fallback
+      setOtpEnforced(false);
       const otpResult = await generateAndSendOTP(email);
-      
+
       if (!otpResult.success) {
         setError(otpResult.error || "Failed to send verification code");
         setIsProcessing(false);
@@ -95,42 +114,23 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
     setIsProcessing(true);
 
     try {
-      // Validate credentials
-      const validation = await validateCredentials(email, password);
+      // Complete password login (threshold already checked during email entry)
+      const loginResult = await completePasswordLogin(email, password);
 
-      if (!validation.success) {
-        setError(validation.error || "Invalid password");
+      if (!loginResult.success) {
+        setError(loginResult.error || "Invalid password");
         setIsProcessing(false);
         return;
       }
 
-      // Check if OTP is required
-      if (validation.requiresOtp) {
-        // Send OTP and show verification modal
-        const otpResult = await generateAndSendOTP(email);
-        
-        if (!otpResult.success) {
-          setError(otpResult.error || "Failed to send verification code");
-          setIsProcessing(false);
-          return;
-        }
+      toast.success("Welcome back!");
+      setCurrentStep("redirecting");
 
-        toast.success("Verification code sent! Check your email.");
-        setCurrentStep("otp_verification");
-      } else {
-        // Direct login
-        const loginResult = await completePasswordLogin(email, password);
-        
-        if (!loginResult.success) {
-          setError(loginResult.error || "Login failed");
-          setIsProcessing(false);
-          return;
-        }
-
-        toast.success("Welcome back!");
+      // Small delay to ensure toast is visible before redirect
+      setTimeout(() => {
         // Use window.location to force a full page reload which will pick up the new auth state
         window.location.href = redirectUrl;
-      }
+      }, 300);
     } catch (err) {
       console.error("Auth error:", err);
       setError("An error occurred. Please try again.");
@@ -141,8 +141,13 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
 
   function handleOTPVerified() {
     toast.success("Verification successful! Welcome back.");
-    // Use window.location to force a full page reload which will pick up the new auth state
-    window.location.href = redirectUrl;
+    setCurrentStep("redirecting");
+
+    // Small delay to ensure toast is visible before redirect
+    setTimeout(() => {
+      // Use window.location to force a full page reload which will pick up the new auth state
+      window.location.href = redirectUrl;
+    }, 300);
   }
 
   function handlePasswordFallback() {
@@ -181,76 +186,119 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
 
   if (currentStep === "otp_verification") {
     return (
-      <OTPVerification
-        open={true}
-        email={email}
-        onVerified={handleOTPVerified}
-        onPasswordFallback={handlePasswordFallback}
-        onClose={handleCloseOTP}
-      />
+      <SignInPage
+        title={<span className="sr-only">Verification</span>}
+        description=""
+        heroImageSrc="/images/signin-video.mp4"
+        error={null}
+        isProcessing={false}
+        showGoogleButton={false}
+        showCreateAccount={false}
+      >
+        <div className="space-y-8">
+          <button
+            type="button"
+            onClick={handleCloseOTP}
+            className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span className="font-medium">Back</span>
+          </button>
+          
+          <div className="space-y-5">
+            <h2 className="text-xl font-semibold text-foreground tracking-tight">
+              Enter Verification Code
+            </h2>
+
+            {otpEnforced && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm text-foreground">
+                <p className="font-medium mb-1">🔒 Two-Factor Authentication Required</p>
+                <p className="text-muted-foreground">
+                  For your security, you&apos;ve reached the password login limit (10 logins).
+                  Please verify using the code sent to your email.
+                </p>
+              </div>
+            )}
+
+            <OTPVerification
+              email={email}
+              onVerified={handleOTPVerified}
+              onPasswordFallback={handlePasswordFallback}
+              onBack={handleCloseOTP}
+              disablePasswordFallback={otpEnforced}
+            />
+          </div>
+        </div>
+      </SignInPage>
     );
   }
 
   if (currentStep === "password_entry") {
     return (
-      <div className="w-full max-w-md mx-auto">
-        <form onSubmit={handlePasswordSubmit} className="space-y-4">
-          <div className="space-y-2 text-center mb-6">
-            <h2 className="text-3xl font-bold">Enter Your Password</h2>
-            <p className="text-muted-foreground">
-              Sign in to <span className="font-semibold text-foreground">{email}</span>
-            </p>
+      <SignInPage
+        title={<span className="font-semibold text-foreground tracking-tight">Enter Your Password</span>}
+        description={
+          <>
+            Sign in to <span className="font-semibold text-foreground">{email}</span>
+          </>
+        }
+        heroImageSrc="/images/signin-video.mp4"
+        error={error}
+        isProcessing={isProcessing}
+        showGoogleButton={false}
+        showCreateAccount={false}
+      >
+        <form onSubmit={handlePasswordSubmit} className="space-y-5">
+          <div className="animate-element animate-delay-300 space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">
+              Password
+            </Label>
+            <div className="rounded-2xl border border-border bg-foreground/5 transition-colors focus-within:border-primary/70 focus-within:bg-primary/10">
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isProcessing}
+                  autoComplete="current-password"
+                  autoFocus
+                  className="w-full bg-transparent border-0 text-sm p-4 pr-12 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-3 flex items-center"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
 
-          {error && (
-            <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
-              {error}
-            </div>
-          )}
-
-          {/* Password Input */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isProcessing}
-                autoComplete="current-password"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                tabIndex={-1}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
+          <div className="animate-element animate-delay-400 flex gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={handleCloseOTP}
               disabled={isProcessing}
-              className="flex-1"
+              className="flex-1 rounded-2xl py-4"
             >
               Back
             </Button>
             <Button
               type="submit"
-              className="flex-1"
+              className="flex-1 rounded-2xl py-4 font-medium hover:scale-[1.02] transition-all"
               disabled={isProcessing || !password}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -258,102 +306,99 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
             </Button>
           </div>
 
-          {/* Forgot Password Link */}
-          <div className="text-center text-sm">
+          <div className="animate-element animate-delay-500 text-center text-sm">
             <a
               href="/auth/forgot-password"
-              className="text-primary hover:underline"
+              className="text-primary hover:underline transition-colors"
             >
               Forgot password?
             </a>
           </div>
         </form>
+      </SignInPage>
+    );
+  }
+
+  // Redirecting state - full page spinner with fade-in
+  if (currentStep === "redirecting") {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background animate-in fade-in duration-200">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">
+            Taking you to BePrepared Dashboard
+          </p>
+        </div>
       </div>
     );
   }
 
   // Default: Email entry
   return (
-    <div className="w-full max-w-md mx-auto">
-      <form onSubmit={handleEmailSubmit} className="space-y-4">
-        <div className="space-y-1 text-center mb-6">
-          <h2 className="text-2xl font-bold">Welcome</h2>
-          <p className="text-sm text-muted-foreground">
-            Sign in or create an account
-          </p>
-        </div>
-
-        {error && (
-          <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
-            {error}
-          </div>
-        )}
-
-        {/* Email Input */}
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="name@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isProcessing}
-            autoComplete="email"
-            autoFocus
+    <SignInPage
+      title={
+        <div className="w-full flex items-center" style={{ height: '12vh', minHeight: '100px' }}>
+          <VaporizeTextCycle
+            texts={["BePrepared"]}
+            font={{
+              fontFamily: "Poppins, sans-serif",
+              fontSize: "60px",
+              fontWeight: 800
+            }}
+            color="rgb(33, 102, 221)"
+            spread={5}
+            density={5}
+            animation={{
+              vaporizeDuration: 2,
+              fadeInDuration: 1,
+              waitDuration: 0.5
+            }}
+            direction="left-to-right"
+            alignment="center"
+            tag={Tag.H1}
           />
         </div>
+      }
+      description="Sign in or create an account to start building your personalized emergency preparedness plan"
+      heroImageSrc="/images/signin-video.mp4"
+      error={error}
+      isProcessing={isProcessing}
+      onGoogleSignIn={() => toast.info("Google sign-in coming soon!")}
+      showPasswordField={false}
+      showRememberMe={false}
+      showCreateAccount={false}
+    >
+      <form onSubmit={handleEmailSubmit} className="space-y-5">
+        <div className="animate-element animate-delay-300 space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium text-muted-foreground">
+            Email Address
+          </Label>
+          <div className="rounded-2xl border border-border bg-foreground/5 transition-colors focus-within:border-primary/70 focus-within:bg-primary/10">
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isProcessing}
+              autoComplete="email"
+              autoFocus
+              className="w-full bg-transparent border-0 text-sm p-4 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
+            />
+          </div>
+        </div>
 
-        {/* Continue Button */}
         <Button
           type="submit"
-          className="w-full"
+          className="animate-element animate-delay-400 w-full rounded-2xl py-4 font-medium hover:scale-[1.02] transition-all"
           disabled={isProcessing || !email}
         >
           {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Continue
         </Button>
-
-        {/* OAuth Placeholder (Phase 2) */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or</span>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          disabled
-        >
-          <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-            <path
-              fill="currentColor"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="currentColor"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="currentColor"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-            />
-            <path
-              fill="currentColor"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            />
-          </svg>
-          Sign in with Google (Coming Soon)
-        </Button>
       </form>
-
-    </div>
+    </SignInPage>
   );
 }
 

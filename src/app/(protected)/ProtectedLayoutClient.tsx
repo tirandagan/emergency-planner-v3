@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { SidebarNew, SidebarStateProvider, useSidebarState } from '@/components/protected/SidebarNew'
 import type { SubscriptionTier } from '@/lib/types/subscription'
+import { Loader2 } from 'lucide-react'
 
 interface ProtectedLayoutClientProps {
   children: React.ReactNode
@@ -58,6 +59,7 @@ export function ProtectedLayoutClient({
   planLimit
 }: ProtectedLayoutClientProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   // Cache invalidation for admin routes
   const pathname = usePathname()
@@ -76,6 +78,29 @@ export function ProtectedLayoutClient({
       refreshProfile()
     }
   }, [pathname, user, refreshProfile])
+
+  // Hide loading screen after a brief moment to allow auth context to settle
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitializing(false)
+    }, 50)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Show clean loading screen during initial mount
+  if (isInitializing) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">
+            Loading your dashboard
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <SidebarStateProvider value={{ isOpen, setIsOpen }}>
