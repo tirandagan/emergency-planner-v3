@@ -785,12 +785,20 @@ export default function ProductEditDialog({
             setProductSuggestions(suggestions);
 
             if (errors && errors.length > 0) {
-                setWebScrapeError(`Partial data retrieved. Issues: ${errors.join(', ')}`);
+                setWebScrapeError({
+                    message: 'Partial data retrieved.',
+                    errors
+                });
             }
         } else if (errors && errors.length > 0) {
-            setWebScrapeError(`Scraping failed: ${errors.join(', ')}`);
+            setWebScrapeError({
+                message: 'Scraping failed',
+                errors
+            });
         } else {
-            setWebScrapeError('No new data found from the website.');
+            setWebScrapeError({
+                message: 'No new data found from the website.'
+            });
         }
     };
 
