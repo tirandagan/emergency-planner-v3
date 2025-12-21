@@ -270,15 +270,18 @@ async def execute_external_api_step(
             'error_context': error_context.to_dict(include_sensitive=settings.DEBUG_MODE)
         }
 
-    # Execute synchronous service call
+        # Execute synchronous service call
     try:
         # Use synchronous context manager
         with service_class() as service:
-            # Use the current running loop
-            loop = asyncio.get_running_loop()
+            # Get the current loop safely
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.get_event_loop()
                 
-            # Use loop's default executor (None) instead of shared global executor
-            # to avoid Future/Loop mismatch errors under concurrency.
+            # Use loop's default executor (None)
+            # Passing the loop explicitly to run_in_executor avoids "different loop" errors
             response: ExternalServiceResponse = await loop.run_in_executor(
                 None,
                 service.call,

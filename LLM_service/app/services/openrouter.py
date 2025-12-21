@@ -8,6 +8,7 @@ Handles authentication, request/response formatting, and error handling.
 import time
 import logging
 import asyncio
+import threading
 from typing import List, Dict, Any, Optional
 import httpx
 
@@ -30,17 +31,12 @@ logger = logging.getLogger(__name__)
 # and "Bad file descriptor" errors under eventlet/asyncio concurrency.
 # Initialized lazily via _get_global_client()
 _global_client: Optional[httpx.AsyncClient] = None
-_client_lock: Optional[asyncio.Lock] = None
+_client_lock = threading.Lock()
 
 async def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> httpx.AsyncClient:
-    global _global_client, _client_lock
-    
-    if _client_lock is None:
-        # Create lock bound to the current running loop
-        _client_lock = asyncio.Lock()
-        
+    global _global_client
     if _global_client is None:
-        async with _client_lock:
+        with _client_lock:
             if _global_client is None:
                 logger.info("Initializing global httpx.AsyncClient for OpenRouter")
                 _global_client = httpx.AsyncClient(
