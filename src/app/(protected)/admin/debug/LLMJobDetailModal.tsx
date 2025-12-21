@@ -400,11 +400,11 @@ export function LLMJobDetailModal({ jobId, onClose }: LLMJobDetailModalProps) {
 
                 {/* Raw JSON Section - Always visible for debugging */}
                 <div className="bg-muted/30 rounded-lg border border-border overflow-hidden">
-                  <button
-                    onClick={() => setIsRawJsonExpanded(!isRawJsonExpanded)}
-                    className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border hover:bg-muted/70 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
+                  <div className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border">
+                    <button
+                      onClick={() => setIsRawJsonExpanded(!isRawJsonExpanded)}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
                       {isRawJsonExpanded ? (
                         <ChevronDown className="w-5 h-5 text-muted-foreground" strokeWidth={2.5} />
                       ) : (
@@ -414,7 +414,7 @@ export function LLMJobDetailModal({ jobId, onClose }: LLMJobDetailModalProps) {
                       <Badge variant="outline" className="text-xs">
                         Debug
                       </Badge>
-                    </div>
+                    </button>
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -436,12 +436,12 @@ export function LLMJobDetailModal({ jobId, onClose }: LLMJobDetailModalProps) {
                         </>
                       )}
                     </Button>
-                  </button>
+                  </div>
                   {isRawJsonExpanded && (
                     <div className="p-4 overflow-auto max-h-96 bg-muted/30">
                       <div className="json-viewer-container text-sm font-mono">
                         <JsonView
-                          data={jobDetail as Record<string, unknown>}
+                          data={jobDetail as unknown as Record<string, unknown>}
                           shouldExpandNode={allExpanded}
                           style={defaultStyles}
                         />
