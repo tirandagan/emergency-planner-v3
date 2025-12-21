@@ -1076,7 +1076,7 @@ export default function ProductsClient({
           if (!groups[catId]) {
               if (catId === 'uncategorized') {
                   groups[catId] = {
-                      category: { id: 'uncategorized', name: 'Uncategorized', parentId: null, description: null, icon: null },
+                      category: { id: 'uncategorized', name: 'Uncategorized', parentId: null, description: null, icon: null, createdAt: new Date(0) },
                       subGroups: {}
                   };
               } else {
@@ -2193,7 +2193,7 @@ export default function ProductsClient({
           name: editingCategoryDialog.name,
           description: editingCategoryDialog.description,
           icon: editingCategoryDialog.icon,
-          createdAt: editingCategoryDialog.createdAt || new Date()
+          createdAt: editingCategoryDialog.createdAt!
         } : null}
         onClose={() => setEditingCategoryDialog(null)}
         onSave={async (id, data) => {

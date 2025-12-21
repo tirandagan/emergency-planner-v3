@@ -81,6 +81,7 @@ export async function getCategories() {
           parentId: categories.parentId,
           description: categories.description,
           icon: categories.icon,
+          createdAt: categories.createdAt,
         })
         .from(categories)
         .orderBy(categories.name);
