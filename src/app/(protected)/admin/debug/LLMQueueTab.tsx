@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RefreshCw, Loader2, AlertCircle } from 'lucide-react';
-import { getLLMServiceURL, fetchLLMHealth, fetchLLMJobs } from './actions';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RefreshCw, Loader2, AlertCircle, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { getLLMServiceURL, fetchLLMHealth, fetchLLMJobs, bulkDeleteLLMJobs } from './actions';
 import { LLMHealthStatus } from './LLMHealthStatus';
 import { LLMJobDetailModal } from './LLMJobDetailModal';
 import type {
@@ -54,6 +55,9 @@ export function LLMQueueTab() {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<{ success: boolean; deleted_count: number; message: string } | null>(null);
 
   // Fetch LLM service URL on mount
   useEffect(() => {
@@ -141,6 +145,89 @@ export function LLMQueueTab() {
     fetchJobs();
   };
 
+  // Toggle individual job selection
+  const toggleJobSelection = (jobId: string) => {
+    setSelectedJobIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle all jobs selection
+  const toggleAllJobs = () => {
+    if (selectedJobIds.size === sortedJobs.length) {
+      setSelectedJobIds(new Set());
+    } else {
+      setSelectedJobIds(new Set(sortedJobs.map(job => job.job_id)));
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedJobIds.size === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ${selectedJobIds.size} job${selectedJobIds.size !== 1 ? 's' : ''}? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) return;
+
+    setIsDeleting(true);
+    setDeleteResult(null);
+
+    try {
+      const result = await bulkDeleteLLMJobs(Array.from(selectedJobIds));
+      setDeleteResult(result);
+
+      if (result.success) {
+        // Clear selection and refresh jobs list
+        setSelectedJobIds(new Set());
+        await fetchJobs();
+      }
+    } catch (error) {
+      setDeleteResult({
+        success: false,
+        deleted_count: 0,
+        message: error instanceof Error ? error.message : 'Failed to delete jobs'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle delete all jobs (all visible jobs matching current filter)
+  const handleDeleteAll = async () => {
+    if (sortedJobs.length === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ALL ${sortedJobs.length} job${sortedJobs.length !== 1 ? 's' : ''} matching the current filter? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) return;
+
+    setIsDeleting(true);
+    setDeleteResult(null);
+
+    try {
+      const allJobIds = sortedJobs.map(job => job.job_id);
+      const result = await bulkDeleteLLMJobs(allJobIds);
+      setDeleteResult(result);
+
+      if (result.success) {
+        // Clear selection and refresh jobs list
+        setSelectedJobIds(new Set());
+        await fetchJobs();
+      }
+    } catch (error) {
+      setDeleteResult({
+        success: false,
+        deleted_count: 0,
+        message: error instanceof Error ? error.message : 'Failed to delete jobs'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Sort jobs
   const sortedJobs = [...jobs].sort((a, b) => {
     const aValue: string | number | null = a[sortField];
@@ -202,7 +289,7 @@ export function LLMQueueTab() {
                 )}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {jobs.some(job => job.status === 'processing') && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-50 dark:bg-yellow-950/20 text-yellow-800 dark:text-yellow-400 text-sm border border-yellow-200 dark:border-yellow-900/30">
                   <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
@@ -236,7 +323,7 @@ export function LLMQueueTab() {
               </Select>
               <Button
                 onClick={handleRefresh}
-                disabled={isLoadingHealth || isLoadingJobs}
+                disabled={isLoadingHealth || isLoadingJobs || isDeleting}
                 variant="outline"
                 size="sm"
                 className="gap-2"
@@ -248,6 +335,38 @@ export function LLMQueueTab() {
                 )}
                 Refresh
               </Button>
+              {selectedJobIds.size > 0 && (
+                <Button
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  Delete Selected ({selectedJobIds.size})
+                </Button>
+              )}
+              {sortedJobs.length > 0 && (
+                <Button
+                  onClick={handleDeleteAll}
+                  disabled={isDeleting}
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  Delete All ({sortedJobs.length})
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -265,6 +384,27 @@ export function LLMQueueTab() {
                   <p className="text-sm mt-1">
                     Check that the LLM service URL is correct in system settings and the webhook secret is configured.
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Result Message */}
+          {deleteResult && (
+            <div className={`p-4 rounded-lg ${
+              deleteResult.success
+                ? 'bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-400'
+                : 'bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400'
+            }`}>
+              <div className="flex items-center gap-2">
+                {deleteResult.success ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                <div>
+                  <p className="font-medium">{deleteResult.message}</p>
+                  {deleteResult.success && deleteResult.deleted_count > 0 && (
+                    <p className="text-sm mt-1">
+                      {deleteResult.deleted_count} job{deleteResult.deleted_count !== 1 ? 's' : ''} deleted successfully.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -288,6 +428,13 @@ export function LLMQueueTab() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={sortedJobs.length > 0 && selectedJobIds.size === sortedJobs.length}
+                          onChange={toggleAllJobs}
+                          aria-label="Select all jobs"
+                        />
+                      </TableHead>
                       <TableHead
                         className="cursor-pointer hover:bg-muted"
                         onClick={() => toggleSort('job_id')}
@@ -326,6 +473,13 @@ export function LLMQueueTab() {
                   <TableBody>
                     {sortedJobs.map((job) => (
                       <TableRow key={job.job_id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedJobIds.has(job.job_id)}
+                            onChange={() => toggleJobSelection(job.job_id)}
+                            aria-label={`Select job ${job.job_id}`}
+                          />
+                        </TableCell>
                         <TableCell>
                           <button
                             onClick={() => setSelectedJobId(job.job_id)}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import {
   checkSystemHealth,
   getRecentActivityLogs,
@@ -86,6 +87,8 @@ function getConnectionPoolBadgeColor(usage: number): string {
 }
 
 export default function DebugPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [health, setHealth] = useState<SystemHealth | null>(null)
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([])
   const [isCheckingHealth, setIsCheckingHealth] = useState(false)
@@ -95,7 +98,16 @@ export default function DebugPage() {
   const [testEmail, setTestEmail] = useState('')
   const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null)
   const [cacheResult, setCacheResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [activeTab, setActiveTab] = useState('settings')
+
+  // Get active tab from URL query parameter, default to 'settings'
+  const activeTab = searchParams.get('tab') || 'settings'
+
+  // Update URL when tab changes
+  const setActiveTab = useCallback((newTab: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', newTab)
+    router.push(`?${params.toString()}`)
+  }, [searchParams, router])
 
   const runHealthCheck = useCallback(async () => {
     setIsCheckingHealth(true)

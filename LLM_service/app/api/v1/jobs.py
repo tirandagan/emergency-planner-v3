@@ -1,17 +1,19 @@
 """
 Jobs list endpoint for querying workflow jobs.
 
-Endpoint:
+Endpoints:
 - GET /jobs - List jobs with filtering and pagination
+- DELETE /jobs/bulk - Bulk delete jobs by IDs
 """
 
 import logging
-from typing import Optional
+from typing import Optional, List
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from pydantic import BaseModel
 
 from app.database import get_db
 from app.schemas.jobs import JobsListResponse, JobSummary
@@ -289,4 +291,143 @@ def list_jobs(
         total=total,
         limit=limit,
         offset=offset
+    )
+
+
+# Request/Response schemas for bulk delete
+class BulkDeleteRequest(BaseModel):
+    """Request schema for bulk job deletion."""
+    job_ids: List[str]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "job_ids": [
+                    "123e4567-e89b-12d3-a456-426614174000",
+                    "987e6543-e21b-12d3-a456-426614174999"
+                ]
+            }
+        }
+
+
+class BulkDeleteResponse(BaseModel):
+    """Response schema for bulk job deletion."""
+    deleted_count: int
+    job_ids: List[str]
+    message: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "deleted_count": 2,
+                "job_ids": ["123e4567-e89b-12d3-a456-426614174000"],
+                "message": "Successfully deleted 2 jobs"
+            }
+        }
+
+
+@router.delete(
+    "/jobs/bulk",
+    response_model=BulkDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(verify_api_secret)],
+    summary="Bulk delete workflow jobs",
+    description="Delete multiple workflow jobs by their IDs. Requires X-API-Secret header. Returns count of deleted jobs.",
+    responses={
+        200: {
+            "description": "Jobs deleted successfully",
+            "model": BulkDeleteResponse
+        },
+        401: {
+            "description": "Invalid or missing API secret",
+            "model": ErrorResponse
+        },
+        400: {
+            "description": "Invalid request (empty list or invalid UUIDs)",
+            "model": ErrorResponse
+        },
+        500: {
+            "description": "Internal server error",
+            "model": ErrorResponse
+        }
+    }
+)
+def bulk_delete_jobs(
+    request: BulkDeleteRequest = Body(...),
+    db: Session = Depends(get_db)
+) -> BulkDeleteResponse:
+    """
+    Bulk delete workflow jobs by their IDs.
+
+    Request Body:
+    - job_ids: List of job UUIDs to delete (required, non-empty)
+
+    Returns:
+    - deleted_count: Number of jobs actually deleted
+    - job_ids: List of deleted job IDs
+    - message: Success message
+
+    Response Codes:
+    - 200 OK: Jobs deleted successfully
+    - 400 Bad Request: Empty list or invalid UUIDs
+    - 401 Unauthorized: Missing or invalid API secret
+    - 500 Internal Server Error: Database error
+    """
+    # Validate request
+    if not request.job_ids:
+        logger.warning("Bulk delete called with empty job_ids list")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "EmptyJobIdsList",
+                "message": "job_ids list cannot be empty",
+            }
+        )
+
+    # Convert string IDs to UUIDs and validate
+    job_uuids = []
+    invalid_ids = []
+    for job_id in request.job_ids:
+        try:
+            job_uuids.append(uuid.UUID(job_id))
+        except ValueError:
+            invalid_ids.append(job_id)
+
+    if invalid_ids:
+        logger.warning(f"Bulk delete called with invalid UUIDs: {invalid_ids}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "InvalidJobIDs",
+                "message": f"Invalid job ID format (expected UUID)",
+                "invalid_ids": invalid_ids
+            }
+        )
+
+    logger.info(f"Bulk delete request for {len(job_uuids)} jobs")
+
+    # Delete jobs from database
+    try:
+        deleted_count = (
+            db.query(WorkflowJob)
+            .filter(WorkflowJob.id.in_(job_uuids))
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+        logger.info(f"Successfully deleted {deleted_count} jobs out of {len(job_uuids)} requested")
+    except Exception as e:
+        db.rollback()
+        logger.error("Database error during bulk delete", exc_info=e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "DatabaseError",
+                "message": f"Failed to delete jobs: {str(e)}"
+            }
+        )
+
+    return BulkDeleteResponse(
+        deleted_count=deleted_count,
+        job_ids=[str(job_id) for job_id in job_uuids[:deleted_count]],
+        message=f"Successfully deleted {deleted_count} job{'s' if deleted_count != 1 else ''}"
     )

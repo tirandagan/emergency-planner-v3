@@ -1334,3 +1334,51 @@ export async function fetchLLMJobDetails(jobId: string): Promise<any> {
     throw error
   }
 }
+
+/**
+ * Bulk delete LLM jobs by IDs (server-side proxy)
+ */
+export async function bulkDeleteLLMJobs(jobIds: string[]): Promise<{
+  success: boolean
+  deleted_count: number
+  message: string
+}> {
+  await checkAdmin()
+
+  try {
+    const llmServiceUrl = await getLLMServiceURL()
+    const webhookSecret = process.env.LLM_WEBHOOK_SECRET || ''
+
+    const response = await fetch(
+      `${llmServiceUrl}/api/v1/jobs/bulk`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Secret': webhookSecret,
+        },
+        body: JSON.stringify({ job_ids: jobIds }),
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `API returned ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return {
+      success: true,
+      deleted_count: data.deleted_count,
+      message: data.message
+    }
+  } catch (error) {
+    console.error('[LLM Service] Bulk delete jobs failed:', error)
+    return {
+      success: false,
+      deleted_count: 0,
+      message: error instanceof Error ? error.message : 'Failed to delete jobs'
+    }
+  }
+}
