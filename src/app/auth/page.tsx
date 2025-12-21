@@ -20,11 +20,14 @@ export default async function AuthPage({ searchParams }: AuthPageProps): Promise
   const params = await searchParams;
   const redirectUrl = params.redirect ? decodeURIComponent(params.redirect) : "/dashboard";
 
+  // Read site testing status from environment
+  const siteStatus = process.env.SITE_TESTING_STATUS || 'live';
+
   // Redirect authenticated users to their intended destination
   if (user) {
     redirect(redirectUrl);
   }
 
-  return <UnifiedAuthForm redirectUrl={redirectUrl} />;
+  return <UnifiedAuthForm redirectUrl={redirectUrl} siteStatus={siteStatus} />;
 }
 

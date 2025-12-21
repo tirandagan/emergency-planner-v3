@@ -26,9 +26,13 @@ type AuthStep =
 
 interface UnifiedAuthFormProps {
   redirectUrl?: string;
+  siteStatus?: string;
 }
 
-export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormProps) {
+export function UnifiedAuthForm({
+  redirectUrl = "/dashboard",
+  siteStatus = 'live'
+}: UnifiedAuthFormProps) {
   
   // Form state
   const [email, setEmail] = useState("");
@@ -57,6 +61,13 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
       const userCheck = await checkUserExists(email);
 
       if (!userCheck.exists) {
+        // Check site status before allowing signup
+        if (siteStatus === 'closed') {
+          setError("New signups are not available during closed beta. Please check back later.");
+          setIsProcessing(false);
+          return;
+        }
+
         // New user - show signup form
         setCurrentStep("signup");
         setIsProcessing(false);
@@ -368,6 +379,29 @@ export function UnifiedAuthForm({ redirectUrl = "/dashboard" }: UnifiedAuthFormP
       showRememberMe={false}
       showCreateAccount={false}
     >
+      {siteStatus === 'closed' && (
+        <div className="mb-6 rounded-2xl border-2 border-primary/30 bg-primary/10 p-5 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div className="flex-1 space-y-2">
+              <h3 className="text-base font-semibold text-foreground">
+                Closed Beta - Invitation Only
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                BePrepared.ai is currently in closed beta testing. New account creation is temporarily disabled while we refine the platform. If you already have an account, you can sign in below.
+              </p>
+              <p className="text-sm text-primary font-medium">
+                Want early access? Email us: <a href="mailto:admin@beprepared.ai" className="underline hover:text-primary/80 transition-colors">admin@beprepared.ai</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleEmailSubmit} className="space-y-5">
         <div className="animate-element animate-delay-300 space-y-2">
           <Label htmlFor="email" className="text-sm font-medium text-muted-foreground">
