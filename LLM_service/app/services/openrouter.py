@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 _global_client: Optional[httpx.Client] = None
 _client_lock = threading.Lock()
 
-def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> httpx.Client:
+def _initialize_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> None:
+    """Initialize the global HTTP client if it doesn't exist."""
     global _global_client
     if _global_client is None:
         with _client_lock:
@@ -41,7 +42,6 @@ def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: flo
                 logger.info("Initializing global synchronous httpx.Client for OpenRouter")
                 _global_client = httpx.Client(
                     timeout=httpx.Timeout(timeout),
-                    # Disable pooling to avoid socket conflicts in eventlet
                     limits=httpx.Limits(max_connections=100, max_keepalive_connections=0),
                     headers={
                         "Authorization": f"Bearer {api_key}",
@@ -50,6 +50,10 @@ def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: flo
                         "Content-Type": "application/json",
                     }
                 )
+
+def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> httpx.Client:
+    if _global_client is None:
+        _initialize_global_client(api_key, site_url, site_name, timeout)
     return _global_client
 
 

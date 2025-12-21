@@ -71,24 +71,12 @@ class WebhookSender:
     ) -> Tuple[bool, int, Optional[str], int]:
         """
         Send webhook with HMAC signature.
-
-        Args:
-            url: Webhook destination URL
-            event_type: Event type (e.g., "workflow.completed", "llm.step.completed")
-            payload: Event payload dictionary
-            secret: HMAC secret (uses global default if not provided)
-
-        Returns:
-            Tuple of (success: bool, status_code: int, response_body: Optional[str], duration_ms: int)
-
-        Raises:
-            WebhookDeliveryError: If delivery fails
         """
         # Use per-job secret or fall back to global secret
-        webhook_secret = secret or settings.LLM_WEBHOOK_SECRET
+        webhook_secret = (secret or settings.LLM_WEBHOOK_SECRET).strip()
 
-        # Serialize payload (use compact format for consistency)
-        payload_json = json.dumps(payload, separators=(',', ':'))
+        # Serialize payload (use compact format and sorted keys for consistency)
+        payload_json = json.dumps(payload, separators=(',', ':'), sort_keys=True)
 
         # Generate HMAC signature from the exact serialized payload
         signature = self._generate_signature(payload_json, webhook_secret)

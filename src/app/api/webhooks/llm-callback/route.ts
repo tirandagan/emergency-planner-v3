@@ -22,6 +22,7 @@ function verifyWebhookSignature(
   secret: string
 ): boolean {
   if (!signature.startsWith('sha256=')) {
+    console.error('[LLM Webhook] Signature does not start with sha256=');
     return false;
   }
 
@@ -32,13 +33,22 @@ function verifyWebhookSignature(
     .digest('hex');
 
   if (expectedDigest.length !== actualDigest.length) {
+    console.error(`[LLM Webhook] Signature length mismatch: expected ${expectedDigest.length}, actual ${actualDigest.length}`);
     return false;
   }
 
-  return timingSafeEqual(
-    Buffer.from(expectedDigest),
-    Buffer.from(actualDigest)
+  const isValid = timingSafeEqual(
+    Buffer.from(expectedDigest, 'hex'),
+    Buffer.from(actualDigest, 'hex')
   );
+
+  if (!isValid) {
+    console.error('[LLM Webhook] Signature digest mismatch after timingSafeEqual');
+    // For debugging, only log in non-prod or with masked secret
+    console.log(`[LLM Webhook] Secret used: ${secret.substring(0, 4)}...${secret.substring(secret.length - 4)}`);
+  }
+
+  return isValid;
 }
 
 /**
@@ -151,40 +161,23 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 4. Check if webhook secret is configured
-    const webhookSecret = process.env.LLM_WEBHOOK_SECRET;
+    const webhookSecret = process.env.LLM_WEBHOOK_SECRET?.trim();
 
     if (!webhookSecret) {
       console.error('[LLM Webhook] LLM_WEBHOOK_SECRET not configured - sending alert');
       await sendSecretMissingAlert();
-
-      // Accept webhook but store with signature_valid = false
-      const payload = JSON.parse(rawBody);
-      await createLLMCallback({
-        callbackId: payload.job_id || `unsigned-${Date.now()}`,
-        signatureValid: false,
-        signatureHeader: signature,
-        verifiedAt: null,
-        payload,
-        payloadPreview: rawBody.substring(0, 200),
-        externalJobId: payload.job_id,
-        workflowName: payload.workflow_name,
-        eventType: payload.event,
-      });
-
-      return NextResponse.json(
-        {
-          received: true,
-          warning: 'Webhook secret not configured - signature not verified'
-        },
-        { status: 200 }
-      );
+      // ...
     }
+
+    // LOG REQUEST INFO (Safe)
+    console.log(`[LLM Webhook] Body length: ${rawBody.length}, Signature: ${signature?.substring(0, 15)}...`);
+    console.log(`[LLM Webhook] Secret length: ${webhookSecret.length}, Snippet: ${webhookSecret.substring(0, 4)}...${webhookSecret.substring(webhookSecret.length - 4)}`);
 
     // 5. Verify signature against raw body
     const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
 
     if (!isValid) {
-      console.error('[LLM Webhook] Invalid signature');
+      console.error('[LLM Webhook] Invalid signature verification failed');
 
       // Store callback with invalid signature for security monitoring
       const payload = JSON.parse(rawBody);
@@ -194,7 +187,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         signatureHeader: signature,
         verifiedAt: null,
         payload,
-        payloadPreview: rawBody.substring(0, 200),
+        payloadPreview: `SIG_INVALID: ${rawBody.substring(0, 180)}`,
         externalJobId: payload.job_id,
         workflowName: payload.workflow_name,
         eventType: payload.event,

@@ -44,10 +44,16 @@ export async function handleEmergencyContactsComplete(
     }
 
     // Handle both cases: output is the data directly, or output has a data property
+    // result.output is the final result of the last step (parse_contacts)
+    // which returns { contacts: [...], meeting_locations: [...] }
     const data = output.contacts ? output : output.data;
 
     if (!data || !data.contacts) {
-      console.warn(`[Webhook] Invalid output structure for user ${userId}. Result keys: ${Object.keys(output || {})}`);
+      console.warn(`[Webhook] Invalid output structure for user ${userId}. Keys: ${Object.keys(output || {})}`);
+      // Fallback: search deep for contacts
+      if (output.result?.output?.contacts) {
+        return handleEmergencyContactsComplete(userId, output.result);
+      }
       return;
     }
 

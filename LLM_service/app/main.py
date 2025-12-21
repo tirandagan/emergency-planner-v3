@@ -46,6 +46,19 @@ def startup_event():
     logger.info(f"🚀 Starting {settings.API_TITLE} v{settings.API_VERSION}")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
 
+    # Initialize global OpenRouter client early to avoid race conditions during first requests
+    try:
+        from app.services.openrouter import _initialize_global_client
+        _initialize_global_client(
+            api_key=settings.OPENROUTER_API_KEY,
+            site_url="https://beprepared.ai",
+            site_name="BePrepared.ai",
+            timeout=300.0
+        )
+        logger.info("✅ Global OpenRouter client initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize OpenRouter client: {e}")
+
     # Test database connection
     if not test_connection():
         logger.error("Database connection failed on startup")
