@@ -29,20 +29,19 @@ logger = logging.getLogger(__name__)
 
 # Global client instance to be shared across providers to avoid socket exhaustion 
 # and "Bad file descriptor" errors under eventlet/asyncio concurrency.
-# Initialized lazily via _get_global_client()
-_global_client: Optional[httpx.AsyncClient] = None
+# We use a synchronous client here because it is much more stable in eventlet environments.
+_global_client: Optional[httpx.Client] = None
 _client_lock = threading.Lock()
 
-async def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> httpx.AsyncClient:
+def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> httpx.Client:
     global _global_client
     if _global_client is None:
         with _client_lock:
             if _global_client is None:
-                logger.info("Initializing global httpx.AsyncClient for OpenRouter")
-                _global_client = httpx.AsyncClient(
+                logger.info("Initializing global synchronous httpx.Client for OpenRouter")
+                _global_client = httpx.Client(
                     timeout=httpx.Timeout(timeout),
-                    # Disable pooling/keep-alive to avoid socket conflicts in eventlet
-                    # when multiple greenlets share the same client.
+                    # Disable pooling to avoid socket conflicts in eventlet
                     limits=httpx.Limits(max_connections=100, max_keepalive_connections=0),
                     headers={
                         "Authorization": f"Bearer {api_key}",
@@ -124,16 +123,16 @@ class OpenRouterProvider(LLMProvider):
         start_time = time.time()
 
         try:
-            # Get shared global client
-            client = await _get_global_client(
+            # Get shared global client (synchronous)
+            client = _get_global_client(
                 self.api_key, 
                 self.site_url, 
                 self.site_name, 
                 self.timeout_val
             )
 
-            # Make API request
-            response_data = await self._make_request(
+            # Make API request (synchronous but non-blocking under eventlet)
+            response_data = self._make_request(
                 client,
                 messages=messages,
                 model=model,
@@ -186,9 +185,9 @@ class OpenRouterProvider(LLMProvider):
             logger.error(f"OpenRouter unexpected error: {e}")
             raise LLMProviderError(f"Unexpected error: {e}") from e
 
-    async def _make_request(
+    def _make_request(
         self,
-        client: httpx.AsyncClient,
+        client: httpx.Client,
         messages: List[Message],
         model: str,
         temperature: float,
@@ -196,7 +195,7 @@ class OpenRouterProvider(LLMProvider):
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Make HTTP POST request to OpenRouter API.
+        Make HTTP POST request to OpenRouter API (Synchronous).
 
         Args:
             client: The shared HTTP client to use
@@ -208,10 +207,6 @@ class OpenRouterProvider(LLMProvider):
 
         Returns:
             Raw API response as dictionary
-
-        Raises:
-            httpx.TimeoutException: Request timed out
-            httpx.HTTPStatusError: HTTP error (4xx, 5xx)
         """
         # Build request payload
         payload = {
@@ -238,7 +233,7 @@ class OpenRouterProvider(LLMProvider):
         logger.info(f"OpenRouter request: {model} with {len(messages)} messages (timeout: {self.timeout_val}s)")
 
         # Use request-specific timeout override
-        response = await client.post(
+        response = client.post(
             url, 
             json=payload,
             timeout=httpx.Timeout(self.timeout_val)

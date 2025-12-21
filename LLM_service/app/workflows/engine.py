@@ -242,19 +242,18 @@ class WorkflowEngine:
         # Load workflow
         workflow = self.load_workflow(workflow_name)
 
-        # Get or create a loop for the current thread
+        # Under eventlet, we should use the thread-local loop if it exists,
+        # otherwise create one. 
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
         
-        # nest_asyncio is critical for eventlet/celery compatibility
-        try:
-            import nest_asyncio
-            nest_asyncio.apply(loop)
-        except ImportError:
-            pass
+        # nest_asyncio is required to allow loop.run_until_complete()
+        # when the loop is already running (common in eventlet).
+        import nest_asyncio
+        nest_asyncio.apply(loop)
             
         return loop.run_until_complete(
             self.execute_workflow(
