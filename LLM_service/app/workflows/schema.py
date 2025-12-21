@@ -291,6 +291,11 @@ class LLMStepConfig(BaseModel):
         le=16000
     )
 
+    timeout: Optional[float] = Field(
+        default=None,
+        description="Override request timeout in seconds"
+    )
+
     top_p: Optional[float] = Field(
         default=None,
         description="Nucleus sampling parameter (0.0-1.0)",

@@ -247,49 +247,23 @@ class WorkflowEngine:
 
         Returns:
             WorkflowResult with output, step history, and metadata
-
-        Raises:
-            WorkflowLoadError: Workflow not found or invalid
-            WorkflowExecutionError: Workflow execution failed
-            WorkflowTimeoutError: Workflow exceeded timeout
-
-        Example:
-            engine = WorkflowEngine()
-            result = engine.execute(
-                workflow_name="emergency_contacts",
-                input_data={"location": "Seattle, WA"},
-                progress_callback=lambda sid, idx, total, out: print(f"{idx}/{total}")
-            )
         """
         # Load workflow
         workflow = self.load_workflow(workflow_name)
 
-        # Execute workflow with eventlet-aware event loop management
-        if RUNNING_UNDER_EVENTLET:
-            # Under eventlet, we need special handling for the already-running event loop
-            # Ensure nest_asyncio is applied to allow nested run_until_complete
+        # Use the most appropriate method to get/create a loop
+        try:
+            loop = asyncio.get_running_loop()
+            logger.debug("Using already running event loop")
+            # If loop is already running, we MUST use nest_asyncio to call run_until_complete
+            # This is common in eventlet/gevent environments
             try:
                 import nest_asyncio
                 nest_asyncio.apply()
-                logger.debug("nest_asyncio applied for eventlet compatibility")
             except ImportError:
-                logger.warning("nest_asyncio not available - concurrent execution may fail")
-            except (ValueError, RuntimeError) as e:
-                # Already applied or conflict - safe to continue
-                logger.debug(f"nest_asyncio state: {e}")
-
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                # No event loop in current thread - create one (shouldn't happen in Celery worker)
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-            logger.debug("Using existing event loop (eventlet mode)")
-
-            # Run the workflow directly on the existing loop
-            # nest_asyncio allows this even if loop is already running
-            result = loop.run_until_complete(
+                logger.warning("nest_asyncio not available; nested execution may fail")
+            
+            return loop.run_until_complete(
                 self.execute_workflow(
                     workflow=workflow,
                     input_data=input_data,
@@ -297,20 +271,13 @@ class WorkflowEngine:
                     progress_callback=progress_callback
                 )
             )
-
-            # Don't close the loop under eventlet - it's managed globally
-            logger.debug("Workflow executed using eventlet event loop")
-            return result
-        else:
-            # Standard asyncio: create fresh event loop for each execution
-            loop = None
+        except RuntimeError:
+            # No loop is running, create a new one
+            logger.debug("No running loop found, creating new one")
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             try:
-                # Create new event loop
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-                # Execute workflow
-                result = loop.run_until_complete(
+                return loop.run_until_complete(
                     self.execute_workflow(
                         workflow=workflow,
                         input_data=input_data,
@@ -318,19 +285,14 @@ class WorkflowEngine:
                         progress_callback=progress_callback
                     )
                 )
-
-                return result
-
             finally:
-                # Standard asyncio cleanup
-                if loop:
-                    try:
-                        # Shutdown async generators (important for async Redis cleanup)
-                        loop.run_until_complete(loop.shutdown_asyncgens())
-                        loop.close()
-                        logger.debug("Event loop cleaned up (standard asyncio mode)")
-                    except Exception as e:
-                        logger.warning(f"Error during event loop cleanup: {e}")
+                try:
+                    # Shutdown async generators (important for async Redis cleanup)
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                    loop.close()
+                    logger.debug("Event loop cleaned up")
+                except Exception as e:
+                    logger.warning(f"Error during event loop cleanup: {e}")
 
     async def execute_workflow(
         self,

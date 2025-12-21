@@ -7,6 +7,7 @@ Handles authentication, request/response formatting, and error handling.
 
 import time
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional
 import httpx
 
@@ -24,6 +25,29 @@ from app.services.cost_calculator import CostCalculator
 
 
 logger = logging.getLogger(__name__)
+
+# Global client instance to be shared across providers to avoid socket exhaustion 
+# and "Bad file descriptor" errors under eventlet/asyncio concurrency.
+# Initialized lazily via _get_client()
+_global_client: Optional[httpx.AsyncClient] = None
+_client_lock = asyncio.Lock()
+
+async def _get_global_client(api_key: str, site_url: str, site_name: str, timeout: float) -> httpx.AsyncClient:
+    global _global_client
+    if _global_client is None:
+        async with _client_lock:
+            if _global_client is None:
+                logger.info("Initializing global httpx.AsyncClient for OpenRouter")
+                _global_client = httpx.AsyncClient(
+                    timeout=httpx.Timeout(timeout),
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "HTTP-Referer": site_url,
+                        "X-Title": site_name,
+                        "Content-Type": "application/json",
+                    }
+                )
+    return _global_client
 
 
 class OpenRouterProvider(LLMProvider):
@@ -60,7 +84,7 @@ class OpenRouterProvider(LLMProvider):
         self,
         api_key: str,
         base_url: str = "https://openrouter.ai/api/v1",
-        timeout: float = 120.0,
+        timeout: float = 300.0,
         site_url: str = "https://beprepared.ai",
         site_name: str = "BePrepared.ai"
     ) -> None:
@@ -70,7 +94,7 @@ class OpenRouterProvider(LLMProvider):
         Args:
             api_key: OpenRouter API key (sk-or-v1-...)
             base_url: OpenRouter API base URL
-            timeout: Request timeout in seconds (default: 120s for long generations)
+            timeout: Request timeout in seconds (default: 300s for long generations)
             site_url: Your site URL for OpenRouter analytics
             site_name: Your site name for OpenRouter analytics
         """
@@ -78,18 +102,9 @@ class OpenRouterProvider(LLMProvider):
         self.base_url = base_url.rstrip("/")
         self.site_url = site_url
         self.site_name = site_name
+        self.timeout_val = timeout
         self.cost_calculator = CostCalculator()
-
-        # Create async HTTP client with timeout
-        self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(timeout),
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "HTTP-Referer": site_url,
-                "X-Title": site_name,
-                "Content-Type": "application/json",
-            }
-        )
+        # Client is now fetched lazily in generate()
 
     async def generate(
         self,
@@ -101,33 +116,21 @@ class OpenRouterProvider(LLMProvider):
     ) -> LLMResponse:
         """
         Generate non-streaming text response from OpenRouter.
-
-        Args:
-            messages: List of chat messages (system, user, assistant)
-            model: Model identifier (e.g., "anthropic/claude-3.5-sonnet")
-            temperature: Sampling temperature (0.0-1.0)
-            max_tokens: Maximum tokens to generate
-            **kwargs: Additional OpenRouter parameters:
-                - top_p: Nucleus sampling parameter (0.0-1.0)
-                - top_k: Top-k sampling parameter
-                - frequency_penalty: Frequency penalty (-2.0 to 2.0)
-                - presence_penalty: Presence penalty (-2.0 to 2.0)
-                - stop: List of stop sequences
-
-        Returns:
-            LLMResponse with content, tokens, cost, and timing
-
-        Raises:
-            LLMProviderTimeout: Request timed out
-            LLMProviderAuthError: Invalid API key
-            LLMProviderRateLimitError: Rate limit exceeded
-            LLMProviderError: Other API errors
         """
         start_time = time.time()
 
         try:
+            # Get shared global client
+            client = await _get_global_client(
+                self.api_key, 
+                self.site_url, 
+                self.site_name, 
+                self.timeout_val
+            )
+
             # Make API request
             response_data = await self._make_request(
+                client,
                 messages=messages,
                 model=model,
                 temperature=temperature,
@@ -169,7 +172,7 @@ class OpenRouterProvider(LLMProvider):
 
         except httpx.TimeoutException as e:
             logger.error(f"OpenRouter request timed out: {e}")
-            raise LLMProviderTimeout(f"Request timed out after {self.client.timeout.read}s") from e
+            raise LLMProviderTimeout(f"Request timed out after {self.timeout_val}s") from e
 
         except httpx.HTTPStatusError as e:
             logger.error(f"OpenRouter HTTP error: {e.response.status_code} - {e.response.text}")
@@ -181,6 +184,7 @@ class OpenRouterProvider(LLMProvider):
 
     async def _make_request(
         self,
+        client: httpx.AsyncClient,
         messages: List[Message],
         model: str,
         temperature: float,
@@ -191,6 +195,7 @@ class OpenRouterProvider(LLMProvider):
         Make HTTP POST request to OpenRouter API.
 
         Args:
+            client: The shared HTTP client to use
             messages: Chat messages
             model: Model identifier
             temperature: Sampling temperature
@@ -226,9 +231,14 @@ class OpenRouterProvider(LLMProvider):
 
         # Make request
         url = f"{self.base_url}/chat/completions"
-        logger.info(f"OpenRouter request: {model} with {len(messages)} messages")
+        logger.info(f"OpenRouter request: {model} with {len(messages)} messages (timeout: {self.timeout_val}s)")
 
-        response = await self.client.post(url, json=payload)
+        # Use request-specific timeout override
+        response = await client.post(
+            url, 
+            json=payload,
+            timeout=httpx.Timeout(self.timeout_val)
+        )
         response.raise_for_status()
 
         return response.json()
@@ -327,9 +337,7 @@ class OpenRouterProvider(LLMProvider):
 
     async def close(self) -> None:
         """
-        Close HTTP client and clean up resources.
-
-        Should be called when provider is no longer needed.
+        No-op since we use a shared global client.
         """
-        await self.client.aclose()
-        logger.info("OpenRouter provider closed")
+        # We don't close the shared client here as it's reused across requests.
+        pass

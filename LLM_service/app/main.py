@@ -54,9 +54,19 @@ def startup_event():
 
 
 @app.on_event("shutdown")
-def shutdown_event():
+async def shutdown_event():
     """Run on application shutdown."""
     logger.info("Shutting down application...")
+    
+    # Close global LLM provider client if it exists
+    try:
+        from app.services.openrouter import _global_client
+        if _global_client:
+            logger.info("Closing global OpenRouter client...")
+            await _global_client.aclose()
+    except Exception as e:
+        logger.error(f"Error closing global OpenRouter client: {e}")
+
     engine.dispose()
     logger.info("✅ Application shutdown complete")
 

@@ -11,7 +11,13 @@ Executes external_api workflow steps with:
 
 import logging
 import traceback
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, Optional
+
+# Shared thread pool for synchronous API calls to avoid overhead and loop conflicts
+# max_workers=20 provides enough concurrency for external API calls
+_executor = ThreadPoolExecutor(max_workers=20)
 
 from app.workflows.schema import WorkflowStep
 from app.workflows.context import WorkflowContext
@@ -266,27 +272,19 @@ async def execute_external_api_step(
 
     # Execute synchronous service call
     try:
-        import asyncio
-        from concurrent.futures import ThreadPoolExecutor
-
         # Use synchronous context manager
         with service_class() as service:
-            # Use a dedicated single-threaded executor to avoid thread pool conflicts
-            # This prevents "Future attached to different loop" errors under eventlet
-            executor = ThreadPoolExecutor(max_workers=1)
-            try:
-                loop = asyncio.get_event_loop()
-                response: ExternalServiceResponse = await loop.run_in_executor(
-                    executor,
-                    service.call,
-                    operation,
-                    resolved_params,
-                    user_id,
-                    cache_ttl
-                )
-            finally:
-                # Clean up executor immediately to avoid state carryover
-                executor.shutdown(wait=False)
+            # Use shared executor and get_running_loop to avoid "different loop" errors
+            # get_running_loop() ensures we use the loop that is actually running this task
+            loop = asyncio.get_running_loop()
+            response: ExternalServiceResponse = await loop.run_in_executor(
+                _executor,
+                service.call,
+                operation,
+                resolved_params,
+                user_id,
+                cache_ttl
+            )
 
             # Record successful request for rate limiting (async infrastructure)
             if response.success:

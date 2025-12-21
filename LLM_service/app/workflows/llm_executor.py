@@ -133,7 +133,13 @@ class LLMStepExecutor:
 
         try:
             # Get or create LLM provider
-            provider = self._provider or get_llm_provider(self.provider_name)
+            # Pass timeout from config if provided
+            provider_kwargs = {"provider_name": self.provider_name}
+            provider = self._provider or get_llm_provider(**provider_kwargs)
+
+            # Update timeout if specified in config
+            if config.timeout and hasattr(provider, 'timeout_val'):
+                provider.timeout_val = config.timeout
 
             try:
                 # Call LLM API
