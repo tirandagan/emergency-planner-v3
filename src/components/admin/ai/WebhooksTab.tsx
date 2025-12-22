@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { Table } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -59,7 +60,7 @@ export function WebhooksTab(): React.JSX.Element {
   const [limitResults, setLimitResults] = useState<string>('25');
   const [selectedWebhookId, setSelectedWebhookId] = useState<string | null>(null);
 
-  const tableRef = useRef<{ resetColumnVisibility: () => void } | null>(null);
+  const tableRef = useRef<Table<LLMWebhook> | null>(null);
 
   // Fetch webhooks
   const fetchWebhooks = useCallback(async () => {
