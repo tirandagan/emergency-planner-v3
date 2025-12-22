@@ -9,7 +9,7 @@ Includes:
 """
 
 from fastapi import APIRouter
-from app.api.v1 import workflow, status, jobs, debug
+from app.api.v1 import workflow, status, jobs, debug, debug_celery
 
 # V1 API router
 router = APIRouter()
@@ -19,5 +19,6 @@ router.include_router(workflow.router, tags=["workflow"])
 router.include_router(status.router, tags=["status"])
 router.include_router(jobs.router, tags=["jobs"])
 router.include_router(debug.router, tags=["debug"])
+router.include_router(debug_celery.router, tags=["debug"])
 
 __all__ = ["router"]
