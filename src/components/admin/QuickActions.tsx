@@ -4,7 +4,7 @@
  */
 
 import Link from 'next/link';
-import { Boxes, Tags, Users, Mail, Calendar } from 'lucide-react';
+import { Boxes, Tags, Users, Mail, Calendar, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function QuickActions() {
@@ -14,12 +14,13 @@ export default function QuickActions() {
     { label: 'View Users', href: '/admin/users', icon: Users, color: 'text-warning' },
     { label: 'Email Campaigns', href: '/admin/email', icon: Mail, color: 'text-destructive' },
     { label: 'Schedule Calls', href: '/admin/calls', icon: Calendar, color: 'text-primary' },
+    { label: 'LLM System', href: '/admin/ai', icon: Cpu, color: 'text-primary' },
   ];
 
   return (
     <div className="bg-card border-2 border-border rounded-lg shadow-sm p-6">
       <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {actions.map((action) => {
           const Icon = action.icon;
           return (

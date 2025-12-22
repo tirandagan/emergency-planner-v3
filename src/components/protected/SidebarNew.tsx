@@ -36,7 +36,7 @@ import {
   Boxes,
   Upload,
   Wrench,
-  Brain,
+  Cpu,
   ArrowLeftRight,
   Info,
   MessageSquare,
@@ -44,7 +44,6 @@ import {
   PinOff,
   Menu,
   X,
-  Shield,
   ChevronRight
 } from 'lucide-react'
 import type { SubscriptionTier } from '@/lib/types/subscription'
@@ -94,7 +93,7 @@ const adminNavigationLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/consulting', label: 'Consulting', icon: MessageSquare },
-  { href: '/admin/ai-usage', label: 'AI Usage', icon: Brain },
+  { href: '/admin/ai', label: 'LLM System', icon: Cpu },
   { href: '/admin/suppliers', label: 'Suppliers', icon: Factory },
   { href: '/admin/products', label: 'Products', icon: Tags },
   { href: '/admin/bundles', label: 'Bundles', icon: Boxes },

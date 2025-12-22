@@ -13,8 +13,6 @@ import {
 } from './actions'
 import { SystemLogsTab } from './SystemLogsTab'
 import { SystemSettingsTab } from './SystemSettingsTab'
-import { LLMQueueTab } from './LLMQueueTab'
-import { LLMCallbackHistoryTab } from './LLMCallbackHistoryTab'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -199,7 +197,7 @@ export default function DebugPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-4xl grid-cols-8">
+        <TabsList className="grid w-full max-w-3xl grid-cols-6">
           <TabsTrigger value="settings" className="gap-2">
             <Settings className="w-4 h-4" />
             Settings
@@ -211,14 +209,6 @@ export default function DebugPage() {
           <TabsTrigger value="logs" className="gap-2">
             <Bug className="w-4 h-4" />
             Logs
-          </TabsTrigger>
-          <TabsTrigger value="llm-queue" className="gap-2">
-            <Cpu className="w-4 h-4" />
-            LLM Queue
-          </TabsTrigger>
-          <TabsTrigger value="callbacks" className="gap-2">
-            <Shield className="w-4 h-4" />
-            Callbacks
           </TabsTrigger>
           <TabsTrigger value="health" className="gap-2">
             <Activity className="w-4 h-4" />
@@ -1130,16 +1120,6 @@ export default function DebugPage() {
               </p>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* LLM Queue Tab */}
-        <TabsContent value="llm-queue" className="mt-6">
-          <LLMQueueTab />
-        </TabsContent>
-
-        {/* Callbacks Tab */}
-        <TabsContent value="callbacks" className="mt-6">
-          <LLMCallbackHistoryTab />
         </TabsContent>
       </Tabs>
     </div>

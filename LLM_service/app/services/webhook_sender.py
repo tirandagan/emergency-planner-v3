@@ -81,6 +81,12 @@ class WebhookSender:
         # Generate HMAC signature from the exact serialized payload
         signature = self._generate_signature(payload_json, webhook_secret)
 
+        # DEBUG: Log serialization details
+        logger.info(f"[Webhook] Payload length: {len(payload_json)}")
+        logger.info(f"[Webhook] Payload first 300 chars: {payload_json[:300]}")
+        logger.info(f"[Webhook] Full signature: {signature}")
+        logger.info(f"[Webhook] Secret length: {len(webhook_secret)}, first 10: {webhook_secret[:10]}...")
+
         # Build headers
         headers = {
             "Content-Type": "application/json",

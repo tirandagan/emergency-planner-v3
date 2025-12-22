@@ -175,12 +175,22 @@ export async function POST(request: Request): Promise<NextResponse> {
     // LOG REQUEST INFO (Safe)
     console.log(`[LLM Webhook] Body length: ${rawBody.length}, Signature: ${signature?.substring(0, 15)}...`);
     console.log(`[LLM Webhook] Secret length: ${webhookSecret.length}, Snippet: ${webhookSecret.substring(0, 4)}...${webhookSecret.substring(webhookSecret.length - 4)}`);
+    console.log(`[LLM Webhook] Raw body first 300 chars: ${rawBody.substring(0, 300)}`);
+    console.log(`[LLM Webhook] Full signature header: ${signature}`);
 
     // 5. Verify signature against raw body
     const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
 
     if (!isValid) {
       console.error('[LLM Webhook] Invalid signature verification failed');
+
+      // Calculate what the signature SHOULD be
+      const expectedDigest = createHmac('sha256', webhookSecret)
+        .update(rawBody)
+        .digest('hex');
+      console.error(`[LLM Webhook] Expected signature: sha256=${expectedDigest}`);
+      console.error(`[LLM Webhook] Received signature: ${signature}`);
+      console.error(`[LLM Webhook] Secret being used (first 10): ${webhookSecret.substring(0, 10)}...`);
 
       // Store callback with invalid signature for security monitoring
       const payload = JSON.parse(rawBody);
