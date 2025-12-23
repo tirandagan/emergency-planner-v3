@@ -716,6 +716,48 @@ export async function duplicateMasterItem(masterItemId: string) {
   return duplicate;
 }
 
+export async function duplicateProduct(productId: string) {
+  await checkAdmin();
+
+  const [source] = await db
+    .select()
+    .from(specificProducts)
+    .where(eq(specificProducts.id, productId))
+    .limit(1);
+
+  if (!source) {
+    throw new Error('Product not found');
+  }
+
+  const [duplicate] = await db
+    .insert(specificProducts)
+    .values({
+      name: `${source.name} [copy]`,
+      description: source.description,
+      sku: source.sku,
+      asin: null,
+      price: source.price,
+      productUrl: source.productUrl,
+      imageUrl: source.imageUrl,
+      type: source.type,
+      status: source.status,
+      masterItemId: source.masterItemId,
+      supplierId: source.supplierId,
+      metadata: source.metadata,
+      timeframes: source.timeframes,
+      demographics: source.demographics,
+      locations: source.locations,
+      scenarios: source.scenarios,
+      variations: source.variations,
+      changeHistory: [],
+    })
+    .returning();
+
+  revalidatePath('/admin/products');
+  revalidatePath('/admin/bundles');
+  return duplicate;
+}
+
 export async function bulkUpdateProducts(ids: string[], data: { supplierId?: string | null; masterItemId?: string }) {
     await checkAdmin();
 

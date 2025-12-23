@@ -28,7 +28,7 @@ import {
 import { SCENARIOS, TIMEFRAMES, DEMOGRAPHICS, LOCATIONS } from "./constants";
 import {
   bulkUpdateProducts, createMasterItem, deleteProduct, deleteMasterItem,
-  duplicateMasterItem, getMasterItemProducts, getMasterItems, updateMasterItem,
+  duplicateMasterItem, duplicateProduct, getMasterItemProducts, getMasterItems, updateMasterItem,
   updateProduct, updateProductTags
 } from "./actions";
 
@@ -819,6 +819,21 @@ export default function ProductsClient({
           alert(error instanceof Error ? error.message : 'Failed to duplicate master item');
       }
   }, [masterItemContextMenu, modals]);
+
+  const handleDuplicateProduct = useCallback(async (product: Product) => {
+      try {
+          const duplicate = await duplicateProduct(product.id);
+
+          openEditModal(duplicate);
+
+          setToastMessage(`Duplicated "${product.name}" - you can now edit it`);
+
+          productContextMenu.closeMenu();
+      } catch (error) {
+          console.error('Error duplicating product:', error);
+          alert(error instanceof Error ? error.message : 'Failed to duplicate product');
+      }
+  }, [productContextMenu]);
 
   const handleConfirmDeleteMasterItem = async (): Promise<void> => {
       if (!deleteMasterItemModal.masterItem) return;
@@ -1878,8 +1893,8 @@ export default function ProductsClient({
                     productContextMenu.closeMenu();
                 }}
             >
-                <Pencil className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-                Edit Specific Product
+                <Pencil className="w-4 h-4 text-foreground flex-shrink-0" strokeWidth={2.5} />
+                Edit Product
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
@@ -1888,14 +1903,14 @@ export default function ProductsClient({
                     productContextMenu.closeMenu();
                 }}
             >
-                <Tag className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
+                <Tag className="w-4 h-4 text-foreground flex-shrink-0" strokeWidth={2.5} />
                 Quick Tag
             </button>
             <button
                 className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
                 onClick={() => openCategoryModal(product)}
             >
-                <Layers className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
+                <Layers className="w-4 h-4 text-foreground flex-shrink-0" strokeWidth={2.5} />
                 Change Master Item
             </button>
             <button
@@ -1905,8 +1920,15 @@ export default function ProductsClient({
                     productContextMenu.closeMenu();
                 }}
             >
-                <Package className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
+                <Package className="w-4 h-4 text-foreground flex-shrink-0" strokeWidth={2.5} />
                 Add to bundle
+            </button>
+            <button
+                className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
+                onClick={() => handleDuplicateProduct(product)}
+            >
+                <Copy className="w-4 h-4 text-foreground flex-shrink-0" strokeWidth={2.5} />
+                Duplicate Product
             </button>
             {/* Supplier Submenu with Flyout */}
             <div 
@@ -1938,7 +1960,7 @@ export default function ProductsClient({
                         setSupplierSubmenuOpen(!supplierSubmenuOpen);
                     }}
                 >
-                    <Truck className="w-4 h-4 text-info flex-shrink-0" strokeWidth={2.5} />
+                    <Truck className="w-4 h-4 text-foreground flex-shrink-0" strokeWidth={2.5} />
                     {product.supplierId ? 'Change Supplier' : 'Assign Supplier'}
                     <ChevronRight className={`w-4 h-4 ml-auto text-muted-foreground transition-transform flex-shrink-0 ${supplierSubmenuOpen ? '' : ''}`} strokeWidth={2.5} />
                 </button>

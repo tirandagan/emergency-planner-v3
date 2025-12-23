@@ -330,7 +330,7 @@ export const ProductRow = React.memo(function ProductRow({
                         </div>
                         <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase ${
                             product.type === 'DROP_SHIP'
-                            ? 'text-secondary'
+                            ? 'text-muted-foreground'
                             : 'text-primary'
                         }`}>
                             {product.type}

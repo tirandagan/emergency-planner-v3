@@ -82,7 +82,7 @@ export default function AmazonSearchDialog({ isOpen, onClose, onSelect }: Amazon
                 <div className="flex-1 overflow-y-auto p-6 bg-background">
                     {isSearching ? (
                         <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4">
-                            <Loader2 className="w-8 h-8 animate-spin text-secondary" strokeWidth={2.5} />
+                            <Loader2 className="w-8 h-8 animate-spin text-foreground/50" strokeWidth={2.5} />
                             <p>Searching Amazon...</p>
                         </div>
                     ) : error ? (
@@ -103,7 +103,7 @@ export default function AmazonSearchDialog({ isOpen, onClose, onSelect }: Amazon
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-foreground font-medium text-lg line-clamp-2 mb-2 group-hover:text-secondary transition-colors">{result.name}</h3>
+                                        <h3 className="text-foreground font-medium text-lg line-clamp-2 mb-2 group-hover:underline transition-all">{result.name}</h3>
                                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-3">
                                             {result.asin && <span className="bg-muted px-2 py-1 rounded border border-border font-mono">ASIN: {result.asin}</span>}
                                             {result.rating && <span className="flex items-center gap-1 text-warning bg-warning/10 px-2 py-1 rounded border border-warning/20"><Sparkles className="w-3 h-3" strokeWidth={2.5} /> {result.rating} ({result.reviews})</span>}

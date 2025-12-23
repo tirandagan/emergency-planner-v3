@@ -32,10 +32,10 @@ export default function AddProductChoiceModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
                         onClick={onManualSelect}
-                        className="flex flex-col items-center gap-4 p-6 bg-muted/50 hover:bg-muted border border-border hover:border-primary/50 rounded-xl transition-all group"
+                        className="flex flex-col items-center gap-4 p-6 bg-muted/50 hover:bg-muted border border-border hover:border-border/50 rounded-xl transition-all group"
                     >
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Plus className="w-8 h-8 text-primary" strokeWidth={2.5} />
+                        <div className="w-16 h-16 rounded-full bg-foreground/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Plus className="w-8 h-8 text-foreground" strokeWidth={2.5} />
                         </div>
                         <div className="text-center">
                             <h3 className="font-bold text-foreground mb-1">Manual Entry</h3>
@@ -45,10 +45,10 @@ export default function AddProductChoiceModal({
 
                     <button
                         onClick={onAmazonSelect}
-                        className="flex flex-col items-center gap-4 p-6 bg-muted/50 hover:bg-muted border border-border hover:border-secondary/50 rounded-xl transition-all group"
+                        className="flex flex-col items-center gap-4 p-6 bg-muted/50 hover:bg-muted border border-border hover:border-border/50 rounded-xl transition-all group"
                     >
-                        <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Search className="w-8 h-8 text-secondary" strokeWidth={2.5} />
+                        <div className="w-16 h-16 rounded-full bg-foreground/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Search className="w-8 h-8 text-foreground" strokeWidth={2.5} />
                         </div>
                         <div className="text-center">
                             <h3 className="font-bold text-foreground mb-1">Search Amazon</h3>

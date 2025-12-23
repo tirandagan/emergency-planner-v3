@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Tag, Layers, Package, Trash2 } from 'lucide-react';
+import { Pencil, Tag, Layers, Package, Trash2, Copy } from 'lucide-react';
 import type { Product } from '@/lib/products-types';
 
 /**
@@ -22,6 +22,8 @@ export interface ProductContextMenuProps {
   onChangeMasterItem: (product: Product) => void;
   /** Handler for adding product to a bundle */
   onAddToBundle: (product: Product) => void;
+  /** Handler for duplicating the product */
+  onDuplicate: (product: Product) => void;
   /** Handler for deleting the product */
   onDelete: (productId: string) => Promise<void>;
   /** Render prop for supplier menu content (allows parent to manage complex submenu) */
@@ -65,6 +67,7 @@ export function ProductContextMenu({
   onQuickTag,
   onChangeMasterItem,
   onAddToBundle,
+  onDuplicate,
   onDelete,
   renderSupplierMenu
 }: ProductContextMenuProps): React.JSX.Element {
@@ -75,44 +78,54 @@ export function ProductContextMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <button
-        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
+        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-blue-600 dark:text-blue-400 flex items-center gap-3 transition-colors whitespace-nowrap"
         onClick={() => {
           onEdit(product);
           onClose();
         }}
       >
-        <Pencil className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2.5} />
-        Edit Specific Product
+        <Pencil className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        <span className="text-foreground">Edit Specific Product</span>
       </button>
       <button
-        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
+        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-green-600 dark:text-green-400 flex items-center gap-3 transition-colors whitespace-nowrap"
         onClick={() => {
           onQuickTag(product.id);
           onClose();
         }}
       >
-        <Tag className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
-        Quick Tag
+        <Tag className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        <span className="text-foreground">Quick Tag</span>
       </button>
       <button
-        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
+        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-orange-600 dark:text-orange-400 flex items-center gap-3 transition-colors whitespace-nowrap"
         onClick={() => {
           onChangeMasterItem(product);
           onClose();
         }}
       >
-        <Layers className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={2.5} />
-        Change Master Item
+        <Layers className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        <span className="text-foreground">Change Master Item</span>
       </button>
       <button
-        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-foreground flex items-center gap-3 transition-colors whitespace-nowrap"
+        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-purple-600 dark:text-purple-400 flex items-center gap-3 transition-colors whitespace-nowrap"
         onClick={() => {
           onAddToBundle(product);
           onClose();
         }}
       >
-        <Package className="w-4 h-4 text-secondary flex-shrink-0" strokeWidth={2.5} />
-        Add to bundle
+        <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        <span className="text-foreground">Add to bundle</span>
+      </button>
+      <button
+        className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm text-cyan-600 dark:text-cyan-400 flex items-center gap-3 transition-colors whitespace-nowrap"
+        onClick={() => {
+          onDuplicate(product);
+          onClose();
+        }}
+      >
+        <Copy className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        <span className="text-foreground">Duplicate Product</span>
       </button>
 
       {/* Supplier menu - rendered by parent for complex state management */}
@@ -128,7 +141,7 @@ export function ProductContextMenu({
           onClose();
         }}
       >
-        <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+        <Trash2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
         Delete
       </button>
     </div>

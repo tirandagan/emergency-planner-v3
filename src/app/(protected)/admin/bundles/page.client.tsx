@@ -680,7 +680,7 @@ export default function BundlesClient({
                                 </span>
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
                                     item.product?.type === 'DROP_SHIP'
-                                    ? 'bg-secondary/20 text-secondary border-secondary/50'
+                                    ? 'bg-muted text-muted-foreground border-border'
                                     : 'bg-primary/20 text-primary border-primary/50'
                                 }`}>
                                     {item.product?.type === 'DROP_SHIP' ? 'DS' : 'AFF'}
@@ -1139,7 +1139,7 @@ function ProductCard({ product, onAdd, onEdit, masterItems, bundleItems }: { pro
 
                     <div className="text-right shrink-0">
                         <div className="text-success font-mono font-medium">${product.price}</div>
-                        <div className={`text-[10px] mt-1 uppercase tracking-wider font-bold ${product.type === 'DROP_SHIP' ? 'text-secondary' : 'text-primary'}`}>
+                        <div className={`text-[10px] mt-1 uppercase tracking-wider font-bold ${product.type === 'DROP_SHIP' ? 'text-muted-foreground' : 'text-primary'}`}>
                             {product.type === 'DROP_SHIP' ? 'Drop Ship' : 'Affiliate'}
                         </div>
                     </div>
