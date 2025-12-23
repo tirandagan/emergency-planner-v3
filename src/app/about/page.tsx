@@ -1,3 +1,4 @@
+import { Metadata } from 'next';
 import Image from 'next/image';
 import {
   Shield,
@@ -20,6 +21,42 @@ import { StickyNav } from './StickyNav';
 import { MethodologyAccordion } from './MethodologyAccordion';
 import { ResearchModal } from './ResearchModal';
 import { BundleExampleModal } from './BundleExampleModal';
+
+export const metadata: Metadata = {
+  title: 'Our Story & Methodology - Expert Emergency Preparedness Team',
+  description: 'Meet the team behind beprepared.ai. Learn about our FBI tactical expertise, systematic research methodology, and field-tested approach to disaster preparedness. Tiran Dagan\'s gear expertise meets Brian Burk\'s strategic FBI background.',
+  keywords: [
+    'emergency preparedness experts',
+    'FBI tactical preparedness',
+    'disaster planning methodology',
+    'survival experts',
+    'emergency preparedness team',
+    'disaster response training',
+    'tactical emergency planning',
+  ],
+  alternates: {
+    canonical: '/about',
+  },
+  openGraph: {
+    title: 'About beprepared.ai - Expert Team & Proven Methodology',
+    description: 'FBI tactical expertise meets practical gear knowledge. Learn about our systematic approach to emergency preparedness backed by extensive research and field testing.',
+    type: 'website',
+    url: '/about',
+    images: [
+      {
+        url: '/images/tiran-gear.png',
+        width: 800,
+        height: 600,
+        alt: 'Tiran Dagan Emergency Preparedness Expert',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Meet the beprepared.ai Team - FBI Expertise + Practical Experience',
+    description: 'Learn about our systematic approach to emergency preparedness combining tactical expertise with hands-on testing.',
+  },
+};
 
 /**
  * About Page - Professional redesign with comprehensive methodology content

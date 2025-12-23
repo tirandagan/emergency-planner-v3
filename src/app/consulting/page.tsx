@@ -5,9 +5,32 @@ import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const metadata: Metadata = {
-  title: 'Emergency Preparedness Consulting | Expert Guidance',
+  title: 'Emergency Preparedness Consulting - Expert 1-on-1 Guidance',
   description:
-    'Get personalized expert guidance on your emergency preparedness journey. One-on-one consulting sessions to help you optimize your plans, supplies, and disaster readiness.',
+    'Get personalized expert guidance from FBI-trained disaster preparedness consultants. One-on-one video consultations for emergency plans, survival kits, evacuation strategies, and family disaster readiness. Book your consultation today.',
+  keywords: [
+    'emergency preparedness consulting',
+    'disaster planning expert',
+    'survival consultant',
+    'emergency preparedness advisor',
+    'disaster readiness coaching',
+    'tactical preparedness consulting',
+    'family emergency planning expert',
+  ],
+  alternates: {
+    canonical: '/consulting',
+  },
+  openGraph: {
+    title: 'Expert Emergency Preparedness Consulting Services',
+    description: 'Personalized 1-on-1 guidance from FBI-trained experts. Optimize your disaster plans, survival kits, and family preparedness strategy with professional consulting.',
+    type: 'website',
+    url: '/consulting',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Emergency Preparedness Consulting - Expert Guidance',
+    description: 'Book a 1-on-1 consultation with FBI-trained disaster preparedness experts. Get personalized advice for your family.',
+  },
 };
 
 async function ConsultingServicesContent(): Promise<React.JSX.Element> {

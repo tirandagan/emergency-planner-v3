@@ -1,3 +1,4 @@
+import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,33 @@ import { stripe, STRIPE_CONFIG } from '@/lib/stripe';
 import { db } from '@/db';
 import { profiles } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+
+export const metadata: Metadata = {
+  title: 'Pricing Plans - Emergency Preparedness Subscriptions',
+  description: 'Simple, transparent pricing for beprepared.ai. Free plan includes 1 emergency plan. Basic ($9/mo) and Pro ($29/mo) plans offer unlimited plans, expert consultations, and advanced features for comprehensive family disaster preparedness.',
+  keywords: [
+    'emergency preparedness pricing',
+    'disaster planning subscription',
+    'emergency plan cost',
+    'preparedness subscription',
+    'family emergency plan pricing',
+    'disaster readiness plans',
+  ],
+  alternates: {
+    canonical: '/pricing',
+  },
+  openGraph: {
+    title: 'beprepared.ai Pricing - Affordable Emergency Preparedness Plans',
+    description: 'Choose the plan that fits your family. Free forever plan available. Paid plans start at $9/mo with unlimited emergency plans and expert support.',
+    type: 'website',
+    url: '/pricing',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Simple Pricing for Emergency Preparedness',
+    description: 'Free plan available. Paid plans from $9/mo with unlimited emergency plans and expert consultations.',
+  },
+};
 
 /**
  * Pricing Page
