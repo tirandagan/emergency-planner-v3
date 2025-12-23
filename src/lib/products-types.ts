@@ -46,6 +46,7 @@ export interface ProductMetadata {
   dimensions?: string;
   rating?: number | string;
   reviews?: number | string;
+  x1_multiplier?: boolean;
 }
 
 export interface VariationAttribute {

@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { createMasterItem, updateMasterItem } from "../actions";
 import { InputGroup, TextInput, TextArea } from "./ProductFormElements";
-import TagSelector from "./TagSelector";
-import { TIMEFRAMES, DEMOGRAPHICS, LOCATIONS, SCENARIOS } from "../constants";
 
 interface MasterItem {
     id: string;
@@ -32,10 +30,6 @@ export default function MasterItemModal({
     selectedCategoryName: string;
     itemToEdit?: MasterItem | null;
 }) {
-    const [timeframes, setTimeframes] = useState<string[]>([]);
-    const [demographics, setDemographics] = useState<string[]>([]);
-    const [locations, setLocations] = useState<string[]>([]);
-    const [scenarios, setScenarios] = useState<string[]>([]);
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
 
@@ -45,18 +39,9 @@ export default function MasterItemModal({
             if (itemToEdit) {
                 setName(itemToEdit.name || "");
                 setDescription(itemToEdit.description || "");
-                setTimeframes(itemToEdit.timeframes || []);
-                setDemographics(itemToEdit.demographics || []);
-                setLocations(itemToEdit.locations || []);
-                setScenarios(itemToEdit.scenarios || []);
             } else {
-                // When creating a new master item, pre-select all tags by default
                 setName("");
                 setDescription("");
-                setTimeframes([...TIMEFRAMES]);
-                setDemographics([...DEMOGRAPHICS]);
-                setLocations([...LOCATIONS]);
-                setScenarios([...SCENARIOS]);
             }
         }
     }, [isOpen, itemToEdit]);
@@ -105,75 +90,70 @@ export default function MasterItemModal({
                     }
                 }} className="space-y-6">
                     <input type="hidden" name="category_id" value={selectedCategoryId || (itemToEdit?.categoryId || '')} />
-                    
-                    {/* Hidden Inputs for Tags */}
-                    {timeframes.map(t => <input key={t} type="hidden" name="timeframes" value={t} />)}
-                    {demographics.map(t => <input key={t} type="hidden" name="demographics" value={t} />)}
-                    {locations.map(t => <input key={t} type="hidden" name="locations" value={t} />)}
-                    {scenarios.map(t => <input key={t} type="hidden" name="scenarios" value={t} />)}
 
                     <div className="space-y-4">
                         <InputGroup label="Master Item Name" required>
-                            <TextInput 
-                                name="name" 
-                                placeholder="e.g. Ultralight Backpack" 
-                                required 
+                            <TextInput
+                                name="name"
+                                placeholder="e.g. Ultralight Backpack"
+                                required
                                 autoFocus
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                             />
                         </InputGroup>
                         <InputGroup label="Description">
-                            <TextArea 
-                                name="description" 
-                                placeholder="General description of this type of item..." 
-                                style={{ minHeight: '80px' }} 
+                            <TextArea
+                                name="description"
+                                placeholder="General description of this type of item..."
+                                style={{ minHeight: '80px' }}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                             />
                         </InputGroup>
                     </div>
 
-                    <div className="space-y-4 pt-2 border-t border-border">
-                         <h3 className="text-sm font-bold text-foreground">Default Tags</h3>
-                         <p className="text-xs text-muted-foreground -mt-3 mb-4">
-                             {isEditing
-                                ? "Updating tags will change defaults for new products, but existing products won't be auto-updated unless you bulk edit them."
-                                : "Products created under this Master Item will inherit these tags."
-                             }
-                         </p>
-                         
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <TagSelector 
-                                label="Timeframe"
-                                options={TIMEFRAMES}
-                                selected={timeframes}
-                                onChange={(val) => setTimeframes(val || [])}
-                                field="timeframes"
-                            />
-                            <TagSelector 
-                                label="Location"
-                                options={LOCATIONS}
-                                selected={locations}
-                                onChange={(val) => setLocations(val || [])}
-                                field="locations"
-                            />
-                            <TagSelector 
-                                label="Demographics"
-                                options={DEMOGRAPHICS}
-                                selected={demographics}
-                                onChange={(val) => setDemographics(val || [])}
-                                field="demographics"
-                            />
-                             <TagSelector 
-                                label="Scenario"
-                                options={SCENARIOS}
-                                selected={scenarios}
-                                onChange={(val) => setScenarios(val || [])}
-                                field="scenarios"
-                            />
-                         </div>
-                    </div>
+                    {isEditing && (
+                        <div className="space-y-4 pt-2 border-t border-border">
+                             <h3 className="text-sm font-bold text-foreground">Tags</h3>
+                             <p className="text-xs text-muted-foreground -mt-3 mb-4 italic">
+                                 Tags are automatically calculated from all products under this master item. Edit product tags to update master item tags.
+                             </p>
+
+                             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+                                {itemToEdit?.demographics && itemToEdit.demographics.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Demographics</p>
+                                        <p className="text-sm text-foreground">{itemToEdit.demographics.join(', ')}</p>
+                                    </div>
+                                )}
+                                {itemToEdit?.timeframes && itemToEdit.timeframes.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Timeframes</p>
+                                        <p className="text-sm text-foreground">{itemToEdit.timeframes.join(', ')}</p>
+                                    </div>
+                                )}
+                                {itemToEdit?.locations && itemToEdit.locations.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Locations</p>
+                                        <p className="text-sm text-foreground">{itemToEdit.locations.join(', ')}</p>
+                                    </div>
+                                )}
+                                {itemToEdit?.scenarios && itemToEdit.scenarios.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Scenarios</p>
+                                        <p className="text-sm text-foreground">{itemToEdit.scenarios.join(', ')}</p>
+                                    </div>
+                                )}
+                                {(!itemToEdit?.demographics || itemToEdit.demographics.length === 0) &&
+                                 (!itemToEdit?.timeframes || itemToEdit.timeframes.length === 0) &&
+                                 (!itemToEdit?.locations || itemToEdit.locations.length === 0) &&
+                                 (!itemToEdit?.scenarios || itemToEdit.scenarios.length === 0) && (
+                                    <p className="text-sm text-muted-foreground italic col-span-2">No tags yet. Add products under this master item to populate tags.</p>
+                                )}
+                             </div>
+                        </div>
+                    )}
                     
                     <div className="flex justify-end gap-3 pt-6 border-t border-border">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors">Cancel</button>

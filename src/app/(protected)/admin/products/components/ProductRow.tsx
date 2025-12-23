@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Fragment } from 'react';
 import type { Product, MasterItem, ProductMetadata } from '@/lib/products-types';
-import { AlertCircle, Shield, Users, Clock, MapPin, Unlink } from 'lucide-react';
+import { AlertCircle, Shield, Users, Clock, MapPin, Unlink, X as XIcon } from 'lucide-react';
 import { QuickTagger } from '../modals/QuickTagger';
 import { TagValueDisplay, HighlightedText } from '../page.client';
-import { formatTagValue } from '@/lib/products-utils';
+import { formatTagValue, sortTimeframes } from '@/lib/products-utils';
 import { DEMOGRAPHICS } from '../constants';
 import { AffiliateLinkButton } from './AffiliateLinkButton';
 import { AffiliateLinkModal } from './AffiliateLinkModal';
@@ -69,12 +69,25 @@ export const ProductRow = React.memo(function ProductRow({
         missingField?: string;
         variationCombination?: string;
     }>({});
+    const [isDarkMode, setIsDarkMode] = useState(false);
 
-    // Check if product has overridden tags (non-null means inheritance is broken)
-    const hasOverriddenTags = product.timeframes !== null ||
-        product.demographics !== null ||
-        product.locations !== null ||
-        product.scenarios !== null;
+    // Detect dark mode
+    React.useEffect(() => {
+        const checkDarkMode = (): void => {
+            setIsDarkMode(document.documentElement.classList.contains('dark'));
+        };
+
+        checkDarkMode();
+
+        // Watch for changes to dark mode
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        return () => observer.disconnect();
+    }, []);
 
     // Check if search term matches description (for badge display)
     const matchesDescription = searchTerm && product.description &&
@@ -122,86 +135,40 @@ export const ProductRow = React.memo(function ProductRow({
 
     const matchContext = getMatchContext();
 
-    // Calculate tag differences for display
-    const getTagDifferences = (): TagDifference[] => {
-        if (!masterItem || !hasOverriddenTags) return [];
+    // Get active tags for display (upward propagation model)
+    const getActiveTags = (): TagDifference[] => {
+        const activeTags: TagDifference[] = [];
 
-        const differences: TagDifference[] = [];
-
-        const checkField = (
+        const addFieldIfHasTags = (
             field: 'scenarios' | 'demographics' | 'timeframes' | 'locations',
-            productTags: string[] | null,
-            masterTags: string[] | null,
+            tags: string[] | null,
             icon: React.ComponentType<{ className?: string; strokeWidth?: number }>,
             className: string,
             label: string
         ): void => {
-            if (productTags === null) return; // Inheriting, no difference
-
-            const productSet = new Set(productTags || []);
-            const masterSet = new Set(masterTags || []);
-
-            // For demographics, compare all options to show state differences
-            if (field === 'demographics') {
-                const allOptions = DEMOGRAPHICS;
-                const differentTags: string[] = [];
-
-                allOptions.forEach(option => {
-                    const inProduct = productSet.has(option);
-                    const inMaster = masterSet.has(option);
-                    if (inProduct !== inMaster) {
-                        differentTags.push(option);
-                    }
+            const tagArray = tags || [];
+            if (tagArray.length > 0) {
+                activeTags.push({
+                    field,
+                    icon,
+                    className,
+                    label,
+                    differentTags: tagArray // Reusing the field name for consistency
                 });
-
-                if (differentTags.length > 0) {
-                    differences.push({
-                        field,
-                        icon,
-                        className,
-                        label,
-                        differentTags
-                    });
-                }
-            } else {
-                // For other fields, find tags that are different
-                const differentTags: string[] = [];
-
-                // Tags added in product
-                productSet.forEach(tag => {
-                    if (!masterSet.has(tag)) {
-                        differentTags.push(tag);
-                    }
-                });
-
-                // Tags removed in product (present in master but not in product)
-                masterSet.forEach(tag => {
-                    if (!productSet.has(tag)) {
-                        differentTags.push(tag);
-                    }
-                });
-
-                if (differentTags.length > 0) {
-                    differences.push({
-                        field,
-                        icon,
-                        className,
-                        label,
-                        differentTags
-                    });
-                }
             }
         };
 
-        checkField('scenarios', product.scenarios ?? null, masterItem.scenarios ?? null, Shield, 'text-destructive bg-destructive/10 border-destructive/20', 'Scenarios');
-        checkField('demographics', product.demographics ?? null, masterItem.demographics ?? null, Users, 'text-success bg-success/10 border-success/20', 'People');
-        checkField('timeframes', product.timeframes ?? null, masterItem.timeframes ?? null, Clock, 'text-primary bg-primary/10 border-primary/20', 'Times');
-        checkField('locations', product.locations ?? null, masterItem.locations ?? null, MapPin, 'text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50', 'Locs');
+        addFieldIfHasTags('scenarios', product.scenarios ?? null, Shield, 'text-destructive bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive/30', 'Scenarios');
+        addFieldIfHasTags('demographics', product.demographics ?? null, Users, 'text-success bg-success/10 dark:bg-success/20 border-success/20 dark:border-success/30', 'People');
+        // Sort timeframes chronologically before displaying
+        const sortedTimeframes = product.timeframes ? sortTimeframes(product.timeframes) : null;
+        addFieldIfHasTags('timeframes', sortedTimeframes, Clock, 'text-primary bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary/30', 'Times');
+        addFieldIfHasTags('locations', product.locations ?? null, MapPin, 'text-amber-700 dark:text-yellow-500 bg-amber-50 dark:bg-yellow-500/20 border-amber-200 dark:border-yellow-500/30', 'Locs');
 
-        return differences;
+        return activeTags;
     };
 
-    const tagDifferences = getTagDifferences();
+    const activeTags = getActiveTags();
 
     return (
         <Fragment>
@@ -218,14 +185,6 @@ export const ProductRow = React.memo(function ProductRow({
             >
                 <td className="pl-8 pr-2 py-3 min-w-0">
                     <div className="flex gap-3 items-start">
-                        {/* Broken link indicator */}
-                        {hasOverriddenTags && (
-                            <div className="w-4 shrink-0 pt-1">
-                                <span title="Tags overridden from master item">
-                                    <Unlink className="w-3.5 h-3.5 text-warning/70" strokeWidth={2.5} />
-                                </span>
-                            </div>
-                        )}
                         {product.imageUrl && (
                             <img src={product.imageUrl} alt="" className="w-24 h-24 rounded bg-muted object-cover border border-border shrink-0" />
                         )}
@@ -233,17 +192,20 @@ export const ProductRow = React.memo(function ProductRow({
                             <div className="font-medium text-foreground flex items-center gap-2 flex-wrap">
                                 <span style={{ display: 'inline', wordBreak: 'normal', hyphens: 'manual' }}>
                                     <HighlightedText text={product.name || ''} searchTerm={searchTerm} />
+                                    {product.metadata?.quantity && (
+                                        <span className="text-muted-foreground"> ({product.metadata.quantity})</span>
+                                    )}
                                 </span>
                                 {matchesDescription && (
-                                    <span 
-                                        className="relative inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-foreground rounded border border-gray-300 shadow-sm" 
+                                    <span
+                                        className="relative inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-foreground rounded border border-gray-300 shadow-sm"
                                         style={{ backgroundColor: '#ffff00' }}
                                         onMouseEnter={() => setShowDescriptionTooltip(true)}
                                         onMouseLeave={() => setShowDescriptionTooltip(false)}
                                     >
                                         Match in description
                                         {showDescriptionTooltip && matchContext && (
-                                            <div 
+                                            <div
                                                 className="absolute z-50 bg-card rounded shadow-lg p-2 text-xs text-foreground"
                                                 style={{
                                                     width: 'max-content',
@@ -270,54 +232,49 @@ export const ProductRow = React.memo(function ProductRow({
                                     </span>
                                 )}
                             </div>
-                            <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-2 mt-0.5">
+                            <div className="text-[11px] text-muted-foreground font-mono flex items-center flex-wrap gap-1.5 mt-0.5">
                                 {product.sku && <span>SKU: {product.sku}</span>}
                                 {product.sku && product.asin && <span className="text-border">•</span>}
                                 {product.asin && <span>ASIN: {product.asin}</span>}
-                                {!product.sku && !product.asin && 'No ID'}
+                                {!product.sku && !product.asin && <span>No ID</span>}
+                                {(product.sku || product.asin) && product.metadata?.brand && <span className="text-border">|</span>}
+                                {product.metadata?.brand && <span>{product.metadata.brand}</span>}
+                                {product.metadata?.brand && product.metadata?.color && <span className="text-border">|</span>}
+                                {product.metadata?.color && <span>{product.metadata.color}</span>}
                             </div>
-                            {/* Product-specific tag differences */}
-                            {tagDifferences.length > 0 && (
+                            {/* Product active tags (upward propagation model) */}
+                            {(activeTags.length > 0 || (product.metadata as ProductMetadata)?.x1_multiplier) && (
                                 <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                    {tagDifferences.map((diff) => {
-                                        const masterSet = new Set(masterItem?.[diff.field] || []);
-                                        const productSet = new Set(product[diff.field] || []);
+                                    {activeTags.map((tagGroup) => {
+                                        const formattedTags = tagGroup.differentTags.map(tag =>
+                                            formatTagValue(tag, tagGroup.field)
+                                        );
 
-                                        // For demographics, show only differing options with their product state
-                                        if (diff.field === 'demographics') {
-                                            const formattedOptions = diff.differentTags.map(option => formatTagValue(option, 'demographics'));
-
-                                            return (
-                                                <div key={diff.field} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${diff.className}`}>
-                                                    <diff.icon className="w-3 h-3 opacity-70 shrink-0" />
-                                                    <div className="flex items-center gap-0">
-                                                        {diff.differentTags.map((option, idx) => {
-                                                            const inProduct = productSet.has(option);
-                                                            const formattedValue = formattedOptions[idx];
-                                                            return (
-                                                                <span key={option} className="flex items-center">
-                                                                    {idx > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
-                                                                    <span className={`rounded px-1 py-0.5 ${inProduct ? '' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'}`}>
-                                                                        <TagValueDisplay value={formattedValue} field={diff.field} title={option} />
-                                                                    </span>
-                                                                </span>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-
-                                        // For other fields, show only the different tags
                                         return (
-                                            <div key={diff.field} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${diff.className}`}>
-                                                <diff.icon className="w-3 h-3 opacity-70 shrink-0" />
-                                                <div className="flex items-center gap-1">
-                                                    {diff.differentTags.map((tag) => {
-                                                        const formattedTag = formatTagValue(tag, diff.field);
+                                            <div key={tagGroup.field} className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${tagGroup.className} pl-0 py-0`}>
+                                                {/* Category Icon - high contrast background with inverted colors for dark mode */}
+                                                <div
+                                                    className="px-1.5 border-r flex items-center justify-center"
+                                                    style={{
+                                                        backgroundColor: isDarkMode ? 'hsl(0 0% 90%)' : 'hsl(0 0% 50%)',
+                                                        borderRightColor: isDarkMode ? 'hsl(0 0% 70%)' : 'hsl(0 0% 30%)',
+                                                        color: isDarkMode ? 'hsl(0 0% 10%)' : 'white'
+                                                    }}
+                                                >
+                                                    <tagGroup.icon
+                                                        className="w-3 h-3 shrink-0"
+                                                        strokeWidth={2.5}
+                                                    />
+                                                </div>
+                                                <div className="px-2 py-0.5 flex items-center flex-wrap gap-0">
+                                                    {tagGroup.differentTags.map((tag, idx) => {
+                                                        const formattedValue = formattedTags[idx];
                                                         return (
-                                                            <span key={tag} className="flex items-center">
-                                                                <TagValueDisplay value={formattedTag} field={diff.field} title={tag} />
+                                                            <span key={`${tagGroup.field}-${tag}-${idx}`} className="flex items-center">
+                                                                {idx > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
+                                                                <span className="text-[10px] font-medium tracking-wide uppercase transition-all bg-transparent rounded px-1 py-0.5">
+                                                                    <TagValueDisplay value={formattedValue} field={tagGroup.field} title={tag} />
+                                                                </span>
                                                             </span>
                                                         );
                                                     })}
@@ -325,28 +282,28 @@ export const ProductRow = React.memo(function ProductRow({
                                             </div>
                                         );
                                     })}
-                                </div>
-                            )}
-                            {/* Compact metadata tags */}
-                            {product.metadata && Object.keys(product.metadata).length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1.5">
-                                    {product.metadata.brand && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 rounded border border-amber-300 dark:border-amber-800/50">{product.metadata.brand}</span>
-                                    )}
-                                    {product.metadata.quantity && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-info/10 text-info rounded border border-info/20">×{product.metadata.quantity}</span>
-                                    )}
-                                    {product.metadata.weight && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border">{product.metadata.weight}{product.metadata.weight_unit || 'g'}</span>
-                                    )}
-                                    {product.metadata.volume && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border">{product.metadata.volume}{product.metadata.volume_unit || 'ml'}</span>
-                                    )}
-                                    {product.metadata.size && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 rounded border border-purple-300 dark:border-purple-800/50">{product.metadata.size}</span>
-                                    )}
-                                    {product.metadata.color && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 rounded border border-sky-300 dark:border-sky-800/50">{product.metadata.color}</span>
+                                    {/* X1 Multiplier Tag */}
+                                    {(product.metadata as ProductMetadata)?.x1_multiplier && (
+                                        <div className="flex items-stretch overflow-hidden rounded-md border transition-all duration-200 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 dark:bg-cyan-500/20 border-cyan-500/20 dark:border-cyan-500/30 pl-0 py-0">
+                                            <div
+                                                className="px-1.5 border-r flex items-center justify-center"
+                                                style={{
+                                                    backgroundColor: isDarkMode ? 'hsl(0 0% 90%)' : 'hsl(0 0% 50%)',
+                                                    borderRightColor: isDarkMode ? 'hsl(0 0% 70%)' : 'hsl(0 0% 30%)',
+                                                    color: isDarkMode ? 'hsl(0 0% 10%)' : 'white'
+                                                }}
+                                            >
+                                                <XIcon
+                                                    className="w-3 h-3 shrink-0"
+                                                    strokeWidth={2.5}
+                                                />
+                                            </div>
+                                            <div className="px-2 py-0.5 flex items-center">
+                                                <span className="text-[10px] font-medium tracking-wide uppercase" title="Quantity multiplies by party size">
+                                                    1
+                                                </span>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -389,7 +346,6 @@ export const ProductRow = React.memo(function ProductRow({
                     <td colSpan={3} className="p-0 relative z-10 overflow-hidden">
                         <QuickTagger
                             product={product}
-                            masterItem={masterItem || undefined}
                             onClose={onQuickTagClose}
                         />
                     </td>

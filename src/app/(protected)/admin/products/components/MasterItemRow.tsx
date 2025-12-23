@@ -142,7 +142,7 @@ export const MasterItemRow = React.memo(function MasterItemRow({
 
                             {/* Visual Tags Display - Only show when expanded */}
                             {isExpanded && (
-                                <div className="flex flex-wrap gap-2 items-center mt-2">
+                                <div className="flex flex-wrap gap-1.5 items-center mt-1.5">
                                     <TagBadge
                                         icon={Shield}
                                         items={
@@ -150,29 +150,34 @@ export const MasterItemRow = React.memo(function MasterItemRow({
                                                 ? ['ALL Scenarios']
                                                 : masterGroup.masterItem.scenarios
                                         }
-                                        className="text-destructive bg-destructive/10 border-destructive/20"
+                                        className="text-destructive bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive/30"
                                         label="Scenarios"
                                         alwaysExpanded
+                                        useHighContrast
                                     />
                                     <TagBadge
                                         icon={Users}
                                         items={masterGroup.masterItem.demographics}
-                                        className="text-success bg-success/10 border-success/20"
+                                        className="text-success bg-success/10 dark:bg-success/20 border-success/20 dark:border-success/30"
                                         label="People"
                                         alwaysExpanded
+                                        useHighContrast
                                     />
                                     <TagBadge
                                         icon={Clock}
                                         items={masterGroup.masterItem.timeframes}
-                                        className="text-primary bg-primary/10 border-primary/20"
+                                        className="text-primary bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary/30"
                                         label="Times"
                                         alwaysExpanded
+                                        useHighContrast
                                     />
                                     <TagBadge
                                         icon={MapPin}
                                         items={masterGroup.masterItem.locations}
-                                        className="text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50"
+                                        className="text-amber-700 dark:text-yellow-500 bg-amber-50 dark:bg-yellow-500/20 border-amber-200 dark:border-yellow-500/30"
                                         label="Locs"
+                                        alwaysExpanded
+                                        useHighContrast
                                     />
                                 </div>
                             )}

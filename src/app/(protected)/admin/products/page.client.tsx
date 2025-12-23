@@ -173,51 +173,104 @@ export const TagBadge = ({
     items,
     className,
     label,
-    alwaysExpanded = false
+    alwaysExpanded = false,
+    useHighContrast = false
 }: {
     icon: any,
     items?: string[] | null,
     className: string,
     label: string,
-    alwaysExpanded?: boolean
+    alwaysExpanded?: boolean,
+    useHighContrast?: boolean
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    // Detect dark mode
+    useEffect(() => {
+        const checkDarkMode = (): void => {
+            setIsDarkMode(document.documentElement.classList.contains('dark'));
+        };
+
+        checkDarkMode();
+
+        // Watch for changes to dark mode
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
     useEffect(() => {
         if (isExpanded && !alwaysExpanded) {
             const timer = setTimeout(() => setIsExpanded(false), 5000);
             return () => clearTimeout(timer);
         }
     }, [isExpanded, alwaysExpanded]);
-    
+
     const isDemographics = label.toLowerCase() === 'people' || label.toLowerCase() === 'demographics';
     const isScenarios = label.toLowerCase() === 'scenarios';
-    
-    // For demographics, show all options in order with inactive ones greyed out
+
+    // For demographics, show only active items with styling matching TagSelector
     if (isDemographics) {
         const activeItems = items || [];
-        const allOptions = DEMOGRAPHICS;
-        const formattedOptions = allOptions.map(option => formatTagValue(option, 'demographics'));
-        
+
+        // Don't render if no active items
+        if (activeItems.length === 0) return null;
+
+        const formattedOptions = activeItems.map(option => formatTagValue(option, 'demographics'));
+
+        if (useHighContrast) {
+            return (
+                <div className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${className} pl-0 py-0`}>
+                    {/* Category Icon - high contrast background with inverted colors for dark mode */}
+                    <div
+                        className="px-1.5 border-r flex items-center justify-center"
+                        style={{
+                            backgroundColor: isDarkMode ? 'hsl(0 0% 90%)' : 'hsl(0 0% 50%)',
+                            borderRightColor: isDarkMode ? 'hsl(0 0% 70%)' : 'hsl(0 0% 30%)'
+                        }}
+                    >
+                        <Icon
+                            className="w-3 h-3 shrink-0"
+                            strokeWidth={2.5}
+                            style={{ color: isDarkMode ? 'hsl(0 0% 10%)' : 'white' }}
+                        />
+                    </div>
+                    <div className="px-2 py-0.5 flex items-center flex-wrap gap-0">
+                        {activeItems.map((option, i) => {
+                            const formattedValue = formattedOptions[i];
+
+                            return (
+                                <span key={option} className="flex items-center">
+                                    {i > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
+                                    <span className="text-[10px] font-medium tracking-wide uppercase transition-all bg-transparent rounded px-1 py-0.5" title={option}>
+                                        <TagValueDisplay value={formattedValue} field="demographics" title={option} />
+                                    </span>
+                                </span>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${className} pl-0 py-0`}>
-                <div className="px-2 bg-white/10 border-r border-white/10 flex items-center justify-center">
-                    <Icon className="w-3.5 h-3.5 opacity-70 shrink-0" />
+                <div className="px-2 border-r border-white/10 flex items-center justify-center">
+                    <Icon className="w-3.5 h-3.5 opacity-70 shrink-0" strokeWidth={2.5} />
                 </div>
                 <div className="px-2.5 py-1 flex items-center flex-wrap gap-0">
-                    {allOptions.map((option, i) => {
-                        const isActive = activeItems.includes(option);
+                    {activeItems.map((option, i) => {
                         const formattedValue = formattedOptions[i];
-                        const isGenderIcon = typeof formattedValue === 'object' && (formattedValue.icon === 'venus' || formattedValue.icon === 'mars');
-                        
+
                         return (
                             <span key={option} className="flex items-center">
                                 {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
-                                <span className={`text-[11px] font-medium tracking-wide uppercase transition-all rounded px-1.5 py-0.5 ${
-                                    isActive 
-                                        ? '' 
-                                        : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
-                                }`} title={option}>
+                                <span className="text-[11px] font-medium tracking-wide uppercase transition-all bg-transparent rounded px-1.5 py-0.5" title={option}>
                                     <TagValueDisplay value={formattedValue} field="demographics" title={option} />
                                 </span>
                             </span>
@@ -227,57 +280,74 @@ export const TagBadge = ({
             </div>
         );
     }
-    
-    // For other tags, use the original behavior
+
+    // For other tags, only show if items exist (matching TagSelector behavior)
     const hasItems = items && items.length > 0;
-    const canCollapse = hasItems && items.length > 2 && !alwaysExpanded;
-    const isCondensed = canCollapse && !isExpanded;
-    const formattedItems = hasItems ? items.map(item => {
+
+    // Don't render if no items
+    if (!hasItems) return null;
+
+    const formattedItems = items.map(item => {
         // Don't format "ALL Scenarios" - show as text
         if (item === 'ALL Scenarios') return item;
         return formatTagValue(item, isScenarios ? 'scenarios' : undefined);
-    }) : [];
-    
+    });
+
+    if (useHighContrast) {
+        return (
+            <div className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${className} pl-0 py-0`}>
+                {/* Category Icon - high contrast background with inverted colors for dark mode */}
+                <div
+                    className="px-1.5 border-r flex items-center justify-center"
+                    style={{
+                        backgroundColor: isDarkMode ? 'hsl(0 0% 90%)' : 'hsl(0 0% 50%)',
+                        borderRightColor: isDarkMode ? 'hsl(0 0% 70%)' : 'hsl(0 0% 30%)'
+                    }}
+                >
+                    <Icon
+                        className="w-3 h-3 shrink-0"
+                        strokeWidth={2.5}
+                        style={{ color: isDarkMode ? 'hsl(0 0% 10%)' : 'white' }}
+                    />
+                </div>
+                <div className="px-2 py-0.5 flex items-center flex-wrap gap-0">
+                    {formattedItems.map((item, i) => (
+                        <span key={i} className="flex items-center">
+                            {i > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
+                            <span className="text-[10px] font-medium tracking-wide uppercase transition-all bg-transparent rounded px-1 py-0.5">
+                                {typeof item === 'string' ? (
+                                    <span title={items[i]}>{item}</span>
+                                ) : (
+                                    <TagValueDisplay value={item} field={isScenarios ? 'scenarios' : undefined} title={items[i]} />
+                                )}
+                            </span>
+                        </span>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <button
-            type="button"
-            onClick={(e) => {
-                e.stopPropagation();
-                if (canCollapse) setIsExpanded(!isExpanded);
-            }}
-            className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${className} pl-0 py-0 ${!hasItems ? 'opacity-30' : ''} ${canCollapse ? 'cursor-pointer hover:brightness-125' : 'cursor-default'}`}
-        >
-            <div className="px-2 bg-white/10 border-r border-white/10 flex items-center justify-center">
-                <Icon className="w-3.5 h-3.5 opacity-70 shrink-0" />
+        <div className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${className} pl-0 py-0`}>
+            <div className="px-2 border-r border-white/10 flex items-center justify-center">
+                <Icon className="w-3.5 h-3.5 opacity-70 shrink-0" strokeWidth={2.5} />
             </div>
-            <div className="px-2.5 py-1 flex items-center">
-                {hasItems && (
-                    isCondensed ? (
-                        <span className="text-[11px] font-medium tracking-wide uppercase">
-                            {items.length} {label}
+            <div className="px-2.5 py-1 flex items-center flex-wrap gap-0">
+                {formattedItems.map((item, i) => (
+                    <span key={i} className="flex items-center">
+                        {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
+                        <span className="text-[11px] font-medium tracking-wide uppercase transition-all bg-transparent rounded px-1.5 py-0.5">
+                            {typeof item === 'string' ? (
+                                <span title={items[i]}>{item}</span>
+                            ) : (
+                                <TagValueDisplay value={item} field={isScenarios ? 'scenarios' : undefined} title={items[i]} />
+                            )}
                         </span>
-                    ) : (
-                        <span className="flex items-center text-[11px] font-medium tracking-wide uppercase">
-                            {formattedItems.map((item, i) => (
-                                <span key={i} className="flex items-center">
-                                    {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
-                                    {typeof item === 'string' ? (
-                                        <span title={item}>{item}</span>
-                                    ) : (
-                                        <TagValueDisplay value={item} field={isScenarios ? 'scenarios' : undefined} title={items[i]} />
-                                    )}
-                                </span>
-                            ))}
-                        </span>
-                    )
-                )}
-                {!hasItems && (
-                    <span className="text-[11px] font-medium tracking-wide uppercase italic opacity-50">
-                        No {label}
                     </span>
-                )}
+                ))}
             </div>
-        </button>
+        </div>
     );
 };
 

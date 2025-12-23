@@ -30,18 +30,17 @@ export function formatTagValue(value: string, field?: string): FormattedTagValue
   if (lower === 'storms') return { icon: 'cloud' };
 
   // Timeframes - use short codes
-  if (lower === '1 year') return '1Y';
-  if (lower === '>1 year') return '>1Y';
-  if (lower === '1 month') return '1MO';
+  if (lower === '3 days') return '3D';
   if (lower === '1 week') return '1W';
+  if (lower === '1 month') return '1MO';
+  if (lower === '3 months') return '3MO';
+  if (lower === '1 year') return '1Y';
 
   // Demographics - use icons for all
   if (lower === 'man') return { icon: 'mars' };
   if (lower === 'woman') return { icon: 'venus' };
   if (lower === 'adult') return { icon: 'userCheck' };
   if (lower === 'child') return { icon: 'baby' };
-  if (lower === 'individual') return { icon: 'user' };
-  if (lower === 'family') return { icon: 'users' };
 
   return value;
 }
@@ -64,8 +63,6 @@ export function getIconDisplayName(icon: string, originalValue?: string): string
     'venus': 'Female',
     'userCheck': 'Adult',
     'baby': 'Child',
-    'user': 'Individual',
-    'users': 'Family',
     'zap': 'EMP',
     'radiation': 'CBRN',
     'alertTriangle': 'Domestic Terrorism',
@@ -73,4 +70,38 @@ export function getIconDisplayName(icon: string, originalValue?: string): string
   };
 
   return iconMap[icon] || icon;
+}
+
+/**
+ * Sort timeframes in logical chronological order
+ *
+ * Orders timeframes from shortest to longest duration:
+ * 3 Days → 1 Week → 1 Month → 3 Months → 1 Year
+ *
+ * Deduplicates timeframes before sorting to prevent duplicate tags.
+ *
+ * @param timeframes - Array of timeframe strings
+ * @returns Deduplicated and sorted array in chronological order
+ */
+export function sortTimeframes(timeframes: string[]): string[] {
+  const order: Record<string, number> = {
+    '3 days': 1,
+    '1 week': 2,
+    '1 month': 3,
+    '3 months': 4,
+    '1 year': 5,
+  };
+
+  // Deduplicate using Set (case-insensitive comparison)
+  const uniqueTimeframes = Array.from(
+    new Map(
+      timeframes.map(tf => [tf.toLowerCase(), tf])
+    ).values()
+  );
+
+  return uniqueTimeframes.sort((a, b) => {
+    const orderA = order[a.toLowerCase()] || 999;
+    const orderB = order[b.toLowerCase()] || 999;
+    return orderA - orderB;
+  });
 }

@@ -334,11 +334,18 @@ export async function updateProduct(formData: FormData) {
     }
     
     // Metadata handling
-    const metadataKeys = ['weight', 'weight_unit', 'dimensions', 'brand', 'color', 'size', 'quantity', 'volume', 'volume_unit', 'rating', 'reviews'];
+    const metadataKeys = ['weight', 'weight_unit', 'dimensions', 'brand', 'color', 'size', 'quantity', 'volume', 'volume_unit', 'rating', 'reviews', 'x1_multiplier'];
     const metadata: Record<string, any> = {};
     metadataKeys.forEach(key => {
         const val = formData.get(`meta_${key}`);
-        if(val) metadata[key] = val;
+        if(val) {
+            // Convert 'true'/'false' strings to booleans for x1_multiplier
+            if (key === 'x1_multiplier') {
+                metadata[key] = val === 'true';
+            } else {
+                metadata[key] = val;
+            }
+        }
     });
 
     // Tag handling
@@ -387,6 +394,9 @@ export async function updateProduct(formData: FormData) {
           changeHistory: updatedChangeHistory,
         })
         .where(eq(specificProducts.id, id));
+
+      // Recalculate master item tags after product update (upward propagation)
+      await recalculateMasterItemTags(masterItemId);
     } catch (error: any) {
       console.error('Database error updating product:', error);
 
@@ -409,25 +419,142 @@ export async function updateProduct(formData: FormData) {
     return { success: true };
   }
 
+/**
+ * Recalculates master item tags based on OR-union of all child product tags
+ * Called automatically after product tag updates
+ */
+export async function recalculateMasterItemTags(masterItemId: string): Promise<void> {
+    await checkAdmin();
+
+    const products = await db
+        .select({
+            id: specificProducts.id,
+            demographics: specificProducts.demographics,
+            timeframes: specificProducts.timeframes,
+            locations: specificProducts.locations,
+            scenarios: specificProducts.scenarios,
+        })
+        .from(specificProducts)
+        .where(eq(specificProducts.masterItemId, masterItemId));
+
+    const allDemographics = new Set<string>();
+    const allTimeframes = new Set<string>();
+    const allLocations = new Set<string>();
+    const allScenarios = new Set<string>();
+
+    for (const product of products) {
+        (product.demographics || []).forEach(tag => allDemographics.add(tag));
+        (product.timeframes || []).forEach(tag => allTimeframes.add(tag));
+        (product.locations || []).forEach(tag => allLocations.add(tag));
+        (product.scenarios || []).forEach(tag => allScenarios.add(tag));
+    }
+
+    const hasAnyTags =
+        allDemographics.size > 0 ||
+        allTimeframes.size > 0 ||
+        allLocations.size > 0 ||
+        allScenarios.size > 0;
+
+    if (!hasAnyTags && products.length > 0) {
+        // Get master item name for better error message
+        const [masterItem] = await db
+            .select({ name: masterItems.name })
+            .from(masterItems)
+            .where(eq(masterItems.id, masterItemId))
+            .limit(1);
+
+        throw new Error(
+            `Cannot save: Master item "${masterItem?.name || masterItemId}" would have no tags. At least one product must have tags. Products under this master item: ${products.map(p => p.id).join(', ')}`
+        );
+    }
+
+    await db
+        .update(masterItems)
+        .set({
+            demographics: Array.from(allDemographics),
+            timeframes: Array.from(allTimeframes),
+            locations: Array.from(allLocations),
+            scenarios: Array.from(allScenarios),
+        })
+        .where(eq(masterItems.id, masterItemId));
+
+    revalidatePath('/admin/products');
+    revalidatePath('/admin/bundles');
+}
+
 export async function updateProductTags(
-    id: string, 
-    tags: { 
-        scenarios: string[] | null; 
-        demographics: string[] | null; 
-        timeframes: string[] | null; 
-        locations: string[] | null; 
+    id: string,
+    tags: {
+        scenarios: string[] | null;
+        demographics: string[] | null;
+        timeframes: string[] | null;
+        locations: string[] | null;
     }
 ) {
     await checkAdmin();
-    
+
+    const [product] = await db
+        .select({ masterItemId: specificProducts.masterItemId })
+        .from(specificProducts)
+        .where(eq(specificProducts.id, id))
+        .limit(1);
+
+    if (!product) throw new Error('Product not found');
+
     await db
         .update(specificProducts)
-        .set(tags)
+        .set({
+            scenarios: tags.scenarios || [],
+            demographics: tags.demographics || [],
+            timeframes: tags.timeframes || [],
+            locations: tags.locations || [],
+        })
         .where(eq(specificProducts.id, id));
-    
-    revalidatePath('/admin/products');
-    revalidatePath('/admin/bundles');
+
+    await recalculateMasterItemTags(product.masterItemId);
+
     return { success: true };
+}
+
+/**
+ * Bulk update product tags with optimized master item recalculation
+ * Only recalculates each affected master item once
+ */
+export async function bulkUpdateProductTags(
+    updates: Array<{
+        productId: string;
+        tags: {
+            scenarios?: string[];
+            demographics?: string[];
+            timeframes?: string[];
+            locations?: string[];
+        };
+    }>
+): Promise<void> {
+    await checkAdmin();
+
+    const affectedMasterItems = new Set<string>();
+
+    for (const update of updates) {
+        const [product] = await db
+            .select({ masterItemId: specificProducts.masterItemId })
+            .from(specificProducts)
+            .where(eq(specificProducts.id, update.productId))
+            .limit(1);
+
+        if (!product) continue;
+
+        affectedMasterItems.add(product.masterItemId);
+
+        await db
+            .update(specificProducts)
+            .set(update.tags)
+            .where(eq(specificProducts.id, update.productId));
+    }
+
+    for (const masterItemId of affectedMasterItems) {
+        await recalculateMasterItemTags(masterItemId);
+    }
 }
 
 export async function deleteProduct(id: string) {

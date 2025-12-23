@@ -20,7 +20,7 @@ import ProductErrorModal from "../modals/ProductErrorModal";
 import { SectionTitle, InputGroup, TextInput, SelectInput, TextArea } from "./ProductFormElements";
 import TagSelector from "./TagSelector";
 import { TIMEFRAMES, DEMOGRAPHICS, LOCATIONS, SCENARIOS } from "../constants";
-import type { Category, MasterItem, Supplier, Product } from "@/lib/products-types";
+import type { Category, MasterItem, Supplier, Product, ProductMetadata } from "@/lib/products-types";
 
 // Types
 
@@ -37,7 +37,6 @@ interface ProductEditDialogProps {
     preSelectedMasterItem?: string;
 }
 
-import InheritanceWarningModal from "./InheritanceWarningModal";
 import { ChangeHistoryModal } from "@/components/admin/ChangeHistoryModal";
 import type { ChangeHistory } from "@/types/change-history";
 
@@ -78,12 +77,8 @@ export default function ProductEditDialog({
     const [decodoError, setDecodoError] = useState<string | null>(null);
     const [webScrapeError, setWebScrapeError] = useState<{ message: string; errors?: string[] } | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
-    
-    // Inheritance Warning State
-    const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
-    const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
-    const [changedFields, setChangedFields] = useState<{label: string, masterValue: string[] | null, newValue: string[] | null}[]>([]);
     const [conflictData, setConflictData] = useState<any>(null);
+    const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
     // Async State
     const [isSummarizing, setIsSummarizing] = useState(false);
@@ -106,15 +101,26 @@ export default function ProductEditDialog({
     useEffect(() => {
         if (isOpen) {
             // Initialize state from product
-            // Do NOT populate tag fields if they are null/inherited.
-            // TagSelector handles the inheritance visualization via the inheritedValue prop.
-            // This ensures 'formState.timeframes' stays null if it's supposed to be inherited.
             const initialState: Partial<Product> = product ? { ...product } : {};
-            
+
             // If pre-selected master item is provided (from UI selection), use it
             // Use it if creating new product OR if product doesn't have masterItemId set
             if (preSelectedMasterItem && (!product || !product.masterItemId)) {
                 initialState.masterItemId = preSelectedMasterItem;
+            }
+
+            // Deduplicate tag arrays to prevent duplicate keys
+            if (initialState.scenarios) {
+                initialState.scenarios = [...new Set(initialState.scenarios)];
+            }
+            if (initialState.demographics) {
+                initialState.demographics = [...new Set(initialState.demographics)];
+            }
+            if (initialState.timeframes) {
+                initialState.timeframes = [...new Set(initialState.timeframes)];
+            }
+            if (initialState.locations) {
+                initialState.locations = [...new Set(initialState.locations)];
             }
 
             setFormState(initialState);
@@ -166,15 +172,17 @@ export default function ProductEditDialog({
     useEffect(() => {
         // Only if we are creating a new product (no ID) and a master item is selected
         if (!product?.id && formState.masterItemId) {
-            // Set tags to null to inherit from master item (not custom values)
-            // null = inherit from master item, actual values = custom override
-            setFormState(prev => ({
-                ...prev,
-                timeframes: null,
-                demographics: null,
-                locations: null,
-                scenarios: null
-            }));
+            // Initialize tags as empty arrays for new products
+            // Tags will need to be explicitly set (no inheritance)
+            if (!formState.timeframes) {
+                setFormState(prev => ({
+                    ...prev,
+                    timeframes: [],
+                    demographics: [],
+                    locations: [],
+                    scenarios: []
+                }));
+            }
         }
     }, [formState.masterItemId, product?.id]);
 
@@ -373,51 +381,7 @@ export default function ProductEditDialog({
     };
 
     const handleSaveClick = async (formData: FormData) => {
-        // Only check inheritance on updates, not creation (unless advanced logic needed later)
-        // Actually, creation also breaks inheritance if we set custom tags immediately? 
-        // User requirement: "If a product's tags are modified so they differ from the master item... ask to confirm"
-        // Usually this implies editing an existing item that WAS inheriting.
-        // But if I create a new item and override, do I need to confirm? Probably not, as I am just creating it.
-        // Let's focus on updates where `product` exists.
-
-        if (product?.id && product.masterItemId) {
-            const master = initialMasterItems.find(m => m.id === product.masterItemId);
-            if (master) {
-                const changes: {label: string, masterValue: string[] | null, newValue: string[] | null}[] = [];
-                
-                // Helper to check if we are breaking inheritance
-                // Breaking = Was inheriting (null in product) AND Now explicit (not null in form)
-                // We also check if the new value is effectively different?
-                // Actually, setting it to explicit IS breaking the link, even if values match.
-                
-                const checkField = (field: 'timeframes' | 'demographics' | 'locations' | 'scenarios', label: string) => {
-                    const originalWasInheriting = product[field] === null || product[field] === undefined;
-                    const newIsExplicit = formState[field] !== null && formState[field] !== undefined;
-                    
-                    if (originalWasInheriting && newIsExplicit) {
-                        changes.push({
-                            label,
-                            masterValue: master[field] || null,
-                            newValue: formState[field] || []
-                        });
-                    }
-                };
-
-                checkField('timeframes', 'Timeframe');
-                checkField('demographics', 'Demographics');
-                checkField('locations', 'Location');
-                checkField('scenarios', 'Scenario');
-
-                if (changes.length > 0) {
-                    setChangedFields(changes);
-                    setPendingFormData(formData);
-                    setIsWarningModalOpen(true);
-                    return;
-                }
-            }
-        }
-
-        // If no warning needed, proceed
+        // Directly submit form without inheritance warnings
         await submitForm(formData);
     };
 
@@ -500,18 +464,6 @@ export default function ProductEditDialog({
              onClose();
          }
          setConflictData(null);
-         setPendingFormData(null);
-    };
-
-    const handleReconnectLink = () => {
-        // Reset all 4 fields to null
-        setFormState(prev => ({
-            ...prev,
-            timeframes: null,
-            demographics: null,
-            locations: null,
-            scenarios: null
-        }));
     };
 
     // URL Cleaning Functions
@@ -1051,93 +1003,86 @@ export default function ProductEditDialog({
 
                             {/* Classification Section */}
                             <section>
-                                <div className="flex justify-between items-center mb-3">
-                                    <SectionTitle icon={Target} className="mb-0">Classification</SectionTitle>
-                                    {/* Reconnect Button */}
-                                    {product?.id && (
-                                        (formState.timeframes || formState.demographics || formState.locations || formState.scenarios) && (
-                                            <button
-                                                type="button"
-                                                onClick={handleReconnectLink}
-                                                className="text-xs flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors bg-primary/10 px-3 py-1.5 rounded-full border border-primary/50 hover:bg-primary/20"
-                                                title="Revert all tags to inherit from Master Item"
-                                            >
-                                                <Layers className="w-3 h-3" strokeWidth={2.5} />
-                                                Reconnect to Master
-                                            </button>
-                                        )
-                                    )}
-                                </div>
+                                <SectionTitle icon={Target}>Classification</SectionTitle>
 
-                                <div className={`bg-muted/30 rounded-xl border transition-colors ${
-                                    (formState.timeframes || formState.demographics || formState.locations || formState.scenarios)
-                                    ? 'border-warning/30 bg-warning/5'
-                                    : 'border-border/50'
-                                }`}>
-                                    {/* Warning Banner - At top of frame when active */}
-                                    {(formState.timeframes || formState.demographics || formState.locations || formState.scenarios) && (
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-warning/20 border-b border-warning/50 text-foreground text-xs">
-                                            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-warning" strokeWidth={2.5} />
-                                            <span>Custom classification — overriding Master Item defaults</span>
-                                        </div>
-                                    )}
-
+                                <div className="bg-muted/30 rounded-xl border border-border/50">
                                     <div className="p-6 space-y-6">
                                     {/* Hidden Inputs for Tags */}
-                                    {(formState.timeframes === null || formState.timeframes === undefined) 
-                                        ? <input type="hidden" name="inherit_timeframes" value="true" /> 
-                                        : formState.timeframes.map((t: string) => <input key={t} type="hidden" name="timeframes" value={t} />)
-                                    }
-                                    {(formState.demographics === null || formState.demographics === undefined)
-                                        ? <input type="hidden" name="inherit_demographics" value="true" />
-                                        : formState.demographics.map((t: string) => <input key={t} type="hidden" name="demographics" value={t} />)
-                                    }
-                                    {(formState.locations === null || formState.locations === undefined)
-                                        ? <input type="hidden" name="inherit_locations" value="true" />
-                                        : formState.locations.map((t: string) => <input key={t} type="hidden" name="locations" value={t} />)
-                                    }
-                                    {(formState.scenarios === null || formState.scenarios === undefined)
-                                        ? <input type="hidden" name="inherit_scenarios" value="true" />
-                                        : formState.scenarios.map((t: string) => <input key={t} type="hidden" name="scenarios" value={t} />)
-                                    }
+                                    {(formState.timeframes || []).map((t: string, idx: number) => <input key={`timeframe-${t}-${idx}`} type="hidden" name="timeframes" value={t} />)}
+                                    {(formState.demographics || []).map((t: string, idx: number) => <input key={`demographic-${t}-${idx}`} type="hidden" name="demographics" value={t} />)}
+                                    {(formState.locations || []).map((t: string, idx: number) => <input key={`location-${t}-${idx}`} type="hidden" name="locations" value={t} />)}
+                                    {(formState.scenarios || []).map((t: string, idx: number) => <input key={`scenario-${t}-${idx}`} type="hidden" name="scenarios" value={t} />)}
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <TagSelector
                                             label="Scenario"
                                             options={SCENARIOS}
-                                            selected={formState.scenarios}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, scenarios: vals }))}
-                                            notSetLabel="Not Set (Inherits from Master Item)"
-                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.scenarios}
+                                            selected={formState.scenarios || []}
+                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, scenarios: vals || [] }))}
                                             field="scenarios"
                                         />
                                         <TagSelector
                                             label="Demographics"
                                             options={DEMOGRAPHICS}
-                                            selected={formState.demographics}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, demographics: vals }))}
-                                            notSetLabel="Not Set (Inherits from Master Item)"
-                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.demographics}
+                                            selected={formState.demographics || []}
+                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, demographics: vals || [] }))}
                                             field="demographics"
                                         />
                                         <TagSelector
                                             label="Timeframe"
                                             options={TIMEFRAMES}
-                                            selected={formState.timeframes}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, timeframes: vals }))}
-                                            notSetLabel="Not Set (Inherits from Master Item)"
-                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.timeframes}
+                                            selected={formState.timeframes || []}
+                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, timeframes: vals || [] }))}
                                             field="timeframes"
                                         />
                                         <TagSelector
                                             label="Location"
                                             options={LOCATIONS}
-                                            selected={formState.locations}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, locations: vals }))}
-                                            notSetLabel="Not Set (Inherits from Master Item)"
-                                            inheritedValue={initialMasterItems.find(m => m.id === formState.masterItemId)?.locations}
+                                            selected={formState.locations || []}
+                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, locations: vals || [] }))}
                                             field="locations"
                                         />
+
+                                        {/* X1 Multiplier Toggle */}
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2 text-xs mb-2 pr-4">
+                                                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                                    X1 Multiplier
+                                                </label>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentMetadata = (formState.metadata as ProductMetadata) || {};
+                                                    setFormState({
+                                                        ...formState,
+                                                        metadata: {
+                                                            ...currentMetadata,
+                                                            x1_multiplier: !currentMetadata.x1_multiplier,
+                                                        },
+                                                    });
+                                                }}
+                                                className={`w-full flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${
+                                                    (formState.metadata as ProductMetadata)?.x1_multiplier
+                                                        ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40'
+                                                        : 'bg-muted text-muted-foreground border-border'
+                                                }`}
+                                            >
+                                                <div className="px-2 border-r border-white/10 flex items-center justify-center">
+                                                    <X className={`w-3.5 h-3.5 shrink-0 transition-opacity ${(formState.metadata as ProductMetadata)?.x1_multiplier ? 'opacity-90' : 'opacity-40'}`} strokeWidth={2.5} />
+                                                </div>
+                                                <div className="px-2.5 py-1 flex items-center justify-center flex-1">
+                                                    <span className="text-[11px] font-bold tracking-wide uppercase">
+                                                        {(formState.metadata as ProductMetadata)?.x1_multiplier ? 'ON' : 'OFF'}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                            <p className="text-[10px] text-muted-foreground text-center italic">
+                                                {(formState.metadata as ProductMetadata)?.x1_multiplier
+                                                    ? 'Quantity multiplies by party size'
+                                                    : 'Fixed quantity regardless of party size'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1473,7 +1418,7 @@ export default function ProductEditDialog({
                 }
             />
 
-            <ProductSearchModal 
+            <ProductSearchModal
                 isOpen={isSearchModalOpen}
                 onClose={() => setIsSearchModalOpen(false)}
                 searchResults={searchResults}
@@ -1483,22 +1428,6 @@ export default function ProductEditDialog({
                     setSearchResults([]);
                 }}
                 searchTerm={formState.name || ""}
-            />
-
-            <InheritanceWarningModal 
-                isOpen={isWarningModalOpen}
-                onClose={() => {
-                    setIsWarningModalOpen(false);
-                    setPendingFormData(null);
-                    setChangedFields([]);
-                }}
-                onConfirm={() => {
-                    if (pendingFormData) {
-                        submitForm(pendingFormData);
-                    }
-                    setIsWarningModalOpen(false);
-                }}
-                changedFields={changedFields}
             />
 
             {conflictData && (
