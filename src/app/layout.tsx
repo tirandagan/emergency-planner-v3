@@ -95,6 +95,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
+        {/* Theme initialization script */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -110,6 +111,12 @@ export default function RootLayout({
               })();
             `,
           }}
+        />
+
+        {/* AvantLink affiliate verification script */}
+        <script
+          type="text/javascript"
+          src="http://classic.avantlink.com/affiliate_app_confirm.php?mode=js&authResponse=430e362b0c8e21303737e6324ded0f0eb299ae65"
         />
       </head>
       <body

@@ -190,7 +190,7 @@ psql "postgresql://postgres:[YOUR_PASSWORD]@db.[YOUR_PROJECT_ID].supabase.co:654
 
 ### Test Next.js App
 ```bash
-curl https://beprepared-nextjs.onrender.com/api/health
+curl https://beprepared.ai/api/health
 # Expected: {"status":"ok","timestamp":"..."}
 ```
 

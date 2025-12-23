@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import Script from 'next/script';
 import HeroSection from '@/components/landing/HeroSection';
 import ProblemSection from '@/components/landing/ProblemSection';
 import HowItWorksSection from '@/components/landing/HowItWorksSection';
@@ -59,13 +58,31 @@ export const metadata: Metadata = {
 };
 
 export default function LandingPage() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://beprepared.ai';
+
   return (
     <>
       <AuthCodeHandler />
-      <Script
-        src="http://classic.avantlink.com/affiliate_app_confirm.php?mode=js&authResponse=430e362b0c8e21303737e6324ded0f0eb299ae65"
-        strategy="afterInteractive"
+
+      {/* Structured Data for SEO */}
+      <OrganizationStructuredData
+        name="beprepared.ai"
+        url={siteUrl}
+        logo={`${siteUrl}/logo.png`}
+        description="Expert emergency preparedness planning platform with AI-powered personalization. FBI tactical expertise meets practical disaster readiness."
+        sameAs={[
+          'https://twitter.com/bepreparedai',
+          'https://facebook.com/bepreparedai',
+          'https://linkedin.com/company/bepreparedai',
+        ]}
+        founders={[
+          { name: 'Tiran Dagan', type: 'Person' },
+          { name: 'Brian Burk', type: 'Person' },
+        ]}
       />
+
+      <WebsiteStructuredData name="beprepared.ai" url={siteUrl} />
+
       <main className="min-h-screen">
         <HeroSection />
         <ProblemSection />

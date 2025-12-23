@@ -254,8 +254,7 @@ LLM_WEBHOOK_SECRET=[paste the secret you generated earlier]
 
 #### Site Configuration
 ```bash
-NEXT_PUBLIC_SITE_URL=https://beprepared-nextjs.onrender.com
-# Update this to your custom domain later
+NEXT_PUBLIC_SITE_URL=https://beprepared.ai
 ```
 
 5. Click **Save Changes**
@@ -369,7 +368,7 @@ Check Render Dashboard - all 5 services should show **Live** or **Available**:
 
 #### Test Next.js App
 ```bash
-curl https://beprepared-nextjs.onrender.com/api/health
+curl https://beprepared.ai/api/health
 
 # Expected response:
 {
@@ -430,7 +429,7 @@ curl -X POST https://llm-service-api.onrender.com/api/v1/jobs \
       "user_tier": "BASIC",
       "static_contacts": ""
     },
-    "webhook_url": "https://beprepared-nextjs.onrender.com/api/webhooks/llm"
+    "webhook_url": "https://beprepared.ai/api/webhooks/llm"
   }'
 
 # Expected response:
@@ -660,7 +659,7 @@ Your monorepo is now deployed with:
 ✅ **Flower Dashboard** - Real-time monitoring
 
 **Access your apps:**
-- **Web App**: `https://beprepared-nextjs.onrender.com`
+- **Web App**: `https://beprepared.ai`
 - **LLM API**: `https://llm-service-api.onrender.com`
 - **Monitoring**: `https://llm-service-flower.onrender.com`
 

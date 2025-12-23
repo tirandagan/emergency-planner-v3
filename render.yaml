@@ -31,7 +31,7 @@ services:
 
       # Site Configuration
       - key: NEXT_PUBLIC_SITE_URL
-        value: https://beprepared-nextjs.onrender.com  # Update with custom domain
+        value: https://beprepared.ai
 
       # Supabase (Database & Auth)
       - key: DATABASE_URL
@@ -357,10 +357,10 @@ services:
 # - Or use Supabase Transaction Mode pooler URL
 #
 # Post-Deployment:
-# 1. Test Next.js app: https://beprepared-nextjs.onrender.com
+# 1. Test Next.js app: https://beprepared.ai
 # 2. Test LLM API health: https://llm-service-api.onrender.com/health
 # 3. Monitor Flower: https://llm-service-flower.onrender.com
-# 4. Set up custom domain in Render Dashboard
+# 4. Verify custom domain DNS configuration
 # 5. Configure Stripe webhooks with production URLs
 #
 # ==============================================================================

@@ -3,6 +3,7 @@ import { ConsultingServicesList } from '@/components/consulting';
 import { getActiveConsultingServices } from '@/lib/consulting';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ServiceStructuredData, FAQStructuredData } from '@/components/seo/StructuredData';
 
 export const metadata: Metadata = {
   title: 'Emergency Preparedness Consulting - Expert 1-on-1 Guidance',
@@ -54,8 +55,44 @@ function LoadingSkeleton(): React.JSX.Element {
 }
 
 export default async function ConsultingPage(): Promise<React.JSX.Element> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://beprepared.ai';
+
   return (
     <div className="container mx-auto px-4 py-12 max-w-7xl">
+      {/* Structured Data for SEO */}
+      <ServiceStructuredData
+        name="Emergency Preparedness Consulting"
+        description="One-on-one expert consulting for emergency preparedness planning, disaster readiness, and survival strategies. Personalized guidance from FBI-trained consultants."
+        provider="beprepared.ai"
+        serviceType="Emergency Preparedness Consulting"
+        areaServed="United States"
+        url={`${siteUrl}/consulting`}
+      />
+
+      <FAQStructuredData
+        questions={[
+          {
+            question: 'What is emergency preparedness consulting?',
+            answer:
+              'Emergency preparedness consulting provides personalized 1-on-1 guidance from experienced disaster preparedness experts. Consultants help you optimize emergency plans, select appropriate survival supplies, develop evacuation strategies, and ensure your family is ready for various disaster scenarios.',
+          },
+          {
+            question: 'Who are the consultants?',
+            answer:
+              'Our consultants include Brian Burk, who served on the FBI Special Response Team and has consulted with high-net-worth families on comprehensive preparedness solutions. Our team combines tactical expertise with practical, field-tested strategies.',
+          },
+          {
+            question: 'How long are the consulting sessions?',
+            answer:
+              'Consulting sessions typically range from 30 minutes to 2 hours depending on the service level. Each session is personalized to your specific needs and includes follow-up resources.',
+          },
+          {
+            question: 'What can I expect from a consultation?',
+            answer:
+              'You can expect personalized advice based on your location, family size, budget, and specific concerns. Consultations cover emergency planning, supply recommendations, evacuation strategies, and actionable next steps you can implement immediately.',
+          },
+        ]}
+      />
       {/* Hero Section */}
       <div className="text-center mb-12 space-y-4">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight">

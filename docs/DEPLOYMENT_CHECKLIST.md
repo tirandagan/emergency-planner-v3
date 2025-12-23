@@ -86,7 +86,7 @@ LLM_WEBHOOK_SECRET=[your-generated-secret]
 
 **Site:**
 ```
-NEXT_PUBLIC_SITE_URL=https://beprepared-nextjs.onrender.com
+NEXT_PUBLIC_SITE_URL=https://beprepared.ai
 ```
 
 ### Step 3: Configure LLM Services
@@ -145,7 +145,7 @@ All services should show **Live** or **Available**:
 
 **Next.js:**
 ```bash
-curl https://beprepared-nextjs.onrender.com/api/health
+curl https://beprepared.ai/api/health
 # Expected: {"status":"ok","timestamp":"..."}
 ```
 
@@ -177,7 +177,7 @@ curl -X POST https://llm-service-api.onrender.com/api/v1/jobs \
       "duration": "72_hours",
       "user_tier": "BASIC"
     },
-    "webhook_url": "https://beprepared-nextjs.onrender.com/api/webhooks/llm"
+    "webhook_url": "https://beprepared.ai/api/webhooks/llm"
   }'
 
 # Expected: {"job_id":"...","status":"queued"}
