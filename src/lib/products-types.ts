@@ -59,6 +59,7 @@ export interface VariationConfig {
   toggles: {
     price: boolean;
     sku: boolean;
+    asin: boolean;
     quantity: boolean;
     processing: boolean;
   };
@@ -94,7 +95,11 @@ export interface Product {
   imageUrl?: string | null;
   masterItemId: string;
   supplierId: string | null;
-  supplier?: { name: string } | null;
+  supplier?: {
+    name: string;
+    affiliateId?: string | null;
+    affiliateUrlTemplate?: string | null;
+  } | null;
   masterItem?: { name: string } | null;
   metadata?: ProductMetadata | null;
   timeframes?: string[] | null;

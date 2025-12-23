@@ -6,6 +6,9 @@ import { QuickTagger } from '../modals/QuickTagger';
 import { TagValueDisplay, HighlightedText } from '../page.client';
 import { formatTagValue } from '@/lib/products-utils';
 import { DEMOGRAPHICS } from '../constants';
+import { AffiliateLinkButton } from './AffiliateLinkButton';
+import { AffiliateLinkModal } from './AffiliateLinkModal';
+import { AffiliateErrorModal, type AffiliateErrorType } from './AffiliateErrorModal';
 
 /**
  * ProductRow Component
@@ -60,6 +63,12 @@ export const ProductRow = React.memo(function ProductRow({
     onQuickTagClose
 }: ProductRowProps): React.JSX.Element {
     const [showDescriptionTooltip, setShowDescriptionTooltip] = useState(false);
+    const [isAffiliateModalOpen, setIsAffiliateModalOpen] = useState(false);
+    const [affiliateErrorType, setAffiliateErrorType] = useState<AffiliateErrorType | null>(null);
+    const [affiliateErrorDetails, setAffiliateErrorDetails] = useState<{
+        missingField?: string;
+        variationCombination?: string;
+    }>({});
 
     // Check if product has overridden tags (non-null means inheritance is broken)
     const hasOverriddenTags = product.timeframes !== null ||
@@ -262,7 +271,10 @@ export const ProductRow = React.memo(function ProductRow({
                                 )}
                             </div>
                             <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-2 mt-0.5">
-                                {product.sku || product.asin || 'No ID'}
+                                {product.sku && <span>SKU: {product.sku}</span>}
+                                {product.sku && product.asin && <span className="text-border">•</span>}
+                                {product.asin && <span>ASIN: {product.asin}</span>}
+                                {!product.sku && !product.asin && 'No ID'}
                             </div>
                             {/* Product-specific tag differences */}
                             {tagDifferences.length > 0 && (
@@ -350,6 +362,12 @@ export const ProductRow = React.memo(function ProductRow({
                                 </span>
                             )}
                             <span className="truncate min-w-0">{product.supplier?.name || <span className="text-destructive italic">No Supplier</span>}</span>
+                            {product.supplier?.affiliateId && (
+                                <AffiliateLinkButton
+                                    product={product}
+                                    onOpenModal={() => setIsAffiliateModalOpen(true)}
+                                />
+                            )}
                         </div>
                         <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase ${
                             product.type === 'DROP_SHIP'
@@ -377,6 +395,33 @@ export const ProductRow = React.memo(function ProductRow({
                     </td>
                 </tr>
             )}
+
+            {/* Affiliate Link Modal */}
+            <AffiliateLinkModal
+                isOpen={isAffiliateModalOpen}
+                onClose={() => setIsAffiliateModalOpen(false)}
+                product={product}
+                onError={(errorType, missingField, variationCombination) => {
+                    setAffiliateErrorType(errorType);
+                    setAffiliateErrorDetails({
+                        missingField,
+                        variationCombination,
+                    });
+                }}
+            />
+
+            {/* Affiliate Error Modal */}
+            <AffiliateErrorModal
+                isOpen={!!affiliateErrorType}
+                onClose={() => {
+                    setAffiliateErrorType(null);
+                    setAffiliateErrorDetails({});
+                }}
+                errorType={affiliateErrorType || 'no_asin'}
+                productName={product.name || 'Unknown Product'}
+                missingField={affiliateErrorDetails.missingField}
+                variationCombination={affiliateErrorDetails.variationCombination}
+            />
         </Fragment>
     );
 });

@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 
 export const suppliers = pgTable('suppliers', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -16,6 +16,14 @@ export const suppliers = pgTable('suppliers', {
   fulfillmentType: text('fulfillment_type').notNull().default('dropship'),
   websiteUrl: text('website_url'),
   logoUrl: text('logo_url'),
+
+  // Affiliate program configuration (optional fields)
+  affiliateId: text('affiliate_id'),
+  affiliateUrlTemplate: text('affiliate_url_template'),
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for querying suppliers with affiliate programs
+  affiliateIdIdx: index('idx_suppliers_affiliate_id').on(table.affiliateId),
+}));
 

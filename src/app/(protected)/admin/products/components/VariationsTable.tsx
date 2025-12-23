@@ -9,6 +9,8 @@ interface VariationsTableProps {
     onChange: (values: Record<string, any>) => void;
     basePrice?: number;
     baseSku?: string;
+    baseAsin?: string;
+    baseQuantity?: number;
 }
 
 // Custom NumberInput Component
@@ -84,6 +86,7 @@ export default function VariationsTable({
     onChange,
     basePrice,
     baseSku,
+    baseAsin,
     baseQuantity
 }: VariationsTableProps & { baseQuantity?: number }) {
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -277,6 +280,7 @@ export default function VariationsTable({
                                 <th key={attr.id} className="px-4 py-3">{attr.name}</th>
                             ))}
                             {config.toggles.sku && <th className="px-4 py-3">SKU</th>}
+                            {config.toggles.asin && <th className="px-4 py-3">ASIN</th>}
                             {config.toggles.price && <th className="px-4 py-3 w-36">Price</th>}
                             {config.toggles.quantity && <th className="px-4 py-3 w-20">Qty</th>}
                             {config.toggles.processing && <th className="px-4 py-3">Processing Profile</th>}
@@ -308,6 +312,22 @@ export default function VariationsTable({
                                                 onChange={e => handleValueChange(combo.key, 'sku', e.target.value)}
                                                 placeholder={baseSku ? `${baseSku}-${combo.labels.join('-')}` : ''}
                                                 className="w-full bg-background border border-input rounded px-2 py-1.5 text-xs text-foreground focus:border-primary outline-none"
+                                            />
+                                        </td>
+                                    )}
+
+                                    {config.toggles.asin && (
+                                        <td className="px-4 py-2">
+                                            <input
+                                                type="text"
+                                                value={entry.asin || ''}
+                                                onChange={e => {
+                                                    const sanitized = e.target.value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                                                    handleValueChange(combo.key, 'asin', sanitized);
+                                                }}
+                                                placeholder={baseAsin || ''}
+                                                maxLength={10}
+                                                className="w-full bg-background border border-input rounded px-2 py-1.5 text-xs text-foreground focus:border-primary outline-none uppercase"
                                             />
                                         </td>
                                     )}

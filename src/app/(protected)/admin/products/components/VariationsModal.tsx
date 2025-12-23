@@ -14,6 +14,7 @@ export interface VariationConfig {
     toggles: {
         price: boolean;
         sku: boolean;
+        asin: boolean;
         quantity: boolean;
         processing: boolean;
     };
@@ -52,6 +53,7 @@ export default function VariationsModal({
     const [toggles, setToggles] = useState({
         price: false,
         sku: false,
+        asin: false,
         quantity: false,
         processing: false
     });
@@ -66,11 +68,11 @@ export default function VariationsModal({
         if (isOpen) {
             if (initialConfig) {
                 setAttributes(initialConfig.attributes || []);
-                setToggles(initialConfig.toggles || { price: false, sku: false, quantity: false, processing: false });
+                setToggles(initialConfig.toggles || { price: false, sku: false, asin: false, quantity: false, processing: false });
                 setStep('list');
             } else {
                 setAttributes([]);
-                setToggles({ price: false, sku: false, quantity: false, processing: false });
+                setToggles({ price: false, sku: false, asin: false, quantity: false, processing: false });
                 setStep('type_select');
             }
         }
@@ -328,7 +330,8 @@ export default function VariationsModal({
                                         { id: 'price', label: 'Prices vary' },
                                         { id: 'processing', label: 'Processing profiles vary' },
                                         { id: 'quantity', label: 'Quantities vary' },
-                                        { id: 'sku', label: 'SKUs vary' }
+                                        { id: 'sku', label: 'SKUs vary' },
+                                        { id: 'asin', label: 'ASINs vary' }
                                     ].map(toggle => (
                                         <div key={toggle.id} className="p-3 bg-muted/50 rounded-lg border border-border">
                                             <Switch

@@ -44,6 +44,8 @@ export async function getProducts(): Promise<Product[]> {
       },
       supplier: {
         name: suppliers.name,
+        affiliateId: suppliers.affiliateId,
+        affiliateUrlTemplate: suppliers.affiliateUrlTemplate,
       },
     })
     .from(specificProducts)

@@ -1,0 +1,273 @@
+@startuml BePrepared.AI System Architecture
+' Complete system architecture showing frontend, backend services, and external integrations
+
+' Styling
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontColor #333333
+skinparam componentBackgroundColor #2196F3
+skinparam componentBorderColor #1976D2
+skinparam databaseBackgroundColor #4CAF50
+skinparam databaseBorderColor #388E3C
+skinparam cloudBackgroundColor #FF9800
+skinparam cloudBorderColor #F57C00
+skinparam packageBackgroundColor #E3F2FD
+skinparam packageBorderColor #1976D2
+
+' ============================================================================
+' FRONTEND LAYER (Next.js 15 + React 19)
+' ============================================================================
+package "Frontend Layer\n(Next.js 15 + React 19)" as Frontend {
+  component "App Router" as AppRouter
+  component "Server Components" as ServerComponents
+  component "Client Components" as ClientComponents
+
+  component "API Routes" as ApiRoutes
+  component "/api/mission-plan/*" as MissionPlanAPI
+  component "/api/webhooks/*" as WebhooksAPI
+  component "/api/stripe/*" as StripeAPI
+  component "/api/emergency-services" as EmergencyAPI
+  component "/api/amazon/product" as AmazonAPI
+  component "/api/firecrawl/*" as FirecrawlAPI
+
+  AppRouter --> ServerComponents
+  AppRouter --> ClientComponents
+  ServerComponents --> ApiRoutes
+  ClientComponents --> ApiRoutes
+
+  ApiRoutes ..> MissionPlanAPI
+  ApiRoutes ..> WebhooksAPI
+  ApiRoutes ..> StripeAPI
+  ApiRoutes ..> EmergencyAPI
+  ApiRoutes ..> AmazonAPI
+  ApiRoutes ..> FirecrawlAPI
+}
+
+' ============================================================================
+' AUTHENTICATION & SESSION LAYER
+' ============================================================================
+package "Authentication Layer" as AuthLayer {
+  component "Supabase Auth" as SupabaseAuth
+  component "Email OTP Flow" as OTPFlow
+  component "Session Management" as SessionMgmt
+  component "Cookie-based Sessions" as CookieSessions
+
+  database "Supabase PostgreSQL" as SupabaseDB
+  component "profiles table" as ProfilesTable
+  component "auth.users" as AuthUsers
+
+  SupabaseAuth ..> OTPFlow
+  SupabaseAuth ..> SessionMgmt
+  SupabaseAuth ..> CookieSessions
+
+  OTPFlow --> AuthUsers
+  SessionMgmt --> CookieSessions
+  AuthUsers --> ProfilesTable
+}
+
+ServerComponents --> SupabaseAuth
+ApiRoutes --> SupabaseAuth
+
+' ============================================================================
+' DATABASE LAYER (Drizzle ORM)
+' ============================================================================
+database "Application Database\n(PostgreSQL via Supabase)" as AppDB {
+  component "mission_reports" as MissionReports
+  component "calls (AI usage)" as CallsTable
+  component "profiles" as ProfilesDB
+  component "subscriptions" as SubscriptionsTable
+  component "llm_callbacks" as LLMCallbacksTable
+  component "system_logs" as SystemLogsTable
+}
+
+ApiRoutes --> AppDB : "Drizzle ORM\n(Direct PostgreSQL)"
+note right of AppDB
+  ⚠️ NEVER use Supabase REST API
+  ALWAYS use Drizzle ORM
+  with direct PostgreSQL connection
+end note
+
+' ============================================================================
+' LLM MICROSERVICE (Python FastAPI + Celery)
+' ============================================================================
+package "LLM Microservice\n(Python FastAPI + Celery)" as LLMService {
+  component "FastAPI Server" as FastAPIServer
+  component "/api/v1/workflow" as WorkflowEndpoint
+  component "/api/v1/jobs" as JobsEndpoint
+  component "/api/v1/debug" as DebugEndpoint
+  component "/health" as HealthEndpoint
+
+  component "Celery Workers" as CeleryWorkers
+  component "execute_workflow" as ExecuteWorkflowTask
+  component "Workflow Engine" as WorkflowEngine
+
+  database "Worker PostgreSQL" as WorkerDB
+  component "workflow_jobs" as WorkflowJobsTable
+  component "job_status tracking" as JobStatusTable
+
+  queue "Redis Queue" as RedisQueue
+  component "Task Queue" as TaskQueue
+  component "Result Backend" as ResultBackend
+
+  FastAPIServer ..> WorkflowEndpoint
+  FastAPIServer ..> JobsEndpoint
+  FastAPIServer ..> DebugEndpoint
+  FastAPIServer ..> HealthEndpoint
+
+  CeleryWorkers ..> ExecuteWorkflowTask
+  CeleryWorkers ..> WorkflowEngine
+
+  WorkerDB ..> WorkflowJobsTable
+  WorkerDB ..> JobStatusTable
+
+  RedisQueue ..> TaskQueue
+  RedisQueue ..> ResultBackend
+
+  WorkflowEndpoint --> WorkflowJobsTable : "Create job record"
+  WorkflowEndpoint --> TaskQueue : "Queue Celery task"
+  ExecuteWorkflowTask --> TaskQueue : "Consume tasks"
+  ExecuteWorkflowTask --> WorkflowEngine
+  WorkflowEngine --> WorkflowJobsTable : "Update job status"
+  CeleryWorkers --> ResultBackend : "Store results"
+}
+
+MissionPlanAPI --> WorkflowEndpoint : "HTTP POST\n/api/v1/workflow"
+WebhooksAPI ..> LLMCallbacksTable : "Store webhook callbacks"
+
+' ============================================================================
+' AI PROVIDER LAYER (OpenRouter)
+' ============================================================================
+cloud "OpenRouter API" as OpenRouter {
+  component "Claude 3.5 Sonnet" as ClaudeSonnet
+  component "Claude Opus 4" as ClaudeOpus
+  component "Claude Haiku 3" as ClaudeHaiku
+}
+
+WorkflowEngine --> OpenRouter : "HTTP (httpx)\nvia OpenRouter SDK"
+note right of OpenRouter
+  ✅ Default: Claude 3.5 Sonnet
+  📊 Token usage logged to calls table
+  💰 Cost tracking per request
+end note
+
+' ============================================================================
+' EXTERNAL API INTEGRATIONS
+' ============================================================================
+cloud "Google Cloud APIs" as GoogleAPIs {
+  component "Maps JavaScript API" as GoogleMaps
+  component "Geocoding API" as GeocodingAPI
+  component "Routes API" as RoutesAPI
+  component "Places API" as PlacesAPI
+}
+
+cloud "Stripe" as Stripe {
+  component "Subscriptions" as StripeSubscriptions
+  component "Webhooks" as StripeWebhooks
+  component "Prices API" as StripePrices
+}
+
+cloud "Firecrawl" as Firecrawl {
+  component "Web Scraping" as WebScraping
+  component "Content Extraction" as ContentExtraction
+}
+
+cloud "Decodo API" as Decodo {
+  component "Amazon Product Data" as AmazonProductData
+  component "Variant Selection" as VariantSelection
+}
+
+cloud "Resend" as Resend {
+  component "Email Delivery" as EmailDelivery
+  component "Transactional Emails" as TransactionalEmails
+}
+
+' Frontend connections to external APIs
+ClientComponents --> GoogleMaps : "Map rendering"
+EmergencyAPI --> PlacesAPI : "Find emergency services"
+EmergencyAPI --> GeocodingAPI : "Geocode addresses"
+ApiRoutes --> RoutesAPI : "Calculate evacuation routes"
+
+StripeAPI --> StripeSubscriptions : "Manage subscriptions"
+StripeAPI --> StripePrices : "Fetch pricing"
+WebhooksAPI --> StripeWebhooks : "Process webhooks"
+SubscriptionsTable ..> StripeSubscriptions : "Sync subscription data"
+
+FirecrawlAPI --> Firecrawl : "Extract web content"
+AmazonAPI --> Decodo : "Fetch product data"
+
+LLMService --> Resend : "Send admin alerts"
+ApiRoutes --> Resend : "Send user emails"
+
+' ============================================================================
+' WORKER SERVICE FLOWS
+' ============================================================================
+note as WorkflowFlow
+  **Workflow Execution Flow**
+  1️⃣ Frontend → POST /api/v1/workflow
+  2️⃣ FastAPI → Create job record (PENDING)
+  3️⃣ FastAPI → Queue Celery task (QUEUED)
+  4️⃣ Celery Worker → Execute workflow (RUNNING)
+  5️⃣ Workflow Engine → Call OpenRouter API
+  6️⃣ Worker → Update job status (COMPLETED/FAILED)
+  7️⃣ Worker → Send webhook to Next.js callback
+  8️⃣ Next.js → Process webhook & store result
+end note
+
+WorkflowFlow .. ExecuteWorkflowTask
+
+note as WebhookSecurity
+  **Webhook Security**
+  🔐 HMAC-SHA256 signature verification
+  ✅ Constant-time comparison (timingSafeEqual)
+  📊 Invalid signatures logged for security monitoring
+  ⚡ Target response time: <200ms
+end note
+
+WebhookSecurity .. WebhooksAPI
+
+' ============================================================================
+' DEPLOYMENT & INFRASTRUCTURE
+' ============================================================================
+cloud "Deployment Platform" as Deployment {
+  component "Next.js App\n(Vercel/Render)" as NextJSDeploy
+  component "LLM Service\n(Render/Railway)" as LLMServiceDeploy
+  component "Celery Workers\n(Render/Railway)" as CeleryDeploy
+  component "Redis Instance\n(Upstash/Render)" as RedisDeploy
+}
+
+Frontend ..> NextJSDeploy : "Deployed as"
+LLMService ..> LLMServiceDeploy : "Deployed as"
+CeleryWorkers ..> CeleryDeploy : "Deployed as"
+RedisQueue ..> RedisDeploy : "Hosted on"
+
+' ============================================================================
+' DATA FLOW ANNOTATIONS
+' ============================================================================
+note right of ApiRoutes
+  **API Route Categories**
+  🎯 Mission Plan Generation
+  🔄 Webhook Callbacks (LLM, Stripe)
+  💳 Payment Processing
+  🗺️ Emergency Services & Routes
+  🛒 Product Recommendations
+  🔍 Content Extraction
+end note
+
+note right of CeleryWorkers
+  **Celery Configuration**
+  🔥 Eventlet pool for async I/O
+  🔗 PostgreSQL for job tracking
+  📊 Redis for task queue & results
+  ⏱️ 300s timeout per task
+  🔄 Task retry with exponential backoff
+end note
+
+note left of AppDB
+  **Database Strategy**
+  ✅ Drizzle ORM with type safety
+  🚫 NO Supabase REST API
+  📝 Direct PostgreSQL connection
+  🔄 Migration-based schema updates
+  🔒 Row-level security via Supabase
+end note
+
+@enduml

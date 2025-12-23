@@ -87,4 +87,20 @@ export const DEFAULT_SYSTEM_SETTINGS = [
     category: 'notifications',
     isEditable: true,
   },
+  {
+    key: 'amazon_associate_id',
+    value: '',
+    valueType: 'string' as const,
+    description: 'Amazon Associates affiliate tag used to generate affiliate product links',
+    category: 'integrations',
+    isEditable: true,
+  },
+  {
+    key: 'amazon_affiliate_url_template',
+    value: 'https://www.amazon.com/dp/{ASIN}?&linkCode=ll1&tag={amazon_associate_id}&ref_=as_li_ss_tl',
+    valueType: 'string' as const,
+    description: 'URL template for Amazon affiliate links. Use {ASIN} and {amazon_associate_id} as placeholders for automatic substitution',
+    category: 'integrations',
+    isEditable: true,
+  },
 ];

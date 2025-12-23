@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Script from 'next/script';
 import HeroSection from '@/components/landing/HeroSection';
 import ProblemSection from '@/components/landing/ProblemSection';
 import HowItWorksSection from '@/components/landing/HowItWorksSection';
@@ -37,6 +38,10 @@ export default function LandingPage() {
   return (
     <>
       <AuthCodeHandler />
+      <Script
+        src="http://classic.avantlink.com/affiliate_app_confirm.php?mode=js&authResponse=430e362b0c8e21303737e6324ded0f0eb299ae65"
+        strategy="afterInteractive"
+      />
       <main className="min-h-screen">
         <HeroSection />
         <ProblemSection />

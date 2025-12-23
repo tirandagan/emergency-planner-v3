@@ -10,6 +10,7 @@ interface VariationsTableModalProps {
     onChange: (values: Record<string, any>) => void;
     basePrice?: number;
     baseSku?: string;
+    baseAsin?: string;
     baseQuantity?: number;
 }
 
@@ -21,6 +22,7 @@ export default function VariationsTableModal({
     onChange,
     basePrice,
     baseSku,
+    baseAsin,
     baseQuantity
 }: VariationsTableModalProps) {
     if (!isOpen) return null;
@@ -42,12 +44,13 @@ export default function VariationsTableModal({
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto flex-1 bg-background">
-                    <VariationsTable 
+                    <VariationsTable
                         config={config}
                         values={values}
                         onChange={onChange}
                         basePrice={basePrice}
                         baseSku={baseSku}
+                        baseAsin={baseAsin}
                         baseQuantity={baseQuantity}
                     />
                 </div>

@@ -1176,20 +1176,31 @@ export default function ProductEditDialog({
                             <div className="bg-background/50 p-6 rounded-xl border border-border">
                                 <SectionTitle icon={Package}>Inventory & Supplier</SectionTitle>
                                 <div className="space-y-4">
-                                    <InputGroup label="SKU / ASIN">
-                                        <TextInput
-                                            ref={asinInputRef}
-                                            name="asin"
-                                            value={formState.asin || formState.sku || ''}
-                                            onChange={e => handleAsinChange(e.target.value)}
-                                            onBlur={handleAsinBlur}
-                                            placeholder="e.g. B005EHPVQW"
-                                            maxLength={10}
-                                        />
-                                        {renderSuggestion('asin')}
-                                        {renderSuggestion('sku')}
-                                    </InputGroup>
-                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <InputGroup label="SKU">
+                                            <TextInput
+                                                name="sku"
+                                                value={formState.sku || ''}
+                                                onChange={e => setFormState({ ...formState, sku: e.target.value })}
+                                                placeholder="e.g. PROD-12345"
+                                            />
+                                            {renderSuggestion('sku')}
+                                        </InputGroup>
+
+                                        <InputGroup label="ASIN">
+                                            <TextInput
+                                                ref={asinInputRef}
+                                                name="asin"
+                                                value={formState.asin || ''}
+                                                onChange={e => handleAsinChange(e.target.value)}
+                                                onBlur={handleAsinBlur}
+                                                placeholder="e.g. B005EHPVQW"
+                                                maxLength={10}
+                                            />
+                                            {renderSuggestion('asin')}
+                                        </InputGroup>
+                                    </div>
+
                                     <InputGroup label="Supplier">
                                         <div className="flex gap-2">
                                             <SelectInput
@@ -1567,7 +1578,8 @@ export default function ProductEditDialog({
                     values={formState.variations.values}
                     onChange={handleVariationValuesChange}
                     basePrice={typeof formState.price === 'number' ? formState.price : typeof formState.price === 'string' ? parseFloat(formState.price) : undefined}
-                    baseSku={(formState.asin ?? formState.sku) ?? undefined}
+                    baseSku={formState.sku ?? undefined}
+                    baseAsin={formState.asin ?? undefined}
                     baseQuantity={undefined}
                 />
             )}

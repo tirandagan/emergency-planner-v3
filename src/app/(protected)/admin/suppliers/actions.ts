@@ -36,6 +36,8 @@ export async function createSupplier(formData: FormData) {
   const notes = formData.get('notes') as string;
   const joinDate = formData.get('join_date') as string || new Date().toISOString().split('T')[0];
   const logoUrl = formData.get('logo_url') as string;
+  const affiliateId = formData.get('affiliate_id') as string;
+  const affiliateUrlTemplate = formData.get('affiliate_url_template') as string;
 
   // Build contact info object
   const contactInfo: any = {};
@@ -60,6 +62,8 @@ export async function createSupplier(formData: FormData) {
       fulfillmentType,
       logoUrl,
       contactInfo,
+      affiliateId: affiliateId || null,
+      affiliateUrlTemplate: affiliateUrlTemplate || null,
     })
     .returning();
   
@@ -89,6 +93,8 @@ export async function updateSupplier(formData: FormData) {
     const notes = formData.get('notes') as string;
     const joinDate = formData.get('join_date') as string;
     const logoUrl = formData.get('logo_url') as string;
+    const affiliateId = formData.get('affiliate_id') as string;
+    const affiliateUrlTemplate = formData.get('affiliate_url_template') as string;
 
     // Build contact info object
     const contactInfo: any = {};
@@ -113,6 +119,8 @@ export async function updateSupplier(formData: FormData) {
             fulfillmentType,
             logoUrl,
             contactInfo,
+            affiliateId: affiliateId || null,
+            affiliateUrlTemplate: affiliateUrlTemplate || null,
         })
         .where(eq(suppliers.id, id))
         .returning();

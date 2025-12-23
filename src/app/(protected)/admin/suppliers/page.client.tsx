@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Trash2, Factory, Globe, Mail, Phone, Pencil, User, Upload, Image as ImageIcon, X, ChevronDown, ChevronUp, MapPin, CreditCard, Calendar, FileText, Hash } from "lucide-react";
+import { Plus, Trash2, Factory, Globe, Mail, Phone, Pencil, User, Upload, Image as ImageIcon, X, ChevronDown, ChevronUp, MapPin, CreditCard, Calendar, FileText, Hash, AlertCircle, Building2, DollarSign } from "lucide-react";
 import { createSupplier, updateSupplier } from "./actions";
 import { supabase } from "@/lib/supabaseClient";
 import DeleteSupplierModal from "./DeleteSupplierModal";
 import { useRouter } from "next/navigation";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Helper to parse combined address string back into components
 function parseAddress(addressString: string | null | undefined): {
@@ -35,6 +36,14 @@ function parseAddress(addressString: string | null | undefined): {
 }
 
 export default function SuppliersClient({ initialSuppliers }: { initialSuppliers: any[] }) {
+  // Debug: Log initial suppliers data
+  console.log('📦 Initial suppliers data:', initialSuppliers.map(s => ({
+    id: s.id,
+    name: s.name,
+    affiliateId: s.affiliateId,
+    affiliateUrlTemplate: s.affiliateUrlTemplate,
+  })));
+
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
@@ -43,6 +52,15 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [supplierToDelete, setSupplierToDelete] = useState<{ id: string; name: string } | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [affiliateUrlTemplate, setAffiliateUrlTemplate] = useState<string>('');
+  const [templateValidationError, setTemplateValidationError] = useState<string | null>(null);
+  const templateTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Collapsible section states
+  const [contactOpen, setContactOpen] = useState(false);
+  const [addressOpen, setAddressOpen] = useState(false);
+  const [financialOpen, setFinancialOpen] = useState(false);
+  const [affiliateOpen, setAffiliateOpen] = useState(false);
 
   const toggleCardExpansion = (supplierId: string): void => {
     setExpandedCards(prev => {
@@ -57,19 +75,92 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
   };
 
   // Parse address when editing
-  const parsedAddress = editingSupplier?.contact_info?.address
-    ? parseAddress(editingSupplier.contact_info.address)
+  const parsedAddress = editingSupplier?.contactInfo?.address
+    ? parseAddress(editingSupplier.contactInfo.address)
     : { line1: '', line2: '', city: '', state: '', zipCode: '', country: '' };
+
+  // Available field placeholders
+  const AVAILABLE_FIELDS = [
+    { name: 'sku', description: 'Product SKU' },
+    { name: 'asin', description: 'Amazon ASIN' },
+    { name: 'name', description: 'Product name' },
+    { name: 'price', description: 'Product price' },
+    { name: 'product_url', description: 'Product URL' },
+    { name: 'affiliate_id', description: 'Affiliate ID' },
+  ];
+
+  // Insert field placeholder at cursor position
+  const insertFieldPlaceholder = (fieldName: string) => {
+    const textarea = templateTextareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentValue = affiliateUrlTemplate;
+    const placeholder = `{${fieldName}}`;
+
+    const newValue = currentValue.substring(0, start) + placeholder + currentValue.substring(end);
+    setAffiliateUrlTemplate(newValue);
+
+    // Set cursor position after inserted placeholder
+    setTimeout(() => {
+      textarea.focus();
+      const newPosition = start + placeholder.length;
+      textarea.setSelectionRange(newPosition, newPosition);
+    }, 0);
+  };
+
+  // Validate template using validation function
+  const validateTemplate = async (template: string): Promise<void> => {
+    if (!template) {
+      setTemplateValidationError(null);
+      return;
+    }
+
+    try {
+      const { validateAffiliateTemplate } = await import('@/app/(protected)/admin/products/actions/affiliate-link-actions');
+      const result = await validateAffiliateTemplate(template);
+
+      if (result.valid) {
+        setTemplateValidationError(null);
+      } else {
+        setTemplateValidationError(result.errors?.[0] || 'Invalid template');
+      }
+    } catch (error) {
+      setTemplateValidationError('Failed to validate template');
+    }
+  };
 
   const openNewModal = () => {
     setEditingSupplier(null);
     setLogoUrl(null);
+    setAffiliateUrlTemplate('');
+    setTemplateValidationError(null);
+    // Reset collapsible states
+    setContactOpen(false);
+    setAddressOpen(false);
+    setFinancialOpen(false);
+    setAffiliateOpen(false);
     setIsModalOpen(true);
   };
 
   const openEditModal = (supplier: any) => {
+    console.log('🔍 Opening edit modal for supplier:', {
+      id: supplier.id,
+      name: supplier.name,
+      affiliateId: supplier.affiliateId,
+      affiliateUrlTemplate: supplier.affiliateUrlTemplate,
+      keys: Object.keys(supplier),
+    });
     setEditingSupplier(supplier);
     setLogoUrl(supplier.logoUrl);
+    setAffiliateUrlTemplate(supplier.affiliateUrlTemplate || '');
+    setTemplateValidationError(null);
+    // Reset collapsible states
+    setContactOpen(false);
+    setAddressOpen(false);
+    setFinancialOpen(false);
+    setAffiliateOpen(false);
     setIsModalOpen(true);
   };
 
@@ -148,10 +239,10 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {initialSuppliers.map((supplier) => {
           const isExpanded = expandedCards.has(supplier.id);
-          const parsedAddr = parseAddress(supplier.contact_info?.address);
+          const parsedAddr = parseAddress(supplier.contactInfo?.address);
           const hasAddress = parsedAddr.line1 || parsedAddr.city || parsedAddr.state;
-          const hasFinancialInfo = supplier.contact_info?.payment_terms || supplier.contact_info?.tax_id || supplier.contact_info?.join_date;
-          const hasNotes = supplier.contact_info?.notes;
+          const hasFinancialInfo = supplier.contactInfo?.payment_terms || supplier.contactInfo?.tax_id || supplier.contactInfo?.join_date;
+          const hasNotes = supplier.contactInfo?.notes;
           const hasExpandableContent = hasAddress || hasFinancialInfo || hasNotes;
 
           return (
@@ -194,22 +285,22 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                     </a>
                   </div>
                 )}
-                {supplier.contact_info?.email && (
+                {supplier.contactInfo?.email && (
                   <div className="flex items-start gap-2.5">
                     <Mail className="w-4 h-4 shrink-0 text-muted-foreground mt-0.5" strokeWidth={2} />
-                    <span className="text-muted-foreground break-all">{supplier.contact_info.email}</span>
+                    <span className="text-muted-foreground break-all">{supplier.contactInfo.email}</span>
                   </div>
                 )}
-                {supplier.contact_info?.phone && (
+                {supplier.contactInfo?.phone && (
                   <div className="flex items-center gap-2.5">
                     <Phone className="w-4 h-4 shrink-0 text-muted-foreground" strokeWidth={2} />
-                    <span className="text-muted-foreground">{supplier.contact_info.phone}</span>
+                    <span className="text-muted-foreground">{supplier.contactInfo.phone}</span>
                   </div>
                 )}
-                {supplier.contact_info?.contact_name && (
+                {supplier.contactInfo?.contact_name && (
                   <div className="flex items-center gap-2.5">
                     <User className="w-4 h-4 shrink-0 text-muted-foreground" strokeWidth={2} />
-                    <span className="text-muted-foreground">{supplier.contact_info.contact_name}</span>
+                    <span className="text-muted-foreground">{supplier.contactInfo.contact_name}</span>
                   </div>
                 )}
               </div>
@@ -266,24 +357,24 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                             <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Financial Details</span>
                           </div>
                           <div className="pl-6 text-sm text-muted-foreground space-y-1.5">
-                            {supplier.contact_info?.payment_terms && (
+                            {supplier.contactInfo?.payment_terms && (
                               <div className="flex items-start gap-2">
                                 <span className="text-foreground/70 font-medium min-w-[100px]">Payment Terms:</span>
-                                <span>{supplier.contact_info.payment_terms}</span>
+                                <span>{supplier.contactInfo.payment_terms}</span>
                               </div>
                             )}
-                            {supplier.contact_info?.tax_id && (
+                            {supplier.contactInfo?.tax_id && (
                               <div className="flex items-start gap-2">
                                 <Hash className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={2} />
                                 <span className="text-foreground/70 font-medium">Tax ID:</span>
-                                <span>{supplier.contact_info.tax_id}</span>
+                                <span>{supplier.contactInfo.tax_id}</span>
                               </div>
                             )}
-                            {supplier.contact_info?.join_date && (
+                            {supplier.contactInfo?.join_date && (
                               <div className="flex items-start gap-2">
                                 <Calendar className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={2} />
                                 <span className="text-foreground/70 font-medium">Joined:</span>
-                                <span>{new Date(supplier.contact_info.join_date).toLocaleDateString()}</span>
+                                <span>{new Date(supplier.contactInfo.join_date).toLocaleDateString()}</span>
                               </div>
                             )}
                           </div>
@@ -298,7 +389,7 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                             <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Notes</span>
                           </div>
                           <div className="pl-6 text-sm text-muted-foreground whitespace-pre-wrap break-words">
-                            {supplier.contact_info.notes}
+                            {supplier.contactInfo.notes}
                           </div>
                         </div>
                       )}
@@ -342,7 +433,27 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form action={async (formData) => {
+            <form onSubmit={async (e) => {
+                e.preventDefault();
+
+                // Capture the form element IMMEDIATELY before any async operations
+                const form = e.currentTarget as HTMLFormElement;
+
+                // Validate affiliate template before submission
+                if (affiliateUrlTemplate) {
+                  await validateTemplate(affiliateUrlTemplate);
+                  if (templateValidationError) {
+                    alert('Please fix the affiliate URL template errors before saving.');
+                    return;
+                  }
+                }
+
+                // Create FormData from captured form element
+                const formData = new FormData(form);
+
+                // Add affiliate URL template from state
+                formData.set('affiliate_url_template', affiliateUrlTemplate);
+
                 if (editingSupplier) {
                     formData.append('id', editingSupplier.id);
                     await updateSupplier(formData);
@@ -352,10 +463,12 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                 setIsModalOpen(false);
                 setEditingSupplier(null);
                 setLogoUrl(null);
+                setAffiliateUrlTemplate('');
+                setTemplateValidationError(null);
                 router.refresh();
             }} className="space-y-6">
 
-                {/* Logo Upload & Basic Info */}
+                {/* Logo Upload & Basic Info - Always Visible */}
                 <div className="flex flex-col md:flex-row gap-6">
                     {/* Logo Upload Area */}
                     <div className="w-full md:w-1/3 flex flex-col items-center">
@@ -403,7 +516,7 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                             <label className={labelClass}>Fulfillment Type</label>
                             <select
                                 name="fulfillment_type"
-                                defaultValue={editingSupplier?.fulfillment_type || "affiliate"}
+                                defaultValue={editingSupplier?.fulfillmentType || "affiliate"}
                                 className={inputClass}
                             >
                                 <option value="affiliate">Affiliate Partner</option>
@@ -415,7 +528,7 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                             <input
                                 name="join_date"
                                 type="date"
-                                defaultValue={editingSupplier?.contact_info?.join_date || new Date().toISOString().split('T')[0]}
+                                defaultValue={editingSupplier?.contactInfo?.join_date || new Date().toISOString().split('T')[0]}
                                 className={inputClass}
                             />
                         </div>
@@ -424,134 +537,259 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                             <input
                                 name="website_url"
                                 type="url"
-                                defaultValue={editingSupplier?.website_url}
+                                defaultValue={editingSupplier?.websiteUrl}
                                 className={inputClass}
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* Contact Info */}
-                <div className="border-t border-border pt-4">
-                    <h3 className="text-sm font-semibold text-primary mb-4 uppercase tracking-wider">Contact Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className={labelClass}>Contact Name</label>
-                            <input
-                                name="contact_name"
-                                defaultValue={editingSupplier?.contact_info?.contact_name}
-                                className={inputClass}
-                            />
+                {/* Collapsible Section: Contact Info */}
+                <Collapsible open={contactOpen} onOpenChange={setContactOpen} className="border-t border-border pt-4">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-muted/50 transition-colors group">
+                        <div className="flex items-center gap-3">
+                            <User className="w-5 h-5 text-primary" strokeWidth={2.5} />
+                            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Contact Information</h3>
                         </div>
-                        <div>
-                            <label className={labelClass}>Email</label>
-                            <input
-                                name="email"
-                                type="email"
-                                defaultValue={editingSupplier?.contact_info?.email}
-                                className={inputClass}
-                            />
+                        {contactOpen ? (
+                            <ChevronUp className="w-5 h-5 text-primary transition-transform" strokeWidth={2.5} />
+                        ) : (
+                            <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" strokeWidth={2.5} />
+                        )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className={labelClass}>Contact Name</label>
+                                <input
+                                    name="contact_name"
+                                    defaultValue={editingSupplier?.contactInfo?.contact_name}
+                                    className={inputClass}
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Email</label>
+                                <input
+                                    name="email"
+                                    type="email"
+                                    defaultValue={editingSupplier?.contactInfo?.email}
+                                    className={inputClass}
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Phone</label>
+                                <input
+                                    name="phone"
+                                    type="tel"
+                                    defaultValue={editingSupplier?.contactInfo?.phone}
+                                    className={inputClass}
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className={labelClass}>Phone</label>
-                            <input
-                                name="phone"
-                                type="tel"
-                                defaultValue={editingSupplier?.contact_info?.phone}
-                                className={inputClass}
-                            />
-                        </div>
-                    </div>
-                </div>
+                    </CollapsibleContent>
+                </Collapsible>
 
-                {/* Address */}
-                <div className="border-t border-border pt-4">
-                    <h3 className="text-sm font-semibold text-primary mb-4 uppercase tracking-wider">Address</h3>
-                    <div className="grid grid-cols-1 gap-4 mb-4">
-                        <div>
-                            <label className={labelClass}>Address Line 1</label>
-                            <input
-                                name="address_line1"
-                                defaultValue={parsedAddress.line1}
-                                className={inputClass}
-                            />
+                {/* Collapsible Section: Address */}
+                <Collapsible open={addressOpen} onOpenChange={setAddressOpen} className="border-t border-border pt-4">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-muted/50 transition-colors group">
+                        <div className="flex items-center gap-3">
+                            <MapPin className="w-5 h-5 text-primary" strokeWidth={2.5} />
+                            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Address</h3>
                         </div>
-                        <div>
-                            <label className={labelClass}>Address Line 2</label>
-                            <input
-                                name="address_line2"
-                                defaultValue={parsedAddress.line2}
-                                className={inputClass}
-                            />
+                        {addressOpen ? (
+                            <ChevronUp className="w-5 h-5 text-primary transition-transform" strokeWidth={2.5} />
+                        ) : (
+                            <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" strokeWidth={2.5} />
+                        )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                        <div className="grid grid-cols-1 gap-4 mb-4">
+                            <div>
+                                <label className={labelClass}>Address Line 1</label>
+                                <input
+                                    name="address_line1"
+                                    defaultValue={parsedAddress.line1}
+                                    className={inputClass}
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Address Line 2</label>
+                                <input
+                                    name="address_line2"
+                                    defaultValue={parsedAddress.line2}
+                                    className={inputClass}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="col-span-1">
-                            <label className={labelClass}>City</label>
-                            <input
-                                name="city"
-                                defaultValue={parsedAddress.city}
-                                className={inputClass}
-                            />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <label className={labelClass}>City</label>
+                                <input
+                                    name="city"
+                                    defaultValue={parsedAddress.city}
+                                    className={inputClass}
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>State</label>
+                                <input
+                                    name="state"
+                                    defaultValue={parsedAddress.state}
+                                    className={inputClass}
+                                />
+                            </div>
+                             <div>
+                                <label className={labelClass}>Zip Code</label>
+                                <input
+                                    name="zip_code"
+                                    defaultValue={parsedAddress.zipCode}
+                                    className={inputClass}
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Country</label>
+                                <input
+                                    name="country"
+                                    defaultValue={parsedAddress.country}
+                                    className={inputClass}
+                                />
+                            </div>
                         </div>
-                        <div className="col-span-1">
-                            <label className={labelClass}>State</label>
-                            <input
-                                name="state"
-                                defaultValue={parsedAddress.state}
-                                className={inputClass}
-                            />
-                        </div>
-                         <div className="col-span-1">
-                            <label className={labelClass}>Zip Code</label>
-                            <input
-                                name="zip_code"
-                                defaultValue={parsedAddress.zipCode}
-                                className={inputClass}
-                            />
-                        </div>
-                        <div className="col-span-1">
-                            <label className={labelClass}>Country</label>
-                            <input
-                                name="country"
-                                defaultValue={parsedAddress.country}
-                                className={inputClass}
-                            />
-                        </div>
-                    </div>
-                </div>
+                    </CollapsibleContent>
+                </Collapsible>
 
-                {/* Financial & Notes */}
-                <div className="border-t border-border pt-4">
-                    <h3 className="text-sm font-semibold text-primary mb-4 uppercase tracking-wider">Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className={labelClass}>Payment Terms</label>
-                            <input
-                                name="payment_terms"
-                                placeholder="e.g. Net 30"
-                                defaultValue={editingSupplier?.contact_info?.payment_terms}
-                                className={inputClass}
+                {/* Collapsible Section: Financial & Notes */}
+                <Collapsible open={financialOpen} onOpenChange={setFinancialOpen} className="border-t border-border pt-4">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-muted/50 transition-colors group">
+                        <div className="flex items-center gap-3">
+                            <DollarSign className="w-5 h-5 text-primary" strokeWidth={2.5} />
+                            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Financial & Business Details</h3>
+                        </div>
+                        {financialOpen ? (
+                            <ChevronUp className="w-5 h-5 text-primary transition-transform" strokeWidth={2.5} />
+                        ) : (
+                            <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" strokeWidth={2.5} />
+                        )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Payment Terms</label>
+                                <input
+                                    name="payment_terms"
+                                    placeholder="e.g. Net 30"
+                                    defaultValue={editingSupplier?.contactInfo?.payment_terms}
+                                    className={inputClass}
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Tax ID</label>
+                                <input
+                                    name="tax_id"
+                                    defaultValue={editingSupplier?.contactInfo?.tax_id}
+                                    className={inputClass}
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <label className={labelClass}>Notes</label>
+                            <textarea
+                                name="notes"
+                                defaultValue={editingSupplier?.contactInfo?.notes}
+                                className={`${inputClass} h-24 resize-none`}
                             />
                         </div>
-                        <div>
-                            <label className={labelClass}>Tax ID</label>
-                            <input
-                                name="tax_id"
-                                defaultValue={editingSupplier?.contact_info?.tax_id}
-                                className={inputClass}
-                            />
+                    </CollapsibleContent>
+                </Collapsible>
+
+                {/* Collapsible Section: Affiliate Program */}
+                <Collapsible open={affiliateOpen} onOpenChange={setAffiliateOpen} className="border-t border-border pt-4">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-muted/50 transition-colors group">
+                        <div className="flex items-center gap-3">
+                            <Building2 className="w-5 h-5 text-primary" strokeWidth={2.5} />
+                            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Affiliate Program Configuration</h3>
                         </div>
-                    </div>
-                    <div className="mt-4">
-                        <label className={labelClass}>Notes</label>
-                        <textarea
-                            name="notes"
-                            defaultValue={editingSupplier?.contact_info?.notes}
-                            className={`${inputClass} h-24 resize-none`}
-                        />
-                    </div>
-                </div>
+                        {affiliateOpen ? (
+                            <ChevronUp className="w-5 h-5 text-primary transition-transform" strokeWidth={2.5} />
+                        ) : (
+                            <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" strokeWidth={2.5} />
+                        )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                        <p className="text-xs text-muted-foreground mb-4">
+                            Configure affiliate program settings for this supplier. Leave blank if the supplier doesn't participate in affiliate programs.
+                        </p>
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
+                                <label className={labelClass}>Affiliate ID</label>
+                                <input
+                                    name="affiliate_id"
+                                    placeholder="your-affiliate-tag-20"
+                                    defaultValue={editingSupplier?.affiliateId || ''}
+                                    className={inputClass}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Your affiliate partner ID or tag provided by the affiliate program.
+                                </p>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Affiliate URL Template</label>
+                                <textarea
+                                    ref={templateTextareaRef}
+                                    name="affiliate_url_template"
+                                    placeholder="https://www.example.com/product/{sku}?ref={affiliate_id}"
+                                    value={affiliateUrlTemplate}
+                                    onChange={(e) => {
+                                      setAffiliateUrlTemplate(e.target.value);
+                                      // Debounce validation
+                                      const timeoutId = setTimeout(() => {
+                                        void validateTemplate(e.target.value);
+                                      }, 500);
+                                      return () => clearTimeout(timeoutId);
+                                    }}
+                                    className={`${inputClass} h-24 resize-none font-mono text-sm ${
+                                      templateValidationError ? 'border-destructive focus:ring-destructive' : ''
+                                    }`}
+                                />
+
+                                {/* Validation Error */}
+                                {templateValidationError && (
+                                  <div className="flex items-start gap-2 mt-2 text-xs text-destructive">
+                                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                                    <span>{templateValidationError}</span>
+                                  </div>
+                                )}
+
+                                {/* Field Pills */}
+                                <div className="mt-3">
+                                  <p className="text-xs font-medium text-foreground/70 mb-2">Click to insert field:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {AVAILABLE_FIELDS.map((field) => (
+                                      <button
+                                        key={field.name}
+                                        type="button"
+                                        onClick={() => insertFieldPlaceholder(field.name)}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/30 transition-colors group"
+                                        title={field.description}
+                                      >
+                                        <code className="text-xs font-mono text-primary group-hover:text-primary/90">
+                                          {`{${field.name}}`}
+                                        </code>
+                                        <span className="text-[10px] text-muted-foreground group-hover:text-foreground/70">
+                                          {field.description}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <p className="text-xs text-muted-foreground mt-3">
+                                  Build your affiliate URL template using the field buttons above. The template will be validated automatically.
+                                </p>
+                            </div>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
 
                 <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-border">
                     <button
