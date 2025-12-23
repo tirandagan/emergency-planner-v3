@@ -288,8 +288,8 @@ export const TagBadge = ({
     if (!hasItems) return null;
 
     const formattedItems = items.map(item => {
-        // Don't format "ALL Scenarios" - show as text
-        if (item === 'ALL Scenarios') return item;
+        // Don't format "ALL" - show as text
+        if (item === 'ALL') return item;
         return formatTagValue(item, isScenarios ? 'scenarios' : undefined);
     });
 

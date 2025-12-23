@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Product, ProductMetadata } from '@/lib/products-types';
 import { X as XIcon, Shield, Users, Clock, MapPin } from 'lucide-react';
 import { TagValueDisplay } from '../page.client';
@@ -28,6 +28,26 @@ export function QuickTagger({
     product: Product;
     onClose: () => void;
 }): React.JSX.Element {
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    // Detect dark mode
+    useEffect(() => {
+        const checkDarkMode = (): void => {
+            setIsDarkMode(document.documentElement.classList.contains('dark'));
+        };
+
+        checkDarkMode();
+
+        // Watch for changes to dark mode
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
     const handleToggle = async (
         field: 'scenarios' | 'demographics' | 'timeframes' | 'locations',
         value: string
@@ -98,11 +118,11 @@ export function QuickTagger({
     }): React.JSX.Element => {
         const currentValues = product[field] || [];
 
-        let badgeClassName = 'text-primary bg-primary/10 border-primary/20';
-        if (field === 'scenarios') badgeClassName = 'text-destructive bg-destructive/10 border-destructive/20';
-        if (field === 'demographics') badgeClassName = 'text-success bg-success/10 border-success/20';
-        if (field === 'timeframes') badgeClassName = 'text-primary bg-primary/10 border-primary/20';
-        if (field === 'locations') badgeClassName = 'text-amber-700 dark:text-amber-500 bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50';
+        let badgeClassName = 'text-primary bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary/30';
+        if (field === 'scenarios') badgeClassName = 'text-destructive bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive/30';
+        if (field === 'demographics') badgeClassName = 'text-success bg-success/10 dark:bg-success/20 border-success/20 dark:border-success/30';
+        if (field === 'timeframes') badgeClassName = 'text-primary bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary/30';
+        if (field === 'locations') badgeClassName = 'text-amber-700 dark:text-yellow-500 bg-amber-50 dark:bg-yellow-500/20 border-amber-200 dark:border-yellow-500/30';
 
         const formattedItems = items.map(item => formatTagValue(item, field));
         const hasActiveItems = currentValues.length > 0;
@@ -115,23 +135,31 @@ export function QuickTagger({
                     </label>
                 </div>
                 <div className={`flex items-stretch overflow-hidden rounded-md border transition-all duration-200 pl-0 py-0 ${hasActiveItems ? badgeClassName : 'bg-muted text-muted-foreground border-border'}`}>
-                    <div className="px-2 border-r border-white/10 flex items-center justify-center">
-                        <Icon className={`w-3.5 h-3.5 shrink-0 transition-opacity ${hasActiveItems ? 'opacity-70' : 'opacity-40'}`} strokeWidth={2.5} />
+                    {/* Category Icon - high contrast background with inverted colors for dark mode */}
+                    <div
+                        className="px-1.5 border-r flex items-center justify-center"
+                        style={{
+                            backgroundColor: isDarkMode ? 'hsl(0 0% 90%)' : 'hsl(0 0% 50%)',
+                            borderRightColor: isDarkMode ? 'hsl(0 0% 70%)' : 'hsl(0 0% 30%)',
+                            color: isDarkMode ? 'hsl(0 0% 10%)' : 'white'
+                        }}
+                    >
+                        <Icon className="w-3 h-3 shrink-0" strokeWidth={2.5} />
                     </div>
-                    <div className="px-2.5 py-1 flex items-center flex-wrap gap-0">
+                    <div className="px-2 py-0.5 flex items-center flex-wrap gap-0">
                         {items.map((item, i) => {
                             const isActive = currentValues.includes(item);
                             const formattedValue = formattedItems[i];
 
                             return (
                                 <span key={item} className="flex items-center">
-                                    {i > 0 && <span className="mx-1.5 w-px h-3 bg-current opacity-30" />}
+                                    {i > 0 && <span className="mx-1 w-px h-2.5 bg-current opacity-30" />}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleToggle(field, item);
                                         }}
-                                        className={`text-[11px] font-medium tracking-wide uppercase transition-all px-1.5 py-0.5 ${
+                                        className={`text-[10px] font-medium tracking-wide uppercase transition-all px-1 py-0.5 ${
                                             isActive
                                                 ? 'bg-transparent hover:bg-white/10 rounded'
                                                 : 'bg-gray-700 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-500 text-gray-300 dark:text-gray-200'
@@ -212,18 +240,26 @@ export function QuickTagger({
                                     e.stopPropagation();
                                     handleX1Toggle();
                                 }}
-                                className={`w-full flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${
+                                className={`w-full flex items-stretch overflow-hidden rounded-md border transition-all duration-200 pl-0 py-0 ${
                                     (product.metadata as ProductMetadata)?.x1_multiplier
-                                        ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40'
+                                        ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 dark:bg-cyan-500/20 border-cyan-500/20 dark:border-cyan-500/30'
                                         : 'bg-muted text-muted-foreground border-border'
                                 }`}
                             >
-                                <div className="px-2 border-r border-white/10 flex items-center justify-center">
-                                    <XIcon className={`w-3.5 h-3.5 shrink-0 transition-opacity ${(product.metadata as ProductMetadata)?.x1_multiplier ? 'opacity-90' : 'opacity-40'}`} strokeWidth={2.5} />
+                                {/* Category Icon - high contrast background with inverted colors for dark mode */}
+                                <div
+                                    className="px-1.5 border-r flex items-center justify-center"
+                                    style={{
+                                        backgroundColor: isDarkMode ? 'hsl(0 0% 90%)' : 'hsl(0 0% 50%)',
+                                        borderRightColor: isDarkMode ? 'hsl(0 0% 70%)' : 'hsl(0 0% 30%)',
+                                        color: isDarkMode ? 'hsl(0 0% 10%)' : 'white'
+                                    }}
+                                >
+                                    <XIcon className="w-3 h-3 shrink-0" strokeWidth={2.5} />
                                 </div>
-                                <div className="px-2.5 py-1 flex items-center justify-center flex-1">
-                                    <span className="text-[11px] font-bold tracking-wide uppercase">
-                                        {(product.metadata as ProductMetadata)?.x1_multiplier ? 'ON' : 'OFF'}
+                                <div className="px-2 py-0.5 flex items-center justify-center flex-1">
+                                    <span className="text-[10px] font-medium tracking-wide uppercase">
+                                        {(product.metadata as ProductMetadata)?.x1_multiplier ? '1' : 'OFF'}
                                     </span>
                                 </div>
                             </button>

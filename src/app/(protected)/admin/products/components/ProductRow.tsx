@@ -5,7 +5,7 @@ import { AlertCircle, Shield, Users, Clock, MapPin, Unlink, X as XIcon } from 'l
 import { QuickTagger } from '../modals/QuickTagger';
 import { TagValueDisplay, HighlightedText } from '../page.client';
 import { formatTagValue, sortTimeframes } from '@/lib/products-utils';
-import { DEMOGRAPHICS } from '../constants';
+import { DEMOGRAPHICS, SCENARIOS } from '../constants';
 import { AffiliateLinkButton } from './AffiliateLinkButton';
 import { AffiliateLinkModal } from './AffiliateLinkModal';
 import { AffiliateErrorModal, type AffiliateErrorType } from './AffiliateErrorModal';
@@ -158,7 +158,9 @@ export const ProductRow = React.memo(function ProductRow({
             }
         };
 
-        addFieldIfHasTags('scenarios', product.scenarios ?? null, Shield, 'text-destructive bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive/30', 'Scenarios');
+        // Show "ALL" if all scenarios are selected
+        const scenariosToDisplay = (product.scenarios?.length === SCENARIOS.length) ? ['ALL'] : (product.scenarios ?? null);
+        addFieldIfHasTags('scenarios', scenariosToDisplay, Shield, 'text-destructive bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive/30', 'Scenarios');
         addFieldIfHasTags('demographics', product.demographics ?? null, Users, 'text-success bg-success/10 dark:bg-success/20 border-success/20 dark:border-success/30', 'People');
         // Sort timeframes chronologically before displaying
         const sortedTimeframes = product.timeframes ? sortTimeframes(product.timeframes) : null;

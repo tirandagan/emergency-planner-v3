@@ -147,7 +147,7 @@ export const MasterItemRow = React.memo(function MasterItemRow({
                                         icon={Shield}
                                         items={
                                             masterGroup.masterItem.scenarios?.length === SCENARIOS.length
-                                                ? ['ALL Scenarios']
+                                                ? ['ALL']
                                                 : masterGroup.masterItem.scenarios
                                         }
                                         className="text-destructive bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive/30"
