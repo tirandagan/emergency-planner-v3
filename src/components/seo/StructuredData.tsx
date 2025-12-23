@@ -2,10 +2,9 @@
  * Structured Data (JSON-LD) Components for SEO
  *
  * These components generate JSON-LD structured data for Google Rich Results.
+ * Uses standard script tags instead of Next.js Script to ensure crawlers can read them.
  * Learn more: https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data
  */
-
-import Script from 'next/script';
 
 interface OrganizationSchema {
   name: string;
@@ -65,8 +64,7 @@ export function OrganizationStructuredData({
   };
 
   return (
-    <Script
-      id="organization-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
@@ -100,8 +98,7 @@ export function ServiceStructuredData({
   };
 
   return (
-    <Script
-      id="service-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
@@ -127,8 +124,7 @@ export function FAQStructuredData({ questions }: FAQSchema): React.JSX.Element {
   };
 
   return (
-    <Script
-      id="faq-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
@@ -176,8 +172,7 @@ export function ProductStructuredData({
   };
 
   return (
-    <Script
-      id="product-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
@@ -211,8 +206,7 @@ export function WebsiteStructuredData({
   };
 
   return (
-    <Script
-      id="website-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
@@ -245,8 +239,7 @@ export function BreadcrumbStructuredData({
   };
 
   return (
-    <Script
-      id="breadcrumb-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />

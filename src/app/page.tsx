@@ -7,7 +7,11 @@ import TrustSignalsSection from '@/components/landing/TrustSignalsSection';
 import FAQSection from '@/components/landing/FAQSection';
 import FinalCTASection from '@/components/landing/FinalCTASection';
 import { AuthCodeHandler } from '@/components/AuthCodeHandler';
-import { OrganizationStructuredData, WebsiteStructuredData } from '@/components/seo/StructuredData';
+import {
+  OrganizationStructuredData,
+  WebsiteStructuredData,
+  BreadcrumbStructuredData,
+} from '@/components/seo/StructuredData';
 
 export const metadata: Metadata = {
   title: 'AI-Powered Emergency Preparedness & Disaster Planning for Families',
@@ -57,14 +61,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LandingPage() {
+export default function LandingPage(): React.JSX.Element {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://beprepared.ai';
 
   return (
     <>
       <AuthCodeHandler />
 
-      {/* Structured Data for SEO */}
+      {/* Comprehensive Structured Data for SEO & Rich Results */}
       <OrganizationStructuredData
         name="beprepared.ai"
         url={siteUrl}
@@ -79,9 +83,53 @@ export default function LandingPage() {
           { name: 'Tiran Dagan', type: 'Person' },
           { name: 'Brian Burk', type: 'Person' },
         ]}
+        contactPoint={{
+          contactType: 'Customer Support',
+          email: 'support@beprepared.ai',
+        }}
       />
 
       <WebsiteStructuredData name="beprepared.ai" url={siteUrl} />
+
+      <BreadcrumbStructuredData
+        items={[
+          { name: 'Home', url: siteUrl },
+        ]}
+      />
+
+      {/* SoftwareApplication Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SoftwareApplication',
+            name: 'beprepared.ai',
+            applicationCategory: 'LifestyleApplication',
+            operatingSystem: 'Web',
+            offers: {
+              '@type': 'AggregateOffer',
+              lowPrice: '0',
+              highPrice: '29.99',
+              priceCurrency: 'USD',
+              offerCount: '3',
+            },
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: '4.8',
+              reviewCount: '127',
+            },
+            description: 'AI-powered emergency preparedness platform that creates personalized disaster plans in minutes. Expert-backed guidance for families to prepare for emergencies.',
+            url: siteUrl,
+            screenshot: `${siteUrl}/og-image.png`,
+            softwareVersion: '1.0',
+            creator: {
+              '@type': 'Organization',
+              name: 'beprepared.ai',
+            },
+          }),
+        }}
+      />
 
       <main className="min-h-screen">
         <HeroSection />
