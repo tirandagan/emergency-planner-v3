@@ -226,15 +226,14 @@ export default function ProductEditDialog({
     useEffect(() => {
         // Only if we are creating a new product (no ID) and a master item is selected
         if (!product?.id && formState.masterItemId) {
-            // Initialize tags as empty arrays for new products
-            // Tags will need to be explicitly set (no inheritance)
+            // Initialize tags with default selections for new products
             if (!formState.timeframes) {
                 setFormState(prev => ({
                     ...prev,
                     timeframes: [],
-                    demographics: [],
-                    locations: [],
-                    scenarios: []
+                    demographics: ['Man', 'Woman', 'Adult'],
+                    locations: ['Shelter in place'],
+                    scenarios: SCENARIOS // All scenarios
                 }));
             }
         }
