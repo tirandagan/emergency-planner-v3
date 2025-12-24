@@ -227,9 +227,24 @@ export const ProductRow = React.memo(function ProductRow({
                             <div className="font-medium text-foreground flex items-center gap-2 flex-wrap">
                                 <span style={{ display: 'inline', wordBreak: 'normal', hyphens: 'manual' }}>
                                     <HighlightedText text={product.name || ''} searchTerm={searchTerm} />
-                                    {product.metadata?.quantity && (
-                                        <span className="text-muted-foreground"> ({product.metadata.quantity})</span>
-                                    )}
+                                    {(() => {
+                                        const pkgSize = product.packageSize ?? 1;
+                                        const reqQty = product.requiredQuantity ?? 1;
+
+                                        if (pkgSize === 1 && reqQty === 1) {
+                                            return null;
+                                        }
+
+                                        if (pkgSize === 1) {
+                                            return <span className="text-muted-foreground"> ({reqQty})</span>;
+                                        }
+
+                                        if (reqQty === 1) {
+                                            return <span className="text-muted-foreground"> ({pkgSize})</span>;
+                                        }
+
+                                        return <span className="text-muted-foreground"> ({pkgSize} x {reqQty})</span>;
+                                    })()}
                                 </span>
                                 {matchesDescription && (
                                     <span
@@ -372,7 +387,12 @@ export const ProductRow = React.memo(function ProductRow({
                 </td>
                 <td className="px-2 py-3 w-[120px]">
                     <div className="text-foreground font-mono">
-                        ${product.price ? Number(product.price).toFixed(2) : '0.00'}
+                        {(() => {
+                            const basePrice = product.price ? Number(product.price) : 0;
+                            const reqQty = product.requiredQuantity ?? 1;
+                            const totalPrice = basePrice * reqQty;
+                            return `$${totalPrice.toFixed(2)}`;
+                        })()}
                     </div>
                 </td>
             </tr>

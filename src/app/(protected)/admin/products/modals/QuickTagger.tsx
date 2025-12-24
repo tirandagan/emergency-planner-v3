@@ -88,6 +88,8 @@ export function QuickTagger({
         formData.append('description', product.description || '');
         formData.append('asin', product.asin || '');
         formData.append('sku', product.sku || '');
+        formData.append('package_size', String(product.packageSize || 1));
+        formData.append('required_quantity', String(product.requiredQuantity || 1));
 
         // Preserve existing tags by adding them to FormData
         (product.scenarios || []).forEach(tag => formData.append('scenarios', tag));

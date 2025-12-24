@@ -155,7 +155,8 @@ export function getVariationFields(product: Product): string[] {
   if (variations.config?.toggles) {
     if (variations.config.toggles.sku) fields.push('sku');
     if (variations.config.toggles.price) fields.push('price');
-    if (variations.config.toggles.quantity) fields.push('quantity');
+    if (variations.config.toggles.package_size) fields.push('package_size');
+    if (variations.config.toggles.required_quantity) fields.push('required_quantity');
     if (variations.config.toggles.processing) fields.push('processing');
   }
 

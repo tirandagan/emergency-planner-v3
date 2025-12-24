@@ -41,6 +41,8 @@ export async function getProducts(): Promise<Product[]> {
       price: specificProducts.price,
       sku: specificProducts.sku,
       asin: specificProducts.asin,
+      packageSize: specificProducts.packageSize,
+      requiredQuantity: specificProducts.requiredQuantity,
       imageUrl: specificProducts.imageUrl,
       productUrl: specificProducts.productUrl,
       type: specificProducts.type,
@@ -139,6 +141,8 @@ export async function createProduct(formData: FormData): Promise<ProductOperatio
   const description = formData.get('description') as string;
   const asinRaw = formData.get('asin') as string;
   const asin = asinRaw && asinRaw.trim() !== '' ? asinRaw.trim() : null;
+  const packageSize = parseInt(formData.get('package_size') as string) || 1;
+  const requiredQuantity = parseInt(formData.get('required_quantity') as string) || 1;
 
   // Validation (return early with error instead of throwing)
   if (!name || name.trim() === '') {
@@ -158,7 +162,15 @@ export async function createProduct(formData: FormData): Promise<ProductOperatio
   if (isNaN(price) || price <= 0) {
     return { success: false, message: 'Valid price is required' };
   }
-  
+
+  if (packageSize < 1) {
+    return { success: false, message: 'Package size must be at least 1' };
+  }
+
+  if (requiredQuantity < 1) {
+    return { success: false, message: 'Required quantity must be at least 1' };
+  }
+
   // Check for duplicate ASIN
   if (asin) {
     const [existing] = await db
@@ -195,7 +207,7 @@ export async function createProduct(formData: FormData): Promise<ProductOperatio
   }
 
   // Metadata handling
-  const metadataKeys = ['weight', 'weight_unit', 'dimensions', 'brand', 'color', 'size', 'quantity', 'volume', 'volume_unit', 'rating', 'reviews'];
+  const metadataKeys = ['weight', 'weight_unit', 'dimensions', 'brand', 'color', 'size', 'volume', 'volume_unit', 'rating', 'reviews'];
   const metadata: Record<string, any> = {};
   metadataKeys.forEach(key => {
     const val = formData.get(`meta_${key}`);
@@ -244,6 +256,8 @@ export async function createProduct(formData: FormData): Promise<ProductOperatio
       imageUrl,
       description,
       asin,
+      packageSize,
+      requiredQuantity,
       metadata,
       status: 'verified',
       timeframes: timeframes === null ? null : (timeframes as string[]),
@@ -290,6 +304,8 @@ export async function updateProduct(formData: FormData): Promise<ProductOperatio
     const description = formData.get('description') as string;
     const asinRaw = formData.get('asin') as string;
     const asin = asinRaw && asinRaw.trim() !== '' ? asinRaw.trim() : null;
+    const packageSize = parseInt(formData.get('package_size') as string) || 1;
+    const requiredQuantity = parseInt(formData.get('required_quantity') as string) || 1;
 
     // Fetch existing product data for change tracking
     const [existingProduct] = await db
@@ -317,8 +333,16 @@ export async function updateProduct(formData: FormData): Promise<ProductOperatio
       return { success: false, message: 'Valid price is required' };
     }
 
+    if (packageSize < 1) {
+      return { success: false, message: 'Package size must be at least 1' };
+    }
+
+    if (requiredQuantity < 1) {
+      return { success: false, message: 'Required quantity must be at least 1' };
+    }
+
     // Metadata handling
-    const metadataKeys = ['weight', 'weight_unit', 'dimensions', 'brand', 'color', 'size', 'quantity', 'volume', 'volume_unit', 'rating', 'reviews', 'x1_multiplier'];
+    const metadataKeys = ['weight', 'weight_unit', 'dimensions', 'brand', 'color', 'size', 'volume', 'volume_unit', 'rating', 'reviews', 'x1_multiplier'];
     const metadata: Record<string, any> = {};
     metadataKeys.forEach(key => {
         const val = formData.get(`meta_${key}`);
@@ -353,6 +377,8 @@ export async function updateProduct(formData: FormData): Promise<ProductOperatio
       imageUrl,
       description,
       asin,
+      packageSize,
+      requiredQuantity,
       metadata,
       status: 'verified' as const,
       timeframes: timeframes === null ? null : (timeframes as string[]),

@@ -1115,8 +1115,9 @@ export default function ProductsClient({
           productUrl: productUrl,
           description: product.description,
           supplierId: amazonSupplier?.id || '',
+          packageSize: product.capacity_value || 1,
+          requiredQuantity: 1,
           metadata: {
-              quantity: product.capacity_value,
               rating: product.rating,
               reviews: product.reviews,
               weight: product.weight,

@@ -34,7 +34,6 @@ export interface Supplier {
 
 export interface ProductMetadata {
   brand?: string;
-  quantity?: number | string;
   weight?: number | string;
   weight_unit?: string;
   volume?: number | string;
@@ -61,7 +60,8 @@ export interface VariationConfig {
     price: boolean;
     sku: boolean;
     asin: boolean;
-    quantity: boolean;
+    package_size: boolean;
+    required_quantity: boolean;
     processing: boolean;
   };
 }
@@ -91,6 +91,8 @@ export interface Product {
   sku?: string | null;
   asin?: string | null;
   price?: string | number | null;
+  packageSize: number;
+  requiredQuantity: number;
   type?: string | null;
   productUrl?: string | null;
   imageUrl?: string | null;

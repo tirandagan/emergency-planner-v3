@@ -15,7 +15,8 @@ export interface VariationConfig {
         price: boolean;
         sku: boolean;
         asin: boolean;
-        quantity: boolean;
+        package_size: boolean;
+        required_quantity: boolean;
         processing: boolean;
     };
 }
@@ -54,7 +55,8 @@ export default function VariationsModal({
         price: false,
         sku: false,
         asin: false,
-        quantity: false,
+        package_size: false,
+        required_quantity: false,
         processing: false
     });
 
@@ -68,11 +70,11 @@ export default function VariationsModal({
         if (isOpen) {
             if (initialConfig) {
                 setAttributes(initialConfig.attributes || []);
-                setToggles(initialConfig.toggles || { price: false, sku: false, asin: false, quantity: false, processing: false });
+                setToggles(initialConfig.toggles || { price: false, sku: false, asin: false, package_size: false, required_quantity: false, processing: false });
                 setStep('list');
             } else {
                 setAttributes([]);
-                setToggles({ price: false, sku: false, asin: false, quantity: false, processing: false });
+                setToggles({ price: false, sku: false, asin: false, package_size: false, required_quantity: false, processing: false });
                 setStep('type_select');
             }
         }
@@ -329,7 +331,8 @@ export default function VariationsModal({
                                     {[
                                         { id: 'price', label: 'Prices vary' },
                                         { id: 'processing', label: 'Processing profiles vary' },
-                                        { id: 'quantity', label: 'Quantities vary' },
+                                        { id: 'package_size', label: 'Package sizes vary' },
+                                        { id: 'required_quantity', label: 'Required quantities vary' },
                                         { id: 'sku', label: 'SKUs vary' },
                                         { id: 'asin', label: 'ASINs vary' }
                                     ].map(toggle => (

@@ -238,7 +238,6 @@ export default function ProductEditDialog({
 
         // Metadata Suggestions
         addSuggestion('metadata_brand', newData.manufacturer, currentMeta.brand);
-        addSuggestion('metadata_quantity', newData.capacity_value, currentMeta.quantity);
         addSuggestion('metadata_dimensions', newData.dimensions, currentMeta.dimensions);
         addSuggestion('metadata_color', newData.color, currentMeta.color);
         addSuggestion('metadata_size', newData.size, currentMeta.size);
@@ -720,7 +719,6 @@ export default function ProductEditDialog({
         addSuggestion('metadata_color', scrapedData.color, currentMeta.color);
         addSuggestion('metadata_size', scrapedData.size, currentMeta.size);
         addSuggestion('metadata_dimensions', scrapedData.dimensions, currentMeta.dimensions);
-        addSuggestion('metadata_quantity', scrapedData.quantity, currentMeta.quantity);
         addSuggestion('metadata_model_number', scrapedData.model_number, currentMeta.model_number);
         addSuggestion('metadata_upc', scrapedData.upc, currentMeta.upc);
 
@@ -1078,6 +1076,12 @@ export default function ProductEditDialog({
                                                     </span>
                                                 </div>
                                             </button>
+                                            {/* Hidden input to ensure x1_multiplier is submitted with form */}
+                                            <input
+                                                type="hidden"
+                                                name="meta_x1_multiplier"
+                                                value={(formState.metadata as ProductMetadata)?.x1_multiplier ? 'true' : 'false'}
+                                            />
                                             <p className="text-[10px] text-muted-foreground text-center italic">
                                                 {(formState.metadata as ProductMetadata)?.x1_multiplier
                                                     ? 'Quantity multiplies by party size'
@@ -1224,17 +1228,40 @@ export default function ProductEditDialog({
                                             />
                                             {renderSuggestion('metadata_brand')}
                                         </InputGroup>
-                                        <InputGroup label="Qty (Count)">
-                                            <TextInput 
-                                                name="meta_quantity" 
-                                                type="number" 
-                                                value={formState.metadata?.quantity || ''}
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, quantity: e.target.value } })}
-                                                placeholder="e.g. 1" 
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="Package Size">
+                                            <TextInput
+                                                name="package_size"
+                                                type="number"
+                                                min="1"
+                                                value={formState.packageSize || 1}
+                                                onChange={e => setFormState({ ...formState, packageSize: Number(e.target.value) })}
+                                                placeholder="1"
                                             />
-                                            {renderSuggestion('metadata_quantity')}
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Items per supplier package
+                                            </p>
+                                            {renderSuggestion('package_size')}
+                                        </InputGroup>
+                                        <InputGroup label="Required Quantity">
+                                            <TextInput
+                                                name="required_quantity"
+                                                type="number"
+                                                min="1"
+                                                value={formState.requiredQuantity || 1}
+                                                onChange={e => setFormState({ ...formState, requiredQuantity: Number(e.target.value) })}
+                                                placeholder="1"
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Packages needed for this master item
+                                            </p>
+                                            {renderSuggestion('required_quantity')}
                                         </InputGroup>
                                     </div>
+                                    <p className="text-sm text-muted-foreground -mt-2">
+                                        (= {(formState.packageSize || 1) * (formState.requiredQuantity || 1)} total units)
+                                    </p>
                                     <div className="grid grid-cols-2 gap-3">
                                         <InputGroup label="UPC / GTIN">
                                             <TextInput 
@@ -1335,7 +1362,8 @@ export default function ProductEditDialog({
                             const fieldOrder = [
                                 'name', 'productUrl', 'imageUrl', 'description',
                                 'price', 'asin', 'sku',
-                                'metadata_brand', 'metadata_quantity', 'metadata_upc', 'metadata_model_number',
+                                'package_size', 'required_quantity',
+                                'metadata_brand', 'metadata_upc', 'metadata_model_number',
                                 'metadata_dimensions', 'metadata_weight', 'metadata_weight_unit',
                                 'metadata_color', 'metadata_size'
                             ];
@@ -1353,8 +1381,9 @@ export default function ProductEditDialog({
                                     'price': 'price',
                                     'asin': 'asin',
                                     'sku': 'asin', // ASIN field handles both
+                                    'package_size': 'package_size',
+                                    'required_quantity': 'required_quantity',
                                     'metadata_brand': 'meta_brand',
-                                    'metadata_quantity': 'meta_quantity',
                                     'metadata_dimensions': 'meta_dimensions',
                                     'metadata_color': 'meta_color',
                                     'metadata_size': 'meta_size',
@@ -1526,7 +1555,8 @@ export default function ProductEditDialog({
                     basePrice={typeof formState.price === 'number' ? formState.price : typeof formState.price === 'string' ? parseFloat(formState.price) : undefined}
                     baseSku={formState.sku ?? undefined}
                     baseAsin={formState.asin ?? undefined}
-                    baseQuantity={undefined}
+                    basePackageSize={formState.packageSize ?? 1}
+                    baseRequiredQuantity={formState.requiredQuantity ?? 1}
                 />
             )}
 

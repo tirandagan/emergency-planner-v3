@@ -11,7 +11,8 @@ interface VariationsTableModalProps {
     basePrice?: number;
     baseSku?: string;
     baseAsin?: string;
-    baseQuantity?: number;
+    basePackageSize?: number;
+    baseRequiredQuantity?: number;
 }
 
 export default function VariationsTableModal({
@@ -23,7 +24,8 @@ export default function VariationsTableModal({
     basePrice,
     baseSku,
     baseAsin,
-    baseQuantity
+    basePackageSize,
+    baseRequiredQuantity
 }: VariationsTableModalProps) {
     if (!isOpen) return null;
 
@@ -51,7 +53,8 @@ export default function VariationsTableModal({
                         basePrice={basePrice}
                         baseSku={baseSku}
                         baseAsin={baseAsin}
-                        baseQuantity={baseQuantity}
+                        basePackageSize={basePackageSize}
+                        baseRequiredQuantity={baseRequiredQuantity}
                     />
                 </div>
 

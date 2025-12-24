@@ -10,7 +10,8 @@ interface VariationsTableProps {
     basePrice?: number;
     baseSku?: string;
     baseAsin?: string;
-    baseQuantity?: number;
+    basePackageSize?: number;
+    baseRequiredQuantity?: number;
 }
 
 // Custom NumberInput Component
@@ -87,11 +88,12 @@ export default function VariationsTable({
     basePrice,
     baseSku,
     baseAsin,
-    baseQuantity
-}: VariationsTableProps & { baseQuantity?: number }) {
+    basePackageSize,
+    baseRequiredQuantity
+}: VariationsTableProps) {
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
     const [batchActionOpen, setBatchActionOpen] = useState(false);
-    const [activeBatchAction, setActiveBatchAction] = useState<'price' | 'quantity' | null>(null);
+    const [activeBatchAction, setActiveBatchAction] = useState<'price' | 'package_size' | 'required_quantity' | null>(null);
     const [batchValue, setBatchValue] = useState("");
 
     const combinations = useMemo(() => {
@@ -241,18 +243,29 @@ export default function VariationsTable({
                                                 <DollarSign className="w-3.5 h-3.5" strokeWidth={2.5} /> Update Price
                                             </button>
                                         )}
-                                        {config.toggles.quantity && (
+                                        {config.toggles.package_size && (
                                             <button
                                                 onClick={() => {
-                                                    setActiveBatchAction('quantity');
+                                                    setActiveBatchAction('package_size');
                                                     setBatchActionOpen(false);
                                                 }}
                                                 className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted hover:text-foreground flex items-center gap-2 whitespace-nowrap"
                                             >
-                                                <Hash className="w-3.5 h-3.5" strokeWidth={2.5} /> Update Quantity
+                                                <Hash className="w-3.5 h-3.5" strokeWidth={2.5} /> Update Package Size
                                             </button>
                                         )}
-                                        {(!config.toggles.price && !config.toggles.quantity) && (
+                                        {config.toggles.required_quantity && (
+                                            <button
+                                                onClick={() => {
+                                                    setActiveBatchAction('required_quantity');
+                                                    setBatchActionOpen(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted hover:text-foreground flex items-center gap-2 whitespace-nowrap"
+                                            >
+                                                <Hash className="w-3.5 h-3.5" strokeWidth={2.5} /> Update Required Quantity
+                                            </button>
+                                        )}
+                                        {(!config.toggles.price && !config.toggles.package_size && !config.toggles.required_quantity) && (
                                             <div className="px-4 py-2 text-xs text-muted-foreground">No editable fields enabled</div>
                                         )}
                                     </div>
@@ -282,7 +295,8 @@ export default function VariationsTable({
                             {config.toggles.sku && <th className="px-4 py-3">SKU</th>}
                             {config.toggles.asin && <th className="px-4 py-3">ASIN</th>}
                             {config.toggles.price && <th className="px-4 py-3 w-36">Price</th>}
-                            {config.toggles.quantity && <th className="px-4 py-3 w-20">Qty</th>}
+                            {config.toggles.package_size && <th className="px-4 py-3 w-24">Pkg Size</th>}
+                            {config.toggles.required_quantity && <th className="px-4 py-3 w-24">Req Qty</th>}
                             {config.toggles.processing && <th className="px-4 py-3">Processing Profile</th>}
                         </tr>
                     </thead>
@@ -342,13 +356,27 @@ export default function VariationsTable({
                                         </td>
                                     )}
 
-                                    {config.toggles.quantity && (
+                                    {config.toggles.package_size && (
                                         <td className="px-4 py-2">
                                             <input
                                                 type="number"
-                                                value={entry.quantity !== undefined ? entry.quantity : (baseQuantity || '')}
-                                                onChange={e => handleValueChange(combo.key, 'quantity', parseInt(e.target.value))}
-                                                placeholder={baseQuantity ? String(baseQuantity) : '0'}
+                                                value={entry.package_size !== undefined ? entry.package_size : (basePackageSize || 1)}
+                                                onChange={e => handleValueChange(combo.key, 'package_size', parseInt(e.target.value))}
+                                                placeholder={basePackageSize ? String(basePackageSize) : '1'}
+                                                min="1"
+                                                className="w-full bg-background border border-input rounded px-2 py-1.5 text-xs text-foreground focus:border-primary outline-none"
+                                            />
+                                        </td>
+                                    )}
+
+                                    {config.toggles.required_quantity && (
+                                        <td className="px-4 py-2">
+                                            <input
+                                                type="number"
+                                                value={entry.required_quantity !== undefined ? entry.required_quantity : (baseRequiredQuantity || 1)}
+                                                onChange={e => handleValueChange(combo.key, 'required_quantity', parseInt(e.target.value))}
+                                                placeholder={baseRequiredQuantity ? String(baseRequiredQuantity) : '1'}
+                                                min="1"
                                                 className="w-full bg-background border border-input rounded px-2 py-1.5 text-xs text-foreground focus:border-primary outline-none"
                                             />
                                         </td>
