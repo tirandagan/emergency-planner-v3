@@ -1271,6 +1271,30 @@ export default function ProductsClient({
           }
       });
 
+      // Sort products within each master item by sortOrder (nulls last, then by name)
+      Object.values(groups).forEach(categoryGroup => {
+          Object.values(categoryGroup.subGroups).forEach(subGroup => {
+              Object.values(subGroup.masterItems).forEach(masterGroup => {
+                  masterGroup.products.sort((a, b) => {
+                      // Products with sortOrder come first
+                      const aHasSort = a.sortOrder !== null && a.sortOrder !== undefined;
+                      const bHasSort = b.sortOrder !== null && b.sortOrder !== undefined;
+
+                      if (aHasSort && !bHasSort) return -1;
+                      if (!aHasSort && bHasSort) return 1;
+
+                      // Both have sortOrder - compare numerically
+                      if (aHasSort && bHasSort) {
+                          return (a.sortOrder as number) - (b.sortOrder as number);
+                      }
+
+                      // Neither has sortOrder - sort by name
+                      return (a.name || '').localeCompare(b.name || '');
+                  });
+              });
+          });
+      });
+
       // When filtering, remove empty master items and categories
       if (hasActiveFilters) {
           // Remove empty master items
