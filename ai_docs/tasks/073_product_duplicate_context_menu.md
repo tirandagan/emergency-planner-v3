@@ -75,6 +75,9 @@ Users need a quick way to duplicate products with minor variations (e.g., differ
 **Alternative Consideration:**
 Option 2 would be preferred if we had concerns about database pollution from abandoned duplicates, but in this case the benefit of guaranteed data integrity and simplicity outweighs that concern.
 
+**🔄 IMPLEMENTATION UPDATE (2025-12-23):**
+During implementation, user clarified that ASIN should NOT be a unique constraint since the same ASIN may be used for products with different quantities/pack sizes. Schema updated to remove unique constraint, and duplicateProduct now preserves the ASIN value instead of setting it to null.
+
 ### Decision Request
 
 **👤 USER DECISION REQUIRED:**

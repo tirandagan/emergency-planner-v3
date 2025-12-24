@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Product, MasterItem, MasterItemGroup } from '@/lib/products-types';
 import { Shield, Users, Clock, MapPin, ChevronDown, ChevronRight } from 'lucide-react';
 import { ProductRow } from './ProductRow';
+import { DraggableProductRow } from './DraggableProductRow';
 import { TagBadge, HighlightedText } from '../page.client';
 import { SCENARIOS } from '../constants';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { reorderProducts } from '../actions';
 
 /**
  * MasterItemRow Component
@@ -67,6 +71,47 @@ export const MasterItemRow = React.memo(function MasterItemRow({
     sortField,
     sortDirection
 }: MasterItemRowProps): React.JSX.Element {
+    // Local state for optimistic updates during drag-and-drop
+    const [localProducts, setLocalProducts] = useState(masterGroup.products);
+
+    // Update local products when props change
+    React.useEffect(() => {
+        setLocalProducts(masterGroup.products);
+    }, [masterGroup.products]);
+
+    // Drag-and-drop sensors configuration
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 8 } // Prevent accidental drags
+        })
+    );
+
+    // Handle drag end event
+    const handleDragEnd = async (event: DragEndEvent): Promise<void> => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id || !masterGroup.masterItem) return;
+
+        const oldIndex = localProducts.findIndex(p => p.id === active.id);
+        const newIndex = localProducts.findIndex(p => p.id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        // Optimistic update - reorder locally
+        const reordered = arrayMove(localProducts, oldIndex, newIndex);
+        setLocalProducts(reordered);
+
+        // Persist to database
+        const productIds = reordered.map(p => p.id);
+        const result = await reorderProducts(masterGroup.masterItem.id, productIds);
+
+        if (!result.success) {
+            // Revert on failure
+            setLocalProducts(masterGroup.products);
+            console.error('Failed to save product order:', result.error);
+        }
+    };
+
     // Sort icon helper component
     const SortIcon = ({ field }: { field: string }): React.JSX.Element => {
         if (sortField !== field) {
@@ -188,36 +233,47 @@ export const MasterItemRow = React.memo(function MasterItemRow({
 
             {/* Products Table - Only show when expanded */}
             {isExpanded && (
-                <table className="w-full text-left text-sm text-muted-foreground table-fixed">
-                    <thead className="bg-background/50 text-muted-foreground text-[10px] uppercase font-medium border-b border-border/50">
-                        <tr>
-                            <th className="pl-8 pr-2 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => onSort('name')}>
-                                <div className="flex items-center gap-2">Product <SortIcon field="name" /></div>
-                            </th>
-                            <th className="px-2 py-2 w-[180px] cursor-pointer hover:text-foreground group/th" onClick={() => onSort('supplier')}>
-                                <div className="flex items-center gap-2">Supplier <SortIcon field="supplier" /></div>
-                            </th>
-                            <th className="px-2 py-2 w-[120px] cursor-pointer hover:text-foreground group/th" onClick={() => onSort('price')}>
-                                <div className="flex items-center gap-2">Price <SortIcon field="price" /></div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
-                        {masterGroup.products.map((product) => (
-                            <ProductRow
-                                key={product.id}
-                                product={product}
-                                masterItem={masterGroup.masterItem}
-                                isSelected={selectedProductIds.has(product.id)}
-                                isTagging={taggingProductId === product.id}
-                                searchTerm={searchTerm}
-                                onContextMenu={onProductContextMenu}
-                                onClick={onProductClick}
-                                onQuickTagClose={onQuickTagClose}
-                            />
-                        ))}
-                    </tbody>
-                </table>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={localProducts.map(p => p.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <table className="w-full text-left text-sm text-muted-foreground table-fixed">
+                            <thead className="bg-background/50 text-muted-foreground text-[10px] uppercase font-medium border-b border-border/50">
+                                <tr>
+                                    <th className="pl-8 pr-2 py-2 cursor-pointer hover:text-foreground group/th" onClick={() => onSort('name')}>
+                                        <div className="flex items-center gap-2">Product <SortIcon field="name" /></div>
+                                    </th>
+                                    <th className="px-2 py-2 w-[180px] cursor-pointer hover:text-foreground group/th" onClick={() => onSort('supplier')}>
+                                        <div className="flex items-center gap-2">Supplier <SortIcon field="supplier" /></div>
+                                    </th>
+                                    <th className="px-2 py-2 w-[120px] cursor-pointer hover:text-foreground group/th" onClick={() => onSort('price')}>
+                                        <div className="flex items-center gap-2">Price <SortIcon field="price" /></div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {localProducts.map((product) => (
+                                    <DraggableProductRow
+                                        key={product.id}
+                                        product={product}
+                                        masterItem={masterGroup.masterItem}
+                                        isSelected={selectedProductIds.has(product.id)}
+                                        isTagging={taggingProductId === product.id}
+                                        searchTerm={searchTerm}
+                                        onContextMenu={onProductContextMenu}
+                                        onClick={onProductClick}
+                                        onQuickTagClose={onQuickTagClose}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    </SortableContext>
+                </DndContext>
             )}
         </div>
     );

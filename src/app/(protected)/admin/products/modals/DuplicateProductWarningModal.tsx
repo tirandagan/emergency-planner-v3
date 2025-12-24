@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, ArrowRight, Trash2, Save, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Save, X } from 'lucide-react';
 
 interface ProductData {
     id?: string;
@@ -15,8 +15,7 @@ interface ProductData {
 interface DuplicateProductWarningModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onMerge: () => void;
-    onDelete: () => void;
+    onSave: () => void;
     existingProduct: ProductData;
     newProduct: ProductData;
     isEditing: boolean;
@@ -25,15 +24,18 @@ interface DuplicateProductWarningModalProps {
 export default function DuplicateProductWarningModal({
     isOpen,
     onClose,
-    onMerge,
-    onDelete,
+    onSave,
     existingProduct,
     newProduct,
     isEditing
 }: DuplicateProductWarningModalProps) {
     if (!isOpen) return null;
 
-    const formatCurrency = (val?: number) => val ? `$${val.toFixed(2)}` : '-';
+    const formatCurrency = (val?: number | string | null) => {
+        if (!val) return '-';
+        const numVal = typeof val === 'string' ? parseFloat(val) : val;
+        return isNaN(numVal) ? '-' : `$${numVal.toFixed(2)}`;
+    };
 
     const renderField = (label: string, val1: any, val2: any, highlight = false) => {
         const isDiff = val1 != val2;
@@ -63,7 +65,7 @@ export default function DuplicateProductWarningModal({
                     <div className="flex-1">
                         <h3 className="text-lg font-bold text-white mb-1">Duplicate ASIN Detected</h3>
                         <p className="text-yellow-200/80 text-sm">
-                            A product with ASIN <span className="font-mono bg-black/30 px-1.5 py-0.5 rounded text-white">{existingProduct.asin}</span> already exists.
+                            A product with ASIN <span className="font-mono bg-black/30 px-1.5 py-0.5 rounded text-white">{existingProduct.asin}</span> already exists. This is allowed for products with different quantities or pack sizes.
                         </p>
                     </div>
                     <button onClick={onClose} className="text-gray-500 hover:text-white">
@@ -112,27 +114,19 @@ export default function DuplicateProductWarningModal({
 
                 {/* Actions */}
                 <div className="p-6 bg-gray-900/50 border-t border-gray-800 flex justify-end gap-3">
-                    <button 
+                    <button
                         onClick={onClose}
                         className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
                     >
                         Cancel & Keep Editing
                     </button>
-                    
-                    <button 
-                        onClick={onDelete}
-                        className="px-4 py-2 rounded-lg text-sm font-medium text-red-400 hover:text-white hover:bg-red-600 border border-red-900/50 hover:border-red-600 transition-colors flex items-center gap-2"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        {isEditing ? "Delete Edited Product" : "Discard Draft"}
-                    </button>
 
-                    <button 
-                        onClick={onMerge}
-                        className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-900/20 flex items-center gap-2 transition-colors"
+                    <button
+                        onClick={onSave}
+                        className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-500 shadow-lg shadow-green-900/20 flex items-center gap-2 transition-colors"
                     >
                         <Save className="w-4 h-4" />
-                        Merge (Overwrite Existing)
+                        Save as Separate Product
                     </button>
                 </div>
             </div>

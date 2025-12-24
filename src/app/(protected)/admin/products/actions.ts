@@ -14,6 +14,22 @@ import { buildChangeEntry, addChangeEntry } from '@/lib/change-tracking';
 
 import type { Product } from '@/lib/products-types';
 
+// Return types for product operations
+export type ProductConflict = {
+  id: string;
+  name: string;
+  master_item_name: string | null;
+  supplier_name: string | null;
+  asin: string | null;
+  price: string | null;
+  image_url: string | null;
+};
+
+export type ProductOperationResult =
+  | { success: true }
+  | { success: false; message: string }
+  | { success: false; conflict: ProductConflict; message: string };
+
 export async function getProducts(): Promise<Product[]> {
   const data = await db
     .select({
@@ -35,6 +51,7 @@ export async function getProducts(): Promise<Product[]> {
       demographics: specificProducts.demographics,
       locations: specificProducts.locations,
       scenarios: specificProducts.scenarios,
+      sortOrder: specificProducts.sortOrder,
       changeHistory: specificProducts.changeHistory,
       createdAt: specificProducts.createdAt,
       updatedAt: specificProducts.updatedAt,
@@ -51,7 +68,12 @@ export async function getProducts(): Promise<Product[]> {
     .from(specificProducts)
     .leftJoin(masterItems, eq(specificProducts.masterItemId, masterItems.id))
     .leftJoin(suppliers, eq(specificProducts.supplierId, suppliers.id))
-    .orderBy(desc(specificProducts.createdAt));
+    .orderBy(
+      specificProducts.masterItemId,
+      sql`${specificProducts.sortOrder} IS NULL`,
+      specificProducts.sortOrder,
+      specificProducts.name
+    );
 
   return data as Product[];
 }
@@ -103,7 +125,7 @@ export async function getSuppliers() {
     return data;
 }
 
-export async function createProduct(formData: FormData) {
+export async function createProduct(formData: FormData): Promise<ProductOperationResult> {
   await checkAdmin();
 
   const name = formData.get('name') as string;
@@ -253,7 +275,7 @@ export async function createProduct(formData: FormData) {
   return { success: true };
 }
 
-export async function updateProduct(formData: FormData) {
+export async function updateProduct(formData: FormData): Promise<ProductOperationResult> {
     const user = await checkAdmin();
 
     const id = formData.get('id') as string;
@@ -294,45 +316,7 @@ export async function updateProduct(formData: FormData) {
     if (isNaN(price) || price <= 0) {
       return { success: false, message: 'Valid price is required' };
     }
-    
-    // Check for duplicate ASIN
-    if (asin) {
-      const [existing] = await db
-        .select({
-          id: specificProducts.id,
-          name: specificProducts.name,
-          masterItemName: masterItems.name,
-          supplierName: suppliers.name,
-          asin: specificProducts.asin,
-          price: specificProducts.price,
-          imageUrl: specificProducts.imageUrl,
-        })
-        .from(specificProducts)
-        .leftJoin(masterItems, eq(specificProducts.masterItemId, masterItems.id))
-        .leftJoin(suppliers, eq(specificProducts.supplierId, suppliers.id))
-        .where(and(
-          eq(specificProducts.asin, asin),
-          sql`${specificProducts.id} != ${id}`
-        ))
-        .limit(1);
-        
-      if (existing) {
-        return { 
-          success: false, 
-          conflict: {
-            id: existing.id,
-            name: existing.name,
-            master_item_name: existing.masterItemName,
-            supplier_name: existing.supplierName,
-            asin: existing.asin,
-            price: existing.price,
-            image_url: existing.imageUrl,
-          },
-          message: `ASIN ${asin} is already used by another product.` 
-        };
-      }
-    }
-    
+
     // Metadata handling
     const metadataKeys = ['weight', 'weight_unit', 'dimensions', 'brand', 'color', 'size', 'quantity', 'volume', 'volume_unit', 'rating', 'reviews', 'x1_multiplier'];
     const metadata: Record<string, any> = {};
@@ -716,7 +700,7 @@ export async function duplicateMasterItem(masterItemId: string) {
   return duplicate;
 }
 
-export async function duplicateProduct(productId: string) {
+export async function duplicateProduct(productId: string): Promise<Product> {
   await checkAdmin();
 
   const [source] = await db
@@ -735,7 +719,7 @@ export async function duplicateProduct(productId: string) {
       name: `${source.name} [copy]`,
       description: source.description,
       sku: source.sku,
-      asin: null,
+      asin: source.asin,
       price: source.price,
       productUrl: source.productUrl,
       imageUrl: source.imageUrl,
@@ -755,7 +739,7 @@ export async function duplicateProduct(productId: string) {
 
   revalidatePath('/admin/products');
   revalidatePath('/admin/bundles');
-  return duplicate;
+  return duplicate as Product;
 }
 
 export async function bulkUpdateProducts(ids: string[], data: { supplierId?: string | null; masterItemId?: string }) {
@@ -1040,3 +1024,56 @@ export const searchProductsFromAmazon = async (query: string) => {
         return { success: false, message: e.message };
     }
 };
+
+/**
+ * Reorder products within a master item
+ * Assigns sequential sort orders (1, 2, 3, ..., N) to products based on new order
+ *
+ * @param masterItemId - UUID of master item containing products
+ * @param productIds - Array of product UUIDs in desired display order
+ * @returns Success response or error
+ */
+export async function reorderProducts(
+  masterItemId: string,
+  productIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  await checkAdmin();
+
+  // Verify all product IDs belong to the specified master item
+  const existingProducts = await db
+    .select({ id: specificProducts.id })
+    .from(specificProducts)
+    .where(
+      and(
+        eq(specificProducts.masterItemId, masterItemId),
+        inArray(specificProducts.id, productIds)
+      )
+    );
+
+  if (existingProducts.length !== productIds.length) {
+    return { success: false, error: 'Invalid product IDs' };
+  }
+
+  // Update sort orders in transaction
+  try {
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < productIds.length; i++) {
+        await tx
+          .update(specificProducts)
+          .set({ sortOrder: i + 1 })
+          .where(
+            and(
+              eq(specificProducts.id, productIds[i]),
+              eq(specificProducts.masterItemId, masterItemId)
+            )
+          );
+      }
+    });
+
+    // Don't revalidate - we use optimistic updates in the UI
+    // The new order will be fetched on next natural page load
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Failed to update product order' };
+  }
+}

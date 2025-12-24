@@ -46,6 +46,12 @@ export interface ProductRowProps {
     onContextMenu: (e: React.MouseEvent, product: Product) => void;
     onClick: (e: React.MouseEvent, productId: string) => void;
     onQuickTagClose: () => void;
+    // Drag-and-drop props (optional, provided by DraggableProductRow)
+    dragRef?: (node: HTMLElement | null) => void;
+    dragStyle?: React.CSSProperties;
+    dragAttributes?: React.HTMLAttributes<HTMLTableRowElement>;
+    dragListeners?: React.HTMLAttributes<HTMLButtonElement>;
+    isDraggingState?: boolean;
 }
 
 /**
@@ -60,7 +66,12 @@ export const ProductRow = React.memo(function ProductRow({
     searchTerm = '',
     onContextMenu,
     onClick,
-    onQuickTagClose
+    onQuickTagClose,
+    dragRef,
+    dragStyle,
+    dragAttributes,
+    dragListeners,
+    isDraggingState
 }: ProductRowProps): React.JSX.Element {
     const [showDescriptionTooltip, setShowDescriptionTooltip] = useState(false);
     const [isAffiliateModalOpen, setIsAffiliateModalOpen] = useState(false);
@@ -175,6 +186,9 @@ export const ProductRow = React.memo(function ProductRow({
     return (
         <Fragment>
             <tr
+                ref={dragRef}
+                style={dragStyle}
+                {...dragAttributes}
                 className={`transition-colors group cursor-pointer ${
                     isSelected
                         ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-primary'
@@ -185,8 +199,27 @@ export const ProductRow = React.memo(function ProductRow({
                 onContextMenu={(e) => onContextMenu(e, product)}
                 onClick={(e) => onClick(e, product.id)}
             >
-                <td className="pl-8 pr-2 py-3 min-w-0">
-                    <div className="flex gap-3 items-start">
+                <td className="pr-2 py-3 min-w-0">
+                    <div className="flex gap-3 items-start pl-2">
+                        {/* Drag handle - only shown when drag listeners are provided */}
+                        {dragListeners && (
+                            <button
+                                {...dragListeners}
+                                className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-[38px]"
+                                aria-label="Drag to reorder product"
+                                type="button"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <svg className="w-4 h-4 text-muted-foreground hover:text-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="9" cy="5" r="1" />
+                                    <circle cx="9" cy="12" r="1" />
+                                    <circle cx="9" cy="19" r="1" />
+                                    <circle cx="15" cy="5" r="1" />
+                                    <circle cx="15" cy="12" r="1" />
+                                    <circle cx="15" cy="19" r="1" />
+                                </svg>
+                            </button>
+                        )}
                         {product.imageUrl && (
                             <img src={product.imageUrl} alt="" className="w-24 h-24 rounded bg-muted object-cover border border-border shrink-0" />
                         )}

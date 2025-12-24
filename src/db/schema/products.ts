@@ -42,7 +42,7 @@ export const specificProducts = pgTable(
     description: text('description'),
     price: decimal('price', { precision: 10, scale: 2 }),
     sku: text('sku'),
-    asin: text('asin').unique(),
+    asin: text('asin'),
     imageUrl: text('image_url'),
     productUrl: text('product_url'),
     type: text('type').notNull().default('product'),
@@ -53,6 +53,7 @@ export const specificProducts = pgTable(
     demographics: text('demographics').array(),
     locations: text('locations').array(),
     scenarios: text('scenarios').array(),
+    sortOrder: integer('sort_order'),
     changeHistory: jsonb('change_history').default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -64,6 +65,7 @@ export const specificProducts = pgTable(
     statusIdx: index('idx_specific_products_status').on(table.status),
     metadataIdx: index('idx_specific_products_metadata').using('gin', table.metadata),
     scenariosIdx: index('idx_specific_products_scenarios').using('gin', table.scenarios),
+    sortOrderIdx: index('idx_specific_products_sort_order').on(table.masterItemId, table.sortOrder),
   })
 );
 

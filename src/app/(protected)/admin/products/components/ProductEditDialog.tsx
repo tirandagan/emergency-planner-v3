@@ -8,6 +8,7 @@ import VariationsModal, { VariationConfig } from "./VariationsModal";
 import VariationsTableModal from "./VariationsTableModal";
 import { createProduct, updateProduct, deleteProduct, summarizeProductDescription } from "../actions";
 import { getProductDetailsFromAmazon, getProductDetailsFromWeb, searchProductsFromAmazon } from "../actions";
+import type { ProductOperationResult } from "../actions";
 import ProductSearchModal from "../modals/ProductSearchModal";
 import DuplicateProductWarningModal from "../modals/DuplicateProductWarningModal";
 import CleanUrlModal from "../modals/CleanUrlModal";
@@ -391,7 +392,7 @@ export default function ProductEditDialog({
                 formData.append('variations', JSON.stringify(formState.variations));
             }
 
-            let res;
+            let res: ProductOperationResult;
             if (product?.id) {
                 formData.append('id', product.id);
                 res = await updateProduct(formData);
@@ -401,7 +402,7 @@ export default function ProductEditDialog({
 
             // Handle validation or conflict errors returned from server
             if (res && !res.success) {
-                if (res.conflict) {
+                if ('conflict' in res && res.conflict) {
                     setPendingFormData(formData);
                     setConflictData(res.conflict);
                     return;
@@ -1434,8 +1435,24 @@ export default function ProductEditDialog({
                 <DuplicateProductWarningModal
                     isOpen={!!conflictData}
                     onClose={() => setConflictData(null)}
-                    onMerge={handleMergeConflict}
-                    onDelete={handleDeleteConflict}
+                    onSave={async () => {
+                        // Save as separate product by proceeding with the original creation
+                        if (pendingFormData) {
+                            try {
+                                const res = await createProduct(pendingFormData);
+                                if (res && !res.success) {
+                                    setSaveError(res.message || "Failed to create product");
+                                    return;
+                                }
+                                if (onSave) onSave();
+                                onClose();
+                                setConflictData(null);
+                                setPendingFormData(null);
+                            } catch (e: any) {
+                                setSaveError(e.message);
+                            }
+                        }
+                    }}
                     existingProduct={conflictData}
                     newProduct={{
                         name: formState.name || '',

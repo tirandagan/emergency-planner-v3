@@ -107,6 +107,7 @@ export interface Product {
   demographics?: string[] | null;
   locations?: string[] | null;
   scenarios?: string[] | null;
+  sortOrder?: number | null;
   variations?: ProductVariations | null;
   changeHistory?: ChangeHistory;
 }
