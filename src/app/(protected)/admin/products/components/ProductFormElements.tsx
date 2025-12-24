@@ -33,3 +33,8 @@ export const TextArea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement
     <textarea {...props} className={`w-full bg-background border border-input rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all text-sm min-h-[120px] resize-y ${props.className || ''}`} />
 );
 
+// Export underlined input variants for modern UI
+export { UnderlinedInput } from './UnderlinedInput';
+export { UnderlinedSelect } from './UnderlinedSelect';
+export { UnderlinedTextarea } from './UnderlinedTextarea';
+

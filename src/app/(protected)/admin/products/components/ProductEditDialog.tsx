@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
-    Pencil, Plus, X, Save, Package, Layers, ImageIcon, DollarSign,
+    Pencil, Plus, X, Save, Package, Layers, DollarSign,
     Tags, ExternalLink, Loader2, Sparkles, Check, AlertCircle, Target,
     Settings2, TableProperties, History
 } from "lucide-react";
@@ -19,6 +19,7 @@ import MasterItemModal from "./MasterItemModal";
 import DecodoErrorModal from "../modals/DecodoErrorModal";
 import ProductErrorModal from "../modals/ProductErrorModal";
 import { SectionTitle, InputGroup, TextInput, SelectInput, TextArea } from "./ProductFormElements";
+import { CollapsibleSection } from "./CollapsibleSection";
 import TagSelector from "./TagSelector";
 import { TIMEFRAMES, DEMOGRAPHICS, LOCATIONS, SCENARIOS } from "../constants";
 import type { Category, MasterItem, Supplier, Product, ProductMetadata } from "@/lib/products-types";
@@ -98,6 +99,15 @@ export default function ProductEditDialog({
     const [selectedCategory, setSelectedCategory] = useState<string>("");
     const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
 
+    // Collapsible Section States (all default to OPEN)
+    const [identityOpen, setIdentityOpen] = useState(true);
+    const [pricingOpen, setPricingOpen] = useState(true);
+    const [classificationOpen, setClassificationOpen] = useState(true);
+    const [categorizationOpen, setCategorizationOpen] = useState(true);
+    const [inventoryOpen, setInventoryOpen] = useState(true);
+    const [variationsOpen, setVariationsOpen] = useState(true);
+    const [attributesOpen, setAttributesOpen] = useState(true);
+
     // Initialization
     useEffect(() => {
         if (isOpen) {
@@ -126,6 +136,15 @@ export default function ProductEditDialog({
 
             setFormState(initialState);
             setProductSuggestions(null);
+
+            // Reset all section states to OPEN when dialog opens
+            setIdentityOpen(true);
+            setPricingOpen(true);
+            setClassificationOpen(true);
+            setCategorizationOpen(true);
+            setInventoryOpen(true);
+            setVariationsOpen(true);
+            setAttributesOpen(true);
 
             // Initialize categories based on product or pre-selected master item
             const masterItemId = product?.masterItemId || preSelectedMasterItem;
@@ -168,6 +187,40 @@ export default function ProductEditDialog({
             }
         };
     }, []);
+
+    // Auto-expand sections when suggestions arrive
+    useEffect(() => {
+        if (!productSuggestions || Object.keys(productSuggestions).length === 0) return;
+
+        // Map suggestion fields to their sections
+        const fieldToSection: Record<string, () => void> = {
+            'name': () => setIdentityOpen(true),
+            'productUrl': () => setIdentityOpen(true),
+            'imageUrl': () => setIdentityOpen(true),
+            'description': () => setIdentityOpen(true),
+            'price': () => setPricingOpen(true),
+            'sku': () => setInventoryOpen(true),
+            'asin': () => setInventoryOpen(true),
+            'package_size': () => setAttributesOpen(true),
+            'required_quantity': () => setAttributesOpen(true),
+            'metadata_brand': () => setAttributesOpen(true),
+            'metadata_upc': () => setAttributesOpen(true),
+            'metadata_model_number': () => setAttributesOpen(true),
+            'metadata_dimensions': () => setAttributesOpen(true),
+            'metadata_weight': () => setAttributesOpen(true),
+            'metadata_weight_unit': () => setAttributesOpen(true),
+            'metadata_color': () => setAttributesOpen(true),
+            'metadata_size': () => setAttributesOpen(true),
+        };
+
+        // Auto-expand sections that have suggestions
+        Object.keys(productSuggestions).forEach(field => {
+            const expandSection = fieldToSection[field];
+            if (expandSection) {
+                expandSection();
+            }
+        });
+    }, [productSuggestions]);
 
     // Auto-fill tags from Master Item on creation
     useEffect(() => {
@@ -819,532 +872,590 @@ export default function ProductEditDialog({
             {/* Scrollable Form Content */}
             <div className="flex-1 overflow-y-auto">
                 <form id="product-form" action={handleSaveClick}>
-                    <div className="grid grid-cols-12 gap-0 min-h-full">
-                        
-                        {/* LEFT COLUMN */}
-                        <div className="col-span-12 lg:col-span-8 p-8 border-r border-border space-y-8">
-                            
-                            {/* Suggestions Bar - Only shows when there are auto-fill suggestions */}
-                            {productSuggestions && Object.keys(productSuggestions).length > 0 && (
-                                <div className="flex justify-between items-center p-4 rounded-xl border bg-primary/10 border-primary/50">
-                                    <div className="text-xs text-muted-foreground">
-                                        {Object.keys(productSuggestions).length} field(s) ready to update
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={acceptAllSuggestions}
-                                            className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-success/90 text-white rounded-lg text-xs font-bold transition-colors shadow-success/20"
-                                        >
-                                            <Check className="w-3 h-3" strokeWidth={2.5} />
-                                            Accept All
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={rejectAllSuggestions}
-                                            className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-bold transition-colors"
-                                        >
-                                            <X className="w-3 h-3" strokeWidth={2.5} />
-                                            Reject All
-                                        </button>
-                                    </div>
+                    <div className="p-8 space-y-4">
+
+                        {/* Suggestions Bar - Only shows when there are auto-fill suggestions */}
+                        {productSuggestions && Object.keys(productSuggestions).length > 0 && (
+                            <div className="flex justify-between items-center p-4 rounded-xl border bg-primary/10 border-primary/50">
+                                <div className="text-xs text-muted-foreground">
+                                    {Object.keys(productSuggestions).length} field(s) ready to update
                                 </div>
-                            )}
-
-                            {/* Identity Section */}
-                            <section>
-                                <SectionTitle icon={Package}>Product Identity</SectionTitle>
-                                <InputGroup label="Product Name" required>
-                                    <TextInput
-                                        name="name"
-                                        value={formState.name || ''}
-                                        onChange={e => setFormState({ ...formState, name: e.target.value })}
-                                        placeholder="e.g. Sawyer Squeeze Water Filter"
-                                        required
-                                    />
-                                    {renderSuggestion('name')}
-                                </InputGroup>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <InputGroup label="Product Page URL" required>
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex gap-2">
-                                                <TextInput
-                                                    ref={productUrlInputRef}
-                                                    name="productUrl"
-                                                    type="url"
-                                                    value={formState.productUrl || ''}
-                                                    onChange={e => handleProductUrlChange(e.target.value)}
-                                                    onBlur={handleProductUrlBlur}
-                                                    placeholder="https://amazon.com/..."
-                                                    required
-                                                />
-                                                {formState.productUrl && (
-                                                    <a href={formState.productUrl} target="_blank" className="p-2.5 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                                                        <ExternalLink className="w-4 h-4 text-muted-foreground" strokeWidth={2.5} />
-                                                    </a>
-                                                )}
-                                            </div>
-                                            {renderSuggestion('productUrl')}
-                                        </div>
-                                    </InputGroup>
-                                    <InputGroup label="Image URL">
-                                        <TextInput
-                                            name="imageUrl"
-                                            type="url"
-                                            value={formState.imageUrl || ''}
-                                            onChange={e => setFormState({ ...formState, imageUrl: e.target.value })}
-                                            placeholder="https://..."
-                                        />
-                                        {renderSuggestion('imageUrl')}
-                                    </InputGroup>
-                                </div>
-
-                                {(formState.imageUrl) && (
-                                    <div className="w-32 h-32 bg-muted rounded-lg border border-border flex items-center justify-center overflow-hidden relative group">
-                                        <img src={formState.imageUrl} alt="Preview" className="w-full h-full object-contain" />
-                                    </div>
-                                )}
-
-                                <InputGroup
-                                    label="Description"
-                                    action={
-                                        <button
-                                            type="button"
-                                            onClick={handleSummarizeDescription}
-                                            disabled={isSummarizing || !formState.description}
-                                            className="text-xs flex items-center gap-1.5 px-3 py-1 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-medium"
-                                        >
-                                            {isSummarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2.5} /> : <Sparkles className="w-3.5 h-3.5" strokeWidth={2.5} />}
-                                            AI Summary
-                                        </button>
-                                    }
-                                >
-                                    <TextArea
-                                        name="description"
-                                        value={formState.description || ''}
-                                        onChange={e => setFormState({ ...formState, description: e.target.value })}
-                                        placeholder="Detailed product description, features, and specs..."
-                                    />
-                                    {renderSuggestion('description')}
-                                </InputGroup>
-                            </section>
-
-                            {/* Categorization Section */}
-                            <section>
-                                <SectionTitle icon={Layers}>Categorization</SectionTitle>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-muted/30 p-4 rounded-xl border border-border/50">
-                                    <InputGroup label="1. Category">
-                                        <SelectInput 
-                                            value={selectedCategory} 
-                                            onChange={e => {
-                                                setSelectedCategory(e.target.value);
-                                                setSelectedSubCategory(""); 
-                                            }}
-                                        >
-                                            <option value="">Select Category...</option>
-                                            {rootCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </SelectInput>
-                                    </InputGroup>
-                                    
-                                    <InputGroup label="2. Subcategory">
-                                        <SelectInput 
-                                            value={selectedSubCategory}
-                                            onChange={e => setSelectedSubCategory(e.target.value)}
-                                            disabled={!selectedCategory || subCategories.length === 0}
-                                        >
-                                            <option value="">{subCategories.length === 0 ? 'No Subcategories' : 'Select Subcategory...'}</option>
-                                            {subCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </SelectInput>
-                                    </InputGroup>
-
-                                    <InputGroup label="3. Master Item (Type)" required>
-                                        <div className="flex gap-2">
-                                            <SelectInput
-                                                name="masterItemId"
-                                                value={formState.masterItemId || ""}
-                                                onChange={e => setFormState({ ...formState, masterItemId: e.target.value })}
-                                                required
-                                                disabled={!selectedCategory}
-                                            >
-                                                <option value="">
-                                                    {(!selectedCategory) ? 'Select Category First' : 
-                                                     (filteredMasterItems.length === 0 ? 'No Master Items Found' : 'Select Master Item...')}
-                                                </option>
-                                                {filteredMasterItems.map(m => {
-                                                    let label = m.name;
-                                                    if (!selectedSubCategory && selectedCategory && m.categoryId !== selectedCategory) {
-                                                        const sub = categories.find(c => c.id === m.categoryId);
-                                                        if (sub) label = `${m.name} (${sub.name})`;
-                                                    }
-                                                    return <option key={m.id} value={m.id}>{label}</option>;
-                                                })}
-                                            </SelectInput>
-                                            <button
-                                                type="button"
-                                                disabled={!selectedCategory}
-                                                onClick={() => setIsMasterItemModalOpen(true)}
-                                                className="bg-muted hover:bg-muted/80 text-foreground px-3 rounded-lg border border-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Add New Master Item"
-                                            >
-                                                <Plus className="w-4 h-4" strokeWidth={2.5} />
-                                            </button>
-                                        </div>
-                                    </InputGroup>
-                                </div>
-                                {filteredMasterItems.length === 0 && selectedCategory && (
-                                    <div className="mt-3 flex items-center gap-2 text-xs text-foreground bg-warning/20 p-3 rounded-lg border border-warning/50">
-                                        <AlertCircle className="w-4 h-4 text-warning" strokeWidth={2.5} />
-                                        No master items found in this category. Please add a Master Item first or check the category selection.
-                                    </div>
-                                )}
-                            </section>
-
-                            {/* Classification Section */}
-                            <section>
-                                <SectionTitle icon={Target}>Classification</SectionTitle>
-
-                                <div className="bg-muted/30 rounded-xl border border-border/50">
-                                    <div className="p-6 space-y-6">
-                                    {/* Hidden Inputs for Tags */}
-                                    {(formState.timeframes || []).map((t: string, idx: number) => <input key={`timeframe-${t}-${idx}`} type="hidden" name="timeframes" value={t} />)}
-                                    {(formState.demographics || []).map((t: string, idx: number) => <input key={`demographic-${t}-${idx}`} type="hidden" name="demographics" value={t} />)}
-                                    {(formState.locations || []).map((t: string, idx: number) => <input key={`location-${t}-${idx}`} type="hidden" name="locations" value={t} />)}
-                                    {(formState.scenarios || []).map((t: string, idx: number) => <input key={`scenario-${t}-${idx}`} type="hidden" name="scenarios" value={t} />)}
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <TagSelector
-                                            label="Scenario"
-                                            options={SCENARIOS}
-                                            selected={formState.scenarios || []}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, scenarios: vals || [] }))}
-                                            field="scenarios"
-                                        />
-                                        <TagSelector
-                                            label="Demographics"
-                                            options={DEMOGRAPHICS}
-                                            selected={formState.demographics || []}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, demographics: vals || [] }))}
-                                            field="demographics"
-                                        />
-                                        <TagSelector
-                                            label="Timeframe"
-                                            options={TIMEFRAMES}
-                                            selected={formState.timeframes || []}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, timeframes: vals || [] }))}
-                                            field="timeframes"
-                                        />
-                                        <TagSelector
-                                            label="Location"
-                                            options={LOCATIONS}
-                                            selected={formState.locations || []}
-                                            onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, locations: vals || [] }))}
-                                            field="locations"
-                                        />
-
-                                        {/* X1 Multiplier Toggle */}
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-2 text-xs mb-2 pr-4">
-                                                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                                    X1 Multiplier
-                                                </label>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const currentMetadata = (formState.metadata as ProductMetadata) || {};
-                                                    setFormState({
-                                                        ...formState,
-                                                        metadata: {
-                                                            ...currentMetadata,
-                                                            x1_multiplier: !currentMetadata.x1_multiplier,
-                                                        },
-                                                    });
-                                                }}
-                                                className={`w-full flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${
-                                                    (formState.metadata as ProductMetadata)?.x1_multiplier
-                                                        ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40'
-                                                        : 'bg-muted text-muted-foreground border-border'
-                                                }`}
-                                            >
-                                                <div className="px-2 border-r border-white/10 flex items-center justify-center">
-                                                    <X className={`w-3.5 h-3.5 shrink-0 transition-opacity ${(formState.metadata as ProductMetadata)?.x1_multiplier ? 'opacity-90' : 'opacity-40'}`} strokeWidth={2.5} />
-                                                </div>
-                                                <div className="px-2.5 py-1 flex items-center justify-center flex-1">
-                                                    <span className="text-[11px] font-bold tracking-wide uppercase">
-                                                        {(formState.metadata as ProductMetadata)?.x1_multiplier ? 'ON' : 'OFF'}
-                                                    </span>
-                                                </div>
-                                            </button>
-                                            {/* Hidden input to ensure x1_multiplier is submitted with form */}
-                                            <input
-                                                type="hidden"
-                                                name="meta_x1_multiplier"
-                                                value={(formState.metadata as ProductMetadata)?.x1_multiplier ? 'true' : 'false'}
-                                            />
-                                            <p className="text-[10px] text-muted-foreground text-center italic">
-                                                {(formState.metadata as ProductMetadata)?.x1_multiplier
-                                                    ? 'Quantity multiplies by party size'
-                                                    : 'Fixed quantity regardless of party size'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                        </div>
-
-                        {/* RIGHT COLUMN */}
-                        <div className="col-span-12 lg:col-span-4 bg-muted p-8 space-y-8 h-full">
-
-                            {/* Pricing Card */}
-                            <div className="bg-background/50 p-6 rounded-xl border border-border">
-                                <SectionTitle icon={DollarSign}>Pricing & Type</SectionTitle>
-                                <div className="space-y-4">
-                                    <InputGroup label="Price ($)" required>
-                                        <TextInput 
-                                            name="price" 
-                                            type="number" 
-                                            step="0.01" 
-                                            value={formState.price || 0}
-                                            onChange={e => setFormState({ ...formState, price: parseFloat(e.target.value) })} 
-                                            className="text-lg font-mono" 
-                                            required 
-                                        />
-                                        {renderSuggestion('price')}
-                                    </InputGroup>
-                                    <InputGroup label="Fulfillment Type">
-                                        <SelectInput name="type" value={formState.type || "AFFILIATE"} onChange={e => setFormState({ ...formState, type: e.target.value })}>
-                                            <option value="AFFILIATE">Affiliate Link (Referral)</option>
-                                            <option value="DROP_SHIP">Drop-Ship (Direct Sale)</option>
-                                        </SelectInput>
-                                    </InputGroup>
-                                </div>
-                            </div>
-
-                            {/* Inventory Card */}
-                            <div className="bg-background/50 p-6 rounded-xl border border-border">
-                                <SectionTitle icon={Package}>Inventory & Supplier</SectionTitle>
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <InputGroup label="SKU">
-                                            <TextInput
-                                                name="sku"
-                                                value={formState.sku || ''}
-                                                onChange={e => setFormState({ ...formState, sku: e.target.value })}
-                                                placeholder="e.g. PROD-12345"
-                                            />
-                                            {renderSuggestion('sku')}
-                                        </InputGroup>
-
-                                        <InputGroup label="ASIN">
-                                            <TextInput
-                                                ref={asinInputRef}
-                                                name="asin"
-                                                value={formState.asin || ''}
-                                                onChange={e => handleAsinChange(e.target.value)}
-                                                onBlur={handleAsinBlur}
-                                                placeholder="e.g. B005EHPVQW"
-                                                maxLength={10}
-                                            />
-                                            {renderSuggestion('asin')}
-                                        </InputGroup>
-                                    </div>
-
-                                    <InputGroup label="Supplier">
-                                        <div className="flex gap-2">
-                                            <SelectInput
-                                                name="supplierId"
-                                                value={formState.supplierId || ""}
-                                                onChange={e => handleSupplierChange(e.target.value)}
-                                            >
-                                                <option value="">Select Supplier...</option>
-                                                {localSuppliers.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                                ))}
-                                            </SelectInput>
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsSupplierModalOpen(true)}
-                                                className="bg-muted hover:bg-muted/80 text-foreground px-3 rounded-lg border border-border transition-colors"
-                                                title="Add New Supplier"
-                                            >
-                                                <Plus className="w-4 h-4" strokeWidth={2.5} />
-                                            </button>
-                                        </div>
-                                    </InputGroup>
-                                </div>
-                            </div>
-
-                            {/* Variations Card */}
-                            <div className="bg-background/50 p-6 rounded-xl border border-border">
-                                <div className="flex justify-between items-center mb-4">
-                                    <SectionTitle icon={Settings2} className="mb-0">Variations</SectionTitle>
+                                <div className="flex gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => setIsVariationsModalOpen(true)}
-                                        className="text-xs bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-lg font-medium transition-colors shadow-primary/20"
+                                        onClick={acceptAllSuggestions}
+                                        className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-success/90 text-white rounded-lg text-xs font-bold transition-colors shadow-success/20"
                                     >
-                                        {formState.variations?.config.attributes.length ? 'Edit Variations' : 'Add Variations'}
+                                        <Check className="w-3 h-3" strokeWidth={2.5} />
+                                        Accept All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={rejectAllSuggestions}
+                                        className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-bold transition-colors"
+                                    >
+                                        <X className="w-3 h-3" strokeWidth={2.5} />
+                                        Reject All
                                     </button>
                                 </div>
+                            </div>
+                        )}
 
-                                {formState.variations?.config.attributes.length ? (
-                                    <div className="space-y-4">
-                                        <div className="flex flex-wrap gap-2">
-                                            {formState.variations.config.attributes.map(attr => (
-                                                <div key={attr.id} className="bg-muted px-3 py-1.5 rounded-lg text-xs text-muted-foreground border border-border">
-                                                    <span className="font-bold text-foreground mr-1">{attr.name}:</span>
-                                                    {attr.options.join(', ')}
-                                                </div>
-                                            ))}
+                            {/* Section 1: Product Identity */}
+                        <CollapsibleSection
+                            title="Product Identity"
+                            icon={Package}
+                            isOpen={identityOpen}
+                            onToggle={setIdentityOpen}
+                        >
+                            <InputGroup label="Product Name" required>
+                                <TextInput
+                                    name="name"
+                                    value={formState.name || ''}
+                                    onChange={e => setFormState({ ...formState, name: e.target.value })}
+                                    placeholder="e.g. Sawyer Squeeze Water Filter"
+                                    required
+                                />
+                                {renderSuggestion('name')}
+                            </InputGroup>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsVariationsTableModalOpen(true)}
-                                                className="bg-muted hover:bg-muted/80 px-3 py-1.5 rounded-lg text-xs text-primary border border-border hover:border-primary/50 hover:text-primary/80 transition-all flex items-center gap-2 font-medium"
-                                            >
-                                                <TableProperties className="w-3.5 h-3.5" strokeWidth={2.5} />
-                                                Variation Table
-                                            </button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <InputGroup label="Product Page URL" required>
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex gap-2">
+                                            <TextInput
+                                                ref={productUrlInputRef}
+                                                name="productUrl"
+                                                type="url"
+                                                value={formState.productUrl || ''}
+                                                onChange={e => handleProductUrlChange(e.target.value)}
+                                                onBlur={handleProductUrlBlur}
+                                                placeholder="https://amazon.com/..."
+                                                required
+                                            />
+                                            {formState.productUrl && (
+                                                <a href={formState.productUrl} target="_blank" className="p-2.5 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                                                    <ExternalLink className="w-4 h-4 text-muted-foreground" strokeWidth={2.5} />
+                                                </a>
+                                            )}
+                                        </div>
+                                        {renderSuggestion('productUrl')}
+                                    </div>
+                                </InputGroup>
+                                <InputGroup label="Image URL">
+                                    <TextInput
+                                        name="imageUrl"
+                                        type="url"
+                                        value={formState.imageUrl || ''}
+                                        onChange={e => setFormState({ ...formState, imageUrl: e.target.value })}
+                                        placeholder="https://..."
+                                    />
+                                    {renderSuggestion('imageUrl')}
+                                </InputGroup>
+                            </div>
+
+                            {/* Description with Image Preview Side-by-Side */}
+                            <div className="flex flex-col md:flex-row gap-6">
+                                {/* Image Preview - Left Side */}
+                                {formState.imageUrl && (
+                                    <div className="flex-shrink-0">
+                                        <div className="w-40 h-40 bg-muted rounded-lg border border-border flex items-center justify-center overflow-hidden relative group">
+                                            <img src={formState.imageUrl} alt="Preview" className="w-full h-full object-contain" />
                                         </div>
                                     </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground italic">No variations defined for this product.</p>
                                 )}
-                            </div>
 
-                            {/* Metadata Card */}
-                            <div className="bg-background/50 p-6 rounded-xl border border-border">
-                                <SectionTitle icon={Tags}>Attributes</SectionTitle>
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <InputGroup label="Brand">
-                                            <TextInput
-                                                name="meta_brand"
-                                                value={formState.metadata?.brand || ''}
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, brand: e.target.value } })}
-                                                placeholder="Brand Name"
-                                            />
-                                            {renderSuggestion('metadata_brand')}
-                                        </InputGroup>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="Package Size">
-                                            <TextInput
-                                                name="package_size"
-                                                type="number"
-                                                min="1"
-                                                value={formState.packageSize || 1}
-                                                onChange={e => setFormState({ ...formState, packageSize: Number(e.target.value) })}
-                                                placeholder="1"
-                                            />
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Items per supplier package
-                                            </p>
-                                            {renderSuggestion('package_size')}
-                                        </InputGroup>
-                                        <InputGroup label="Required Quantity">
-                                            <TextInput
-                                                name="required_quantity"
-                                                type="number"
-                                                min="1"
-                                                value={formState.requiredQuantity || 1}
-                                                onChange={e => setFormState({ ...formState, requiredQuantity: Number(e.target.value) })}
-                                                placeholder="1"
-                                            />
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Packages needed for this master item
-                                            </p>
-                                            {renderSuggestion('required_quantity')}
-                                        </InputGroup>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground -mt-2">
-                                        (= {(formState.packageSize || 1) * (formState.requiredQuantity || 1)} total units)
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <InputGroup label="UPC / GTIN">
-                                            <TextInput 
-                                                name="meta_upc" 
-                                                value={formState.metadata?.upc || ''} 
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, upc: e.target.value } })}
-                                                placeholder="e.g. 07640144284091" 
-                                            />
-                                            {renderSuggestion('metadata_upc')}
-                                        </InputGroup>
-                                        <InputGroup label="Model #">
-                                            <TextInput
-                                                name="meta_model_number"
-                                                value={formState.metadata?.model_number || ''}
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, model_number: e.target.value } })}
-                                                placeholder="e.g. LSC024"
-                                            />
-                                            {renderSuggestion('metadata_model_number')}
-                                        </InputGroup>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-3">
-                                        <InputGroup label="Dimensions">
-                                            <TextInput 
-                                                name="meta_dimensions" 
-                                                value={formState.metadata?.dimensions || ''} 
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, dimensions: e.target.value } })}
-                                                placeholder="e.g. 23 x 24.5 x 23 inches" 
-                                            />
-                                            {renderSuggestion('metadata_dimensions')}
-                                        </InputGroup>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <InputGroup label="Weight">
-                                            <TextInput 
-                                                name="meta_weight" 
-                                                type="number" 
-                                                step="0.01" 
-                                                value={formState.metadata?.weight || ''}
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, weight: e.target.value } })}
-                                                placeholder="e.g. 500" 
-                                            />
-                                            {renderSuggestion('metadata_weight')}
-                                        </InputGroup>
-                                        <InputGroup label="Weight Unit">
-                                            <SelectInput 
-                                                name="meta_weight_unit" 
-                                                value={formState.metadata?.weight_unit || ''}
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, weight_unit: e.target.value } })}
+                                <div className="flex-1">
+                                    <InputGroup
+                                        label="Description"
+                                        action={
+                                            <button
+                                                type="button"
+                                                onClick={handleSummarizeDescription}
+                                                disabled={isSummarizing || !formState.description}
+                                                className="text-xs flex items-center gap-1.5 px-3 py-1 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-medium"
                                             >
-                                                <option value="">Select...</option>
-                                                <option value="g">Grams (g)</option>
-                                                <option value="kg">Kilograms (kg)</option>
-                                                <option value="oz">Ounces (oz)</option>
-                                                <option value="lb">Pounds (lb)</option>
-                                                <option value="mg">Milligrams (mg)</option>
-                                            </SelectInput>
-                                            {renderSuggestion('metadata_weight_unit')}
-                                        </InputGroup>
-                                    </div>
-                                    {/* Other metadata fields... simplified for brevity but kept main ones */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <InputGroup label="Color">
-                                            <TextInput 
-                                                name="meta_color" 
-                                                value={formState.metadata?.color || ''}
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, color: e.target.value } })}
-                                                placeholder="e.g. Black" 
-                                            />
-                                            {renderSuggestion('metadata_color')}
-                                        </InputGroup>
-                                        <InputGroup label="Size">
-                                            <TextInput 
-                                                name="meta_size" 
-                                                value={formState.metadata?.size || ''}
-                                                onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, size: e.target.value } })}
-                                                placeholder="e.g. Large" 
-                                            />
-                                            {renderSuggestion('metadata_size')}
-                                        </InputGroup>
-                                    </div>
+                                                {isSummarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2.5} /> : <Sparkles className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                                                AI Summary
+                                            </button>
+                                        }
+                                    >
+                                        <TextArea
+                                            name="description"
+                                            value={formState.description || ''}
+                                            onChange={e => setFormState({ ...formState, description: e.target.value })}
+                                            placeholder="Detailed product description, features, and specs..."
+                                        />
+                                        {renderSuggestion('description')}
+                                    </InputGroup>
                                 </div>
                             </div>
-                        </div>
+                        </CollapsibleSection>
+
+                        {/* Section 2: Pricing & Type */}
+                        <CollapsibleSection
+                            title="Pricing & Type"
+                            icon={DollarSign}
+                            isOpen={pricingOpen}
+                            onToggle={setPricingOpen}
+                            preview={
+                                formState.price
+                                    ? `$${Number(formState.price).toFixed(2)} • ${formState.type === 'DROP_SHIP' ? 'Drop-Ship' : 'Affiliate'}`
+                                    : undefined
+                            }
+                        >
+                            <InputGroup label="Price ($)" required>
+                                <TextInput
+                                    name="price"
+                                    type="number"
+                                    step="0.01"
+                                    value={formState.price || 0}
+                                    onChange={e => setFormState({ ...formState, price: parseFloat(e.target.value) })}
+                                    className="text-lg font-mono"
+                                    required
+                                />
+                                {renderSuggestion('price')}
+                            </InputGroup>
+                            <InputGroup label="Fulfillment Type">
+                                <SelectInput name="type" value={formState.type || "AFFILIATE"} onChange={e => setFormState({ ...formState, type: e.target.value })}>
+                                    <option value="AFFILIATE">Affiliate Link (Referral)</option>
+                                    <option value="DROP_SHIP">Drop-Ship (Direct Sale)</option>
+                                </SelectInput>
+                            </InputGroup>
+                        </CollapsibleSection>
+
+                        {/* Section 3: Classification */}
+                        <CollapsibleSection
+                            title="Classification"
+                            icon={Target}
+                            isOpen={classificationOpen}
+                            onToggle={setClassificationOpen}
+                            preview={
+                                (() => {
+                                    const tagCounts = [
+                                        (formState.scenarios || []).length && `${(formState.scenarios || []).length} scenario${(formState.scenarios || []).length !== 1 ? 's' : ''}`,
+                                        (formState.demographics || []).length && `${(formState.demographics || []).length} demographic${(formState.demographics || []).length !== 1 ? 's' : ''}`,
+                                        (formState.timeframes || []).length && `${(formState.timeframes || []).length} timeframe${(formState.timeframes || []).length !== 1 ? 's' : ''}`,
+                                        (formState.locations || []).length && `${(formState.locations || []).length} location${(formState.locations || []).length !== 1 ? 's' : ''}`
+                                    ].filter(Boolean);
+                                    return tagCounts.length ? tagCounts.join(', ') : undefined;
+                                })()
+                            }
+                        >
+                            {/* Hidden Inputs for Tags */}
+                            {(formState.timeframes || []).map((t: string, idx: number) => <input key={`timeframe-${t}-${idx}`} type="hidden" name="timeframes" value={t} />)}
+                            {(formState.demographics || []).map((t: string, idx: number) => <input key={`demographic-${t}-${idx}`} type="hidden" name="demographics" value={t} />)}
+                            {(formState.locations || []).map((t: string, idx: number) => <input key={`location-${t}-${idx}`} type="hidden" name="locations" value={t} />)}
+                            {(formState.scenarios || []).map((t: string, idx: number) => <input key={`scenario-${t}-${idx}`} type="hidden" name="scenarios" value={t} />)}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <TagSelector
+                                    label="Scenario"
+                                    options={SCENARIOS}
+                                    selected={formState.scenarios || []}
+                                    onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, scenarios: vals || [] }))}
+                                    field="scenarios"
+                                />
+                                <TagSelector
+                                    label="Demographics"
+                                    options={DEMOGRAPHICS}
+                                    selected={formState.demographics || []}
+                                    onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, demographics: vals || [] }))}
+                                    field="demographics"
+                                />
+                                <TagSelector
+                                    label="Timeframe"
+                                    options={TIMEFRAMES}
+                                    selected={formState.timeframes || []}
+                                    onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, timeframes: vals || [] }))}
+                                    field="timeframes"
+                                />
+                                <TagSelector
+                                    label="Location"
+                                    options={LOCATIONS}
+                                    selected={formState.locations || []}
+                                    onChange={(vals: string[] | null) => setFormState((prev: any) => ({ ...prev, locations: vals || [] }))}
+                                    field="locations"
+                                />
+
+                                {/* X1 Multiplier Toggle */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-xs mb-2 pr-4">
+                                        <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                            X1 Multiplier
+                                        </label>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const currentMetadata = (formState.metadata as ProductMetadata) || {};
+                                            setFormState({
+                                                ...formState,
+                                                metadata: {
+                                                    ...currentMetadata,
+                                                    x1_multiplier: !currentMetadata.x1_multiplier,
+                                                },
+                                            });
+                                        }}
+                                        className={`w-full flex items-stretch overflow-hidden rounded-md border transition-all duration-200 ${
+                                            (formState.metadata as ProductMetadata)?.x1_multiplier
+                                                ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40'
+                                                : 'bg-muted text-muted-foreground border-border'
+                                        }`}
+                                    >
+                                        <div className="px-2 border-r border-white/10 flex items-center justify-center">
+                                            <X className={`w-3.5 h-3.5 shrink-0 transition-opacity ${(formState.metadata as ProductMetadata)?.x1_multiplier ? 'opacity-90' : 'opacity-40'}`} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="px-2.5 py-1 flex items-center justify-center flex-1">
+                                            <span className="text-[11px] font-bold tracking-wide uppercase">
+                                                {(formState.metadata as ProductMetadata)?.x1_multiplier ? 'ON' : 'OFF'}
+                                            </span>
+                                        </div>
+                                    </button>
+                                    {/* Hidden input to ensure x1_multiplier is submitted with form */}
+                                    <input
+                                        type="hidden"
+                                        name="meta_x1_multiplier"
+                                        value={(formState.metadata as ProductMetadata)?.x1_multiplier ? 'true' : 'false'}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground text-center italic">
+                                        {(formState.metadata as ProductMetadata)?.x1_multiplier
+                                            ? 'Quantity multiplies by party size'
+                                            : 'Fixed quantity regardless of party size'}
+                                    </p>
+                                </div>
+                            </div>
+                        </CollapsibleSection>
+
+                        {/* Section 4: Categorization */}
+                        <CollapsibleSection
+                            title="Categorization"
+                            icon={Layers}
+                            isOpen={categorizationOpen}
+                            onToggle={setCategorizationOpen}
+                            preview={
+                                (() => {
+                                    const parts = [];
+                                    if (selectedCategory) {
+                                        const cat = categories.find(c => c.id === selectedCategory);
+                                        if (cat) parts.push(cat.name);
+                                    }
+                                    if (selectedSubCategory) {
+                                        const subCat = categories.find(c => c.id === selectedSubCategory);
+                                        if (subCat) parts.push(subCat.name);
+                                    }
+                                    if (formState.masterItemId) {
+                                        const master = localMasterItems.find(m => m.id === formState.masterItemId);
+                                        if (master) parts.push(master.name);
+                                    }
+                                    return parts.length ? parts.join(' → ') : undefined;
+                                })()
+                            }
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <InputGroup label="1. Category">
+                                    <SelectInput
+                                        value={selectedCategory}
+                                        onChange={e => {
+                                            setSelectedCategory(e.target.value);
+                                            setSelectedSubCategory("");
+                                        }}
+                                    >
+                                        <option value="">Select Category...</option>
+                                        {rootCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </SelectInput>
+                                </InputGroup>
+
+                                <InputGroup label="2. Subcategory">
+                                    <SelectInput
+                                        value={selectedSubCategory}
+                                        onChange={e => setSelectedSubCategory(e.target.value)}
+                                        disabled={!selectedCategory || subCategories.length === 0}
+                                    >
+                                        <option value="">{subCategories.length === 0 ? 'No Subcategories' : 'Select Subcategory...'}</option>
+                                        {subCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </SelectInput>
+                                </InputGroup>
+
+                                <InputGroup label="3. Master Item (Type)" required>
+                                    <div className="flex gap-2">
+                                        <SelectInput
+                                            name="masterItemId"
+                                            value={formState.masterItemId || ""}
+                                            onChange={e => setFormState({ ...formState, masterItemId: e.target.value })}
+                                            required
+                                            disabled={!selectedCategory}
+                                        >
+                                            <option value="">
+                                                {(!selectedCategory) ? 'Select Category First' :
+                                                 (filteredMasterItems.length === 0 ? 'No Master Items Found' : 'Select Master Item...')}
+                                            </option>
+                                            {filteredMasterItems.map(m => {
+                                                let label = m.name;
+                                                if (!selectedSubCategory && selectedCategory && m.categoryId !== selectedCategory) {
+                                                    const sub = categories.find(c => c.id === m.categoryId);
+                                                    if (sub) label = `${m.name} (${sub.name})`;
+                                                }
+                                                return <option key={m.id} value={m.id}>{label}</option>;
+                                            })}
+                                        </SelectInput>
+                                        <button
+                                            type="button"
+                                            disabled={!selectedCategory}
+                                            onClick={() => setIsMasterItemModalOpen(true)}
+                                            className="bg-muted hover:bg-muted/80 text-foreground px-3 rounded-lg border border-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Add New Master Item"
+                                        >
+                                            <Plus className="w-4 h-4" strokeWidth={2.5} />
+                                        </button>
+                                    </div>
+                                </InputGroup>
+                            </div>
+                            {filteredMasterItems.length === 0 && selectedCategory && (
+                                <div className="mt-3 flex items-center gap-2 text-xs text-foreground bg-warning/20 p-3 rounded-lg border border-warning/50">
+                                    <AlertCircle className="w-4 h-4 text-warning" strokeWidth={2.5} />
+                                    No master items found in this category. Please add a Master Item first or check the category selection.
+                                </div>
+                            )}
+                        </CollapsibleSection>
+
+                        {/* Section 5: Inventory & Supplier */}
+                        <CollapsibleSection
+                            title="Inventory & Supplier"
+                            icon={Package}
+                            isOpen={inventoryOpen}
+                            onToggle={setInventoryOpen}
+                            preview={
+                                formState.sku || formState.supplierId
+                                    ? [
+                                        formState.sku && `SKU: ${formState.sku}`,
+                                        formState.supplierId && localSuppliers.find(s => s.id === formState.supplierId)?.name
+                                    ].filter(Boolean).join(' • ')
+                                    : undefined
+                            }
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <InputGroup label="SKU">
+                                    <TextInput
+                                        name="sku"
+                                        value={formState.sku || ''}
+                                        onChange={e => setFormState({ ...formState, sku: e.target.value })}
+                                        placeholder="e.g. PROD-12345"
+                                    />
+                                    {renderSuggestion('sku')}
+                                </InputGroup>
+
+                                <InputGroup label="ASIN">
+                                    <TextInput
+                                        ref={asinInputRef}
+                                        name="asin"
+                                        value={formState.asin || ''}
+                                        onChange={e => handleAsinChange(e.target.value)}
+                                        onBlur={handleAsinBlur}
+                                        placeholder="e.g. B005EHPVQW"
+                                        maxLength={10}
+                                    />
+                                    {renderSuggestion('asin')}
+                                </InputGroup>
+                            </div>
+
+                            <InputGroup label="Supplier">
+                                <div className="flex gap-2">
+                                    <SelectInput
+                                        name="supplierId"
+                                        value={formState.supplierId || ""}
+                                        onChange={e => handleSupplierChange(e.target.value)}
+                                    >
+                                        <option value="">Select Supplier...</option>
+                                        {localSuppliers.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </SelectInput>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsSupplierModalOpen(true)}
+                                        className="bg-muted hover:bg-muted/80 text-foreground px-3 rounded-lg border border-border transition-colors"
+                                        title="Add New Supplier"
+                                    >
+                                        <Plus className="w-4 h-4" strokeWidth={2.5} />
+                                    </button>
+                                </div>
+                            </InputGroup>
+                        </CollapsibleSection>
+
+                        {/* Section 6: Variations */}
+                        <CollapsibleSection
+                            title="Variations"
+                            icon={Settings2}
+                            isOpen={variationsOpen}
+                            onToggle={setVariationsOpen}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsVariationsModalOpen(true)}
+                                    className="text-xs bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-lg font-medium transition-colors shadow-primary/20"
+                                >
+                                    {formState.variations?.config.attributes.length ? 'Edit Variations' : 'Add Variations'}
+                                </button>
+                            </div>
+
+                            {formState.variations?.config.attributes.length ? (
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap gap-2">
+                                        {formState.variations.config.attributes.map(attr => (
+                                            <div key={attr.id} className="bg-muted px-3 py-1.5 rounded-lg text-xs text-muted-foreground border border-border">
+                                                <span className="font-bold text-foreground mr-1">{attr.name}:</span>
+                                                {attr.options.join(', ')}
+                                            </div>
+                                        ))}
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsVariationsTableModalOpen(true)}
+                                            className="bg-muted hover:bg-muted/80 px-3 py-1.5 rounded-lg text-xs text-primary border border-border hover:border-primary/50 hover:text-primary/80 transition-all flex items-center gap-2 font-medium"
+                                        >
+                                            <TableProperties className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                            Variation Table
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground italic">No variations defined for this product.</p>
+                            )}
+                        </CollapsibleSection>
+
+                        {/* Section 7: Attributes */}
+                        <CollapsibleSection
+                            title="Attributes"
+                            icon={Tags}
+                            isOpen={attributesOpen}
+                            onToggle={setAttributesOpen}
+                        >
+                            <div className="grid grid-cols-2 gap-3">
+                                <InputGroup label="Brand">
+                                    <TextInput
+                                        name="meta_brand"
+                                        value={formState.metadata?.brand || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, brand: e.target.value } })}
+                                        placeholder="Brand Name"
+                                    />
+                                    {renderSuggestion('metadata_brand')}
+                                </InputGroup>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputGroup label="Package Size">
+                                    <TextInput
+                                        name="package_size"
+                                        type="number"
+                                        min="1"
+                                        value={formState.packageSize || 1}
+                                        onChange={e => setFormState({ ...formState, packageSize: Number(e.target.value) })}
+                                        placeholder="1"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Items per supplier package
+                                    </p>
+                                    {renderSuggestion('package_size')}
+                                </InputGroup>
+                                <InputGroup label="Required Quantity">
+                                    <TextInput
+                                        name="required_quantity"
+                                        type="number"
+                                        min="1"
+                                        value={formState.requiredQuantity || 1}
+                                        onChange={e => setFormState({ ...formState, requiredQuantity: Number(e.target.value) })}
+                                        placeholder="1"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Packages needed for this master item
+                                    </p>
+                                    {renderSuggestion('required_quantity')}
+                                </InputGroup>
+                            </div>
+                            <p className="text-sm text-muted-foreground -mt-2">
+                                (= {(formState.packageSize || 1) * (formState.requiredQuantity || 1)} total units)
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <InputGroup label="UPC / GTIN">
+                                    <TextInput
+                                        name="meta_upc"
+                                        value={formState.metadata?.upc || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, upc: e.target.value } })}
+                                        placeholder="e.g. 07640144284091"
+                                    />
+                                    {renderSuggestion('metadata_upc')}
+                                </InputGroup>
+                                <InputGroup label="Model #">
+                                    <TextInput
+                                        name="meta_model_number"
+                                        value={formState.metadata?.model_number || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, model_number: e.target.value } })}
+                                        placeholder="e.g. LSC024"
+                                    />
+                                    {renderSuggestion('metadata_model_number')}
+                                </InputGroup>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3">
+                                <InputGroup label="Dimensions">
+                                    <TextInput
+                                        name="meta_dimensions"
+                                        value={formState.metadata?.dimensions || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, dimensions: e.target.value } })}
+                                        placeholder="e.g. 23 x 24.5 x 23 inches"
+                                    />
+                                    {renderSuggestion('metadata_dimensions')}
+                                </InputGroup>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <InputGroup label="Weight">
+                                    <TextInput
+                                        name="meta_weight"
+                                        type="number"
+                                        step="0.01"
+                                        value={formState.metadata?.weight || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, weight: e.target.value } })}
+                                        placeholder="e.g. 500"
+                                    />
+                                    {renderSuggestion('metadata_weight')}
+                                </InputGroup>
+                                <InputGroup label="Weight Unit">
+                                    <SelectInput
+                                        name="meta_weight_unit"
+                                        value={formState.metadata?.weight_unit || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, weight_unit: e.target.value } })}
+                                    >
+                                        <option value="">Select...</option>
+                                        <option value="g">Grams (g)</option>
+                                        <option value="kg">Kilograms (kg)</option>
+                                        <option value="oz">Ounces (oz)</option>
+                                        <option value="lb">Pounds (lb)</option>
+                                        <option value="mg">Milligrams (mg)</option>
+                                    </SelectInput>
+                                    {renderSuggestion('metadata_weight_unit')}
+                                </InputGroup>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <InputGroup label="Color">
+                                    <TextInput
+                                        name="meta_color"
+                                        value={formState.metadata?.color || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, color: e.target.value } })}
+                                        placeholder="e.g. Black"
+                                    />
+                                    {renderSuggestion('metadata_color')}
+                                </InputGroup>
+                                <InputGroup label="Size">
+                                    <TextInput
+                                        name="meta_size"
+                                        value={formState.metadata?.size || ''}
+                                        onChange={e => setFormState({ ...formState, metadata: { ...formState.metadata, size: e.target.value } })}
+                                        placeholder="e.g. Large"
+                                    />
+                                    {renderSuggestion('metadata_size')}
+                                </InputGroup>
+                            </div>
+                        </CollapsibleSection>
                     </div>
                 </form>
             </div>
