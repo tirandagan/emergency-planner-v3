@@ -1612,6 +1612,49 @@ All database schemas, migrations, storage buckets, and Stripe integration comple
     - [ ] Cascade delete all user data (mission_reports, inventory_items, etc. via foreign key cascades)
     - [ ] Log deletion in admin activity log
     - [ ] Send final "Account deleted" confirmation email
+- [ ] Implement `/api/cron/refresh-product-pricing` (configurable frequency):
+  - [ ] Schedule: Configurable in system settings (default: 3x per week at 1am - cron: `0 1 * * 1,3,5`)
+  - [ ] Query all products in catalog with non-null `productUrl`
+  - [ ] For each product:
+    - [ ] Attempt to fetch current price from product URL (use existing fetch logic from Amazon/web scraper)
+    - [ ] Compare fetched price with stored price
+    - [ ] If price changed by >5%: Update product price, log change in product change history
+    - [ ] If product URL returns 404/410 or price unavailable: Add to `unavailable_products` queue for admin review
+    - [ ] Track API rate limits to avoid being blocked by retailers
+  - [ ] Generate admin notification summary:
+    - [ ] Count of price updates applied
+    - [ ] List of products flagged as unavailable (needs replacement)
+    - [ ] Email summary to admin with review link
+  - [ ] Log execution metrics: products checked, prices updated, unavailable count, API errors
+  - [ ] **Database support**:
+    - [ ] Add `last_price_check` timestamp to products table
+    - [ ] Create `unavailable_products` queue table (product_id, detected_at, status: pending/reviewed/replaced)
+    - [ ] Track price history in product change_history JSON field
+- [ ] Implement bundle validation feature (manual trigger + optional automation):
+  - [ ] Create `/api/admin/bundles/validate-master-items` endpoint:
+    - [ ] Accept bundle ID parameter (or validate all bundles if not provided)
+    - [ ] For each bundle:
+      - [ ] Load bundle configuration with master items and tag filters
+      - [ ] Analyze master item tag distributions (scenarios, demographics, timeframes, locations)
+      - [ ] Identify potential gaps or mismatches:
+        - [ ] Master items with narrow tag coverage (e.g., only 1 scenario when bundle targets all)
+        - [ ] Master items missing critical demographics (e.g., child-specific items in adult-only bundle)
+        - [ ] Location mismatches (e.g., "bug out" items in "shelter in place" bundle)
+        - [ ] Timeframe gaps (e.g., no long-term storage items in "1 year" bundle)
+      - [ ] Generate validation report per bundle:
+        - [ ] Warning level: Low (informational) / Medium (review recommended) / High (likely issue)
+        - [ ] Affected master items with gap details
+        - [ ] Suggested actions (add tags, remove item, add different master item)
+  - [ ] Admin UI integration:
+    - [ ] Add "Validate Tags" button in bundle edit dialog
+    - [ ] Display validation warnings in collapsible alert section
+    - [ ] Show master item-specific warnings with drill-down details
+    - [ ] Allow admin to dismiss/acknowledge warnings or take suggested actions
+  - [ ] Optional automation via cron:
+    - [ ] Schedule: Weekly at 4am Sunday (cron: `0 4 * * 0`)
+    - [ ] Run validation on all active bundles
+    - [ ] Email admin summary of bundles needing review
+    - [ ] Flag high-severity issues for immediate attention
 - [ ] Add cron authentication:
   - [ ] Check for `CRON_SECRET` header or token in all cron routes
   - [ ] Return 401 if unauthorized
