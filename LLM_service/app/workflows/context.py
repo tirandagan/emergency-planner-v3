@@ -49,24 +49,32 @@ class WorkflowContext:
         self.steps: Dict[str, Dict[str, Any]] = {}
         self.variables: Dict[str, Any] = {}
 
-    def set_step_output(self, step_id: str, output: Any) -> None:
+    def set_step_output(self, step_id: str, output: Any, output_names: Optional[List[str]] = None) -> None:
         """
         Store output from executed step.
 
         Args:
             step_id: Unique step identifier
             output: Step execution output data
+            output_names: Optional list of names to map the result to
         """
         self.steps[step_id] = {
             "output": output,
             "success": True
         }
-        # Also merge dictionary outputs into the top level for easier access
-        # e.g., ${steps.id.key} instead of ${steps.id.output.key}
+        
+        # Merge dictionary outputs into the top level for easier access
         if isinstance(output, dict):
             for key, value in output.items():
                 if key not in ["output", "success"]:
                     self.steps[step_id][key] = value
+        
+        # Map result to specific output names if provided
+        if output_names:
+            for name in output_names:
+                # If output is a dict and name exists in it, it's already merged above.
+                # Otherwise, map the whole output to this name.
+                self.steps[step_id][name] = output
         
         logger.debug(f"Stored output for step: {step_id}")
 

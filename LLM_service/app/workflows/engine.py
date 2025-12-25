@@ -283,27 +283,12 @@ class WorkflowEngine:
                     from .transform_executor import _resolve_config_variables
                     resolved_transform_config = _resolve_config_variables(transform_config, context)
                     
-                    result = execute_transformation(
+                    step_result = execute_transformation(
                         operation=operation,
                         input_data=input_data_for_transform,
                         config=resolved_transform_config,
                         error_mode=ErrorMode.CONTINUE if step.error_mode == ErrorMode.CONTINUE else ErrorMode.FAIL
                     )
-
-                    # Build output dictionary
-                    step_result = {
-                        "output": result,
-                        "metadata": {
-                            "step_id": step.id,
-                            "operation": operation,
-                            "success": result is not None,
-                        }
-                    }
-
-                    # Map result to output names if provided in the workflow step
-                    if step.outputs:
-                        for name in step.outputs:
-                            step_result[name] = result
                 elif step.type == StepType.EXTERNAL_API:
                     # USE PURE SYNC PATH FOR EXTERNAL API
                     from .external_api_executor import execute_external_api_step_sync
@@ -319,7 +304,7 @@ class WorkflowEngine:
 
                 if step_result is not None:
                     if isinstance(step_result, LLMResponse):
-                        context.set_step_output(step.id, step_result.model_dump())
+                        context.set_step_output(step.id, step_result.model_dump(), step.outputs)
                         step_info["tokens"] = step_result.usage.total_tokens
                         step_info["cost_usd"] = step_result.cost_usd
                         total_cost += step_result.cost_usd
@@ -335,7 +320,7 @@ class WorkflowEngine:
                             "metadata": {"step_id": step.id}
                         })
                     else:
-                        context.set_step_output(step.id, step_result)
+                        context.set_step_output(step.id, step_result, step.outputs)
                     
                     step_info["output"] = self._serialize_output(step_result)
 
@@ -502,10 +487,10 @@ class WorkflowEngine:
                     # This ensures dictionary access works in variable resolution
                     if isinstance(step_result, LLMResponse):
                         # Convert LLMResponse to dict before storing
-                        context.set_step_output(step.id, step_result.model_dump())
+                        context.set_step_output(step.id, step_result.model_dump(), step.outputs)
                     else:
                         # Store dict directly
-                        context.set_step_output(step.id, step_result)
+                        context.set_step_output(step.id, step_result, step.outputs)
 
                     # Track metadata for LLM steps
                     if isinstance(step_result, LLMResponse):
@@ -637,8 +622,7 @@ class WorkflowEngine:
             elif step.type == StepType.TRANSFORM:
                 # Phase 4: Transform step execution
                 config = TransformStepConfig(**step.config)
-                result = await execute_transform_step(step.id, config, context, step.outputs)
-                return result
+                return await execute_transform_step(step.id, config, context)
 
             elif step.type == StepType.EXTERNAL_API:
                 # Phase 5: External API step execution

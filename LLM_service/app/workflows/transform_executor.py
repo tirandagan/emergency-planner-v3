@@ -14,9 +14,8 @@ from .schema import TransformStepConfig, ErrorMode as SchemaErrorMode
 async def execute_transform_step(
     step_id: str,
     config: TransformStepConfig,
-    context: WorkflowContext,
-    output_names: Optional[List[str]] = None
-) -> Dict[str, Any]:
+    context: WorkflowContext
+) -> Any:
     """
     Execute a transform step
 
@@ -24,13 +23,9 @@ async def execute_transform_step(
         step_id: Step identifier
         config: Transform step configuration
         context: Workflow context for variable resolution
-        output_names: Optional list of names to map the result to
 
     Returns:
-        Dictionary with:
-        - output: Transformation result
-        - metadata: Execution metadata (duration, operation, etc.)
-        - Any mapped output names from output_names
+        Transformation result
 
     Raises:
         Exception: If transformation fails and error_mode is FAIL
@@ -80,24 +75,8 @@ async def execute_transform_step(
 
         duration_ms = int((time.time() - start_time) * 1000)
 
-        # Build output dictionary
-        output_dict = {
-            "output": result,
-            "metadata": {
-                "step_id": step_id,
-                "operation": operation,
-                "duration_ms": duration_ms,
-                "success": True,
-                "error_mode": error_mode_str,
-            }
-        }
-
-        # Map result to output names if provided
-        if output_names:
-            for name in output_names:
-                output_dict[name] = result
-
-        return output_dict
+        # Return only the result. The engine handles metadata and mapping.
+        return result
 
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
@@ -110,17 +89,7 @@ async def execute_transform_step(
             raise
         elif error_mode_str == SchemaErrorMode.CONTINUE:
             print(f"⚠️ Continuing after error in step '{step_id}'")
-            return {
-                "output": None,
-                "metadata": {
-                    "step_id": step_id,
-                    "operation": operation,
-                    "duration_ms": duration_ms,
-                    "success": False,
-                    "error": str(e),
-                    "error_mode": error_mode_str,
-                }
-            }
+            return None
         else:  # RETRY
             # TODO: Implement retry logic in Phase 6
             print(f"⚠️ Retry not implemented, failing step '{step_id}'")

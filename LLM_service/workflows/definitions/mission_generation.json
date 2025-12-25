@@ -10,6 +10,7 @@
       "description": "Format product bundles for LLM context injection",
       "display_name": "Formatting Bundles",
       "error_mode": "continue",
+      "outputs": ["formatted_bundles"],
       "config": {
         "operation": "template",
         "config": {
@@ -24,6 +25,7 @@
       "description": "Join bundle data into single context string",
       "display_name": "Joining Bundles",
       "error_mode": "continue",
+      "outputs": ["bundle_context"],
       "config": {
         "operation": "join",
         "config": {
@@ -38,6 +40,7 @@
       "description": "Format scenarios into readable list",
       "display_name": "Building Scenario List",
       "error_mode": "continue",
+      "outputs": ["scenario_list"],
       "config": {
         "operation": "join",
         "config": {
@@ -74,6 +77,7 @@
       "id": "generate_mission_plan",
       "type": "llm",
       "error_mode": "fail",
+      "outputs": ["mission_plan"],
       "config": {
         "model": "anthropic/claude-3.5-sonnet",
         "prompt_template": "mission-generation/mega-prompt.md",
@@ -95,6 +99,7 @@
       "description": "Extract structured sections from mission plan",
       "display_name": "Parsing Sections",
       "error_mode": "continue",
+      "outputs": ["parsed_sections"],
       "config": {
         "operation": "regex_extract",
         "config": {
