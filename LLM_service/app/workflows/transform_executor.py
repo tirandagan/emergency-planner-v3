@@ -5,7 +5,7 @@ Executes transformation steps in workflows, applying data transformations
 to workflow data using the transformation library.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 from .transformations import execute_transformation, ErrorMode
 from .context import WorkflowContext
 from .schema import TransformStepConfig, ErrorMode as SchemaErrorMode
