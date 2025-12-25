@@ -84,7 +84,6 @@ interface PlanWizardProps {
 
 export function PlanWizard({
   mode = 'create',
-  existingPlanId,
   initialData,
   savedHouseholdMembers,
   saveHouseholdPreference: initialSavePreference,

@@ -283,12 +283,27 @@ class WorkflowEngine:
                     from .transform_executor import _resolve_config_variables
                     resolved_transform_config = _resolve_config_variables(transform_config, context)
                     
-                    step_result = execute_transformation(
+                    result = execute_transformation(
                         operation=operation,
                         input_data=input_data_for_transform,
                         config=resolved_transform_config,
                         error_mode=ErrorMode.CONTINUE if step.error_mode == ErrorMode.CONTINUE else ErrorMode.FAIL
                     )
+
+                    # Build output dictionary
+                    step_result = {
+                        "output": result,
+                        "metadata": {
+                            "step_id": step.id,
+                            "operation": operation,
+                            "success": result is not None,
+                        }
+                    }
+
+                    # Map result to output names if provided in the workflow step
+                    if step.outputs:
+                        for name in step.outputs:
+                            step_result[name] = result
                 elif step.type == StepType.EXTERNAL_API:
                     # USE PURE SYNC PATH FOR EXTERNAL API
                     from .external_api_executor import execute_external_api_step_sync
@@ -622,8 +637,8 @@ class WorkflowEngine:
             elif step.type == StepType.TRANSFORM:
                 # Phase 4: Transform step execution
                 config = TransformStepConfig(**step.config)
-                result = await execute_transform_step(step.id, config, context)
-                return result["output"]
+                result = await execute_transform_step(step.id, config, context, step.outputs)
+                return result
 
             elif step.type == StepType.EXTERNAL_API:
                 # Phase 5: External API step execution

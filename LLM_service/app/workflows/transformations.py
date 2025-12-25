@@ -476,6 +476,7 @@ class RegexExtractTransformation(BaseTransformation):
 
     Config:
     - pattern: str - Regex pattern
+    - patterns: Dict[str, str] - Multiple named patterns to extract
     - group: Optional[int|str] - Capture group to extract (default: 0 for full match)
     - all_matches: bool - Return all matches (default: False for first match only)
     - source: Optional[str] - Field path to extract from
@@ -484,36 +485,40 @@ class RegexExtractTransformation(BaseTransformation):
     def execute(self, input_data: Any, config: Dict[str, Any]) -> Any:
         try:
             pattern = config.get("pattern")
+            patterns = config.get("patterns")
             group = config.get("group", 0)
             all_matches = config.get("all_matches", False)
-            source = config.get("source")
+            source_text = input_data
 
-            if not pattern:
-                raise TransformationError("Missing 'pattern' in config")
+            if not pattern and not patterns:
+                raise TransformationError("Missing 'pattern' or 'patterns' in config")
 
-            # Get source text
-            if source:
-                extractor = ExtractFieldsTransformation(error_mode=self.error_mode)
-                text = extractor._extract_path(input_data, source)
-            else:
-                text = input_data
+            if not isinstance(source_text, str):
+                source_text = str(source_text)
 
-            if not isinstance(text, str):
-                text = str(text)
+            # Handle multiple patterns
+            if patterns:
+                results = {}
+                for name, p in patterns.items():
+                    results[name] = self._extract(source_text, p, group, all_matches)
+                return results
 
-            # Compile regex
-            regex = re.compile(pattern, re.MULTILINE | re.DOTALL)
-
-            # Extract matches
-            if all_matches:
-                matches = regex.finditer(text)
-                return [match.group(group) for match in matches]
-            else:
-                match = regex.search(text)
-                return match.group(group) if match else None
+            # Handle single pattern
+            return self._extract(source_text, pattern, group, all_matches)
 
         except Exception as e:
             return self.handle_error(e, "regex_extract")
+
+    def _extract(self, text: str, pattern: str, group: Union[int, str], all_matches: bool) -> Any:
+        """Helper to perform extraction for a single pattern"""
+        regex = re.compile(pattern, re.MULTILINE | re.DOTALL)
+
+        if all_matches:
+            matches = regex.finditer(text)
+            return [match.group(group) for match in matches]
+        else:
+            match = regex.search(text)
+            return match.group(group) if match else None
 
 
 class MarkdownToJsonTransformation(BaseTransformation):
@@ -722,19 +727,27 @@ class TemplateTransformation(BaseTransformation):
             if not template:
                 raise TransformationError("Missing 'template' in config")
 
-            # Merge input_data with variables
-            context_dict = {**input_data} if isinstance(input_data, dict) else {}
-            context_dict.update(variables)
-
-            # Use a temporary WorkflowContext to resolve variables (including nested ones)
-            from .context import WorkflowContext
-            ctx = WorkflowContext(context_dict)
+            # Handle list input (mapping)
+            if isinstance(input_data, list):
+                return [self._render(item, template, variables) for item in input_data]
             
-            # Use the new resolve_string method which handles multiple placeholders and nested paths
-            return ctx.resolve_string(template)
+            return self._render(input_data, template, variables)
 
         except Exception as e:
             return self.handle_error(e, "template")
+
+    def _render(self, context_data: Any, template: str, extra_variables: Dict[str, Any]) -> str:
+        """Helper to render a single context"""
+        # Merge context_data with extra_variables
+        context_dict = {**context_data} if isinstance(context_data, dict) else {}
+        context_dict.update(extra_variables)
+
+        # Use a temporary WorkflowContext to resolve variables (including nested ones)
+        from .context import WorkflowContext
+        ctx = WorkflowContext(context_dict)
+        
+        # Use the resolve_string method which handles multiple placeholders and nested paths
+        return ctx.resolve_string(template)
 
 
 class MergeTransformation(BaseTransformation):
@@ -815,4 +828,10 @@ def execute_transformation(
 ) -> Any:
     """Execute a transformation"""
     transformation = get_transformation(operation, error_mode, default_value)
+    
+    # If config has a 'source' field, use it as the input data
+    # The executor already resolved placeholders in the config dict
+    if "source" in config and config["source"] is not None:
+        input_data = config["source"]
+        
     return transformation.execute(input_data, config)

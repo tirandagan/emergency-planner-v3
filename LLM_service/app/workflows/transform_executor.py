@@ -14,7 +14,8 @@ from .schema import TransformStepConfig, ErrorMode as SchemaErrorMode
 async def execute_transform_step(
     step_id: str,
     config: TransformStepConfig,
-    context: WorkflowContext
+    context: WorkflowContext,
+    output_names: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Execute a transform step
@@ -23,11 +24,13 @@ async def execute_transform_step(
         step_id: Step identifier
         config: Transform step configuration
         context: Workflow context for variable resolution
+        output_names: Optional list of names to map the result to
 
     Returns:
         Dictionary with:
         - output: Transformation result
         - metadata: Execution metadata (duration, operation, etc.)
+        - Any mapped output names from output_names
 
     Raises:
         Exception: If transformation fails and error_mode is FAIL
@@ -77,7 +80,8 @@ async def execute_transform_step(
 
         duration_ms = int((time.time() - start_time) * 1000)
 
-        return {
+        # Build output dictionary
+        output_dict = {
             "output": result,
             "metadata": {
                 "step_id": step_id,
@@ -87,6 +91,13 @@ async def execute_transform_step(
                 "error_mode": error_mode_str,
             }
         }
+
+        # Map result to output names if provided
+        if output_names:
+            for name in output_names:
+                output_dict[name] = result
+
+        return output_dict
 
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)

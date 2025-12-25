@@ -117,9 +117,24 @@ class WorkflowStep(BaseModel):
         description="Step type determines which executor processes it"
     )
 
+    display_name: Optional[str] = Field(
+        default=None,
+        description="Human-readable name for display in UI"
+    )
+
+    description: Optional[str] = Field(
+        default=None,
+        description="Human-readable description of step purpose"
+    )
+
     config: Dict[str, Any] = Field(
         default_factory=dict,
         description="Step-specific configuration (validated by executor)"
+    )
+
+    outputs: Optional[List[str]] = Field(
+        default=None,
+        description="List of output variable names to map result to"
     )
 
     output_var: Optional[str] = Field(

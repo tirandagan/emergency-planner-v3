@@ -49,7 +49,7 @@ class WorkflowContext:
         self.steps: Dict[str, Dict[str, Any]] = {}
         self.variables: Dict[str, Any] = {}
 
-    def set_step_output(self, step_id: str, output: Dict[str, Any]) -> None:
+    def set_step_output(self, step_id: str, output: Any) -> None:
         """
         Store output from executed step.
 
@@ -61,6 +61,13 @@ class WorkflowContext:
             "output": output,
             "success": True
         }
+        # Also merge dictionary outputs into the top level for easier access
+        # e.g., ${steps.id.key} instead of ${steps.id.output.key}
+        if isinstance(output, dict):
+            for key, value in output.items():
+                if key not in ["output", "success"]:
+                    self.steps[step_id][key] = value
+        
         logger.debug(f"Stored output for step: {step_id}")
 
     def set_step_error(self, step_id: str, error_message: str) -> None:
