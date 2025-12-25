@@ -134,15 +134,12 @@ def _resolve_config_variables(config: Dict[str, Any], context: WorkflowContext) 
     elif isinstance(config, list):
         return [_resolve_config_variables(item, context) for item in config]
     elif isinstance(config, str):
-        # Check if this is a variable reference
-        if config.startswith("${") and config.endswith("}"):
-            var_path = config[2:-1]  # Remove ${ and }
-            try:
-                return context.get_value(var_path)
-            except Exception as e:
-                # If variable resolution fails, return the original string
-                print(f"⚠️ Failed to resolve variable '{var_path}': {str(e)}")
-                return config
-        return config
+        # Use context.resolve_string to handle single or multiple placeholders
+        try:
+            return context.resolve_string(config)
+        except Exception as e:
+            # If variable resolution fails, return the original string
+            print(f"⚠️ Failed to resolve variables in '{config}': {str(e)}")
+            return config
     else:
         return config

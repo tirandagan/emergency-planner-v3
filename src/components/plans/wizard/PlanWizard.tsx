@@ -14,7 +14,6 @@ import {
   scenarioSelectionSchema,
   personnelConfigurationSchema,
   locationContextSchema,
-  validateStep,
 } from '@/lib/validation/wizard';
 import type { WizardFormData, LocationData, FamilyMember } from '@/types/wizard';
 import { useAuth } from '@/context/AuthContext';
@@ -137,6 +136,7 @@ export function PlanWizard({
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [hasLoadedState, setHasLoadedState] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
   const [saveHouseholdPreference, setSaveHouseholdPreference] = useState(
@@ -146,7 +146,6 @@ export function PlanWizard({
   // React Hook Form setup
   const {
     register,
-    handleSubmit,
     watch,
     setValue,
     control,
@@ -154,15 +153,13 @@ export function PlanWizard({
     reset,
     formState: { errors },
   } = useForm<WizardFormData>({
-    resolver: (
-      currentStep === 0
-        ? zodResolver(scenarioSelectionSchema)
-        : currentStep === 1
-        ? zodResolver(personnelConfigurationSchema)
-        : currentStep === 2
-        ? zodResolver(locationContextSchema)
-        : zodResolver(scenarioSelectionSchema)
-    ) as any,
+    resolver: (currentStep === 0
+      ? zodResolver(scenarioSelectionSchema)
+      : currentStep === 1
+      ? zodResolver(personnelConfigurationSchema)
+      : currentStep === 2
+      ? zodResolver(locationContextSchema)
+      : zodResolver(scenarioSelectionSchema)),
     defaultValues: INITIAL_FORM_DATA as WizardFormData,
     mode: 'onChange',
   });
@@ -256,8 +253,6 @@ export function PlanWizard({
     // Only update if there's no saved state (saved state takes precedence)
     const savedState = loadSavedState(storageKey);
     if (!savedState) {
-      let needsUpdate = false;
-      
       // Check if name needs updating
       if (profileName) {
         const currentName = watch('familyMembers.0.name');
@@ -267,7 +262,6 @@ export function PlanWizard({
             shouldDirty: false,
             shouldTouch: false,
           });
-          needsUpdate = true;
         }
       }
       
@@ -280,7 +274,6 @@ export function PlanWizard({
             shouldDirty: false,
             shouldTouch: false,
           });
-          needsUpdate = true;
         }
       }
     }
@@ -318,31 +311,38 @@ export function PlanWizard({
    * Handle next button click
    */
   const handleNext = async (): Promise<void> => {
-    const isValid = await validateCurrentStep();
+    if (isProcessing) return;
+    setIsProcessing(true);
 
-    if (isValid) {
-      // Save household members to profile when leaving Step 2 (Personnel)
-      if (currentStep === 1 && saveHouseholdPreference) {
-        try {
-          await updateHouseholdMembers(
-            formData.familyMembers,
-            saveHouseholdPreference
-          );
+    try {
+      const isValid = await validateCurrentStep();
 
-          // Refresh profile in context to get updated data
-          if (user?.id) {
-            invalidateCachedProfile(user.id);
-            await refreshProfile();
+      if (isValid) {
+        // Save household members to profile when leaving Step 2 (Personnel)
+        if (currentStep === 1 && saveHouseholdPreference) {
+          try {
+            await updateHouseholdMembers(
+              formData.familyMembers,
+              saveHouseholdPreference
+            );
+
+            // Refresh profile in context to get updated data
+            if (user?.id) {
+              invalidateCachedProfile(user.id);
+              await refreshProfile();
+            }
+          } catch (error) {
+            console.error('Failed to save household members:', error);
           }
-        } catch (error) {
-          console.error('Failed to save household members:', error);
+        }
+
+        if (currentStep < 3) {
+          setCurrentStep(currentStep + 1);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
-
-      if (currentStep < 3) {
-        setCurrentStep(currentStep + 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -506,13 +506,13 @@ export function PlanWizard({
             <Button
               type="button"
               onClick={handleNext}
-              disabled={isValidating}
+              disabled={isValidating || isProcessing}
               className="min-w-[120px]"
             >
-              {isValidating ? (
+              {isValidating || isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Validating...
+                  {currentStep === 2 ? 'Submitting...' : 'Validating...'}
                 </>
               ) : currentStep === 2 ? (
                 <>

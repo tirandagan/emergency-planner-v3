@@ -190,6 +190,50 @@ class WorkflowContext:
         else:
             raise ValueError(f"Unknown namespace: {namespace}")
 
+    def resolve_string(self, text: str) -> Any:
+        """
+        Resolve all ${variable.path} placeholders in a string.
+        
+        If the entire string is a single placeholder, returns the resolved value 
+        directly (preserving type). Otherwise, returns a string with all 
+        placeholders replaced by their string representations.
+
+        Args:
+            text: String containing placeholders
+
+        Returns:
+            Resolved value (Any if single placeholder, str otherwise)
+        """
+        import re
+
+        # Find all ${...} placeholders
+        pattern = r"\$\{([^}]+)\}"
+        matches = list(re.finditer(pattern, text))
+
+        if not matches:
+            return text
+
+        # If the entire string is a single placeholder, return the value directly
+        if len(matches) == 1 and matches[0].group(0) == text:
+            path = matches[0].group(1)
+            return self.get_value(path)
+
+        # Otherwise, replace all placeholders in the string
+        result = text
+        # Process matches in reverse order to keep indices valid
+        for match in reversed(matches):
+            placeholder = match.group(0)
+            path = match.group(1)
+            try:
+                value = self.get_value(path)
+                result = result[:match.start()] + str(value) + result[match.end():]
+            except Exception as e:
+                logger.warning(f"Failed to resolve placeholder {placeholder}: {e}")
+                # Keep the placeholder if resolution fails
+                continue
+
+        return result
+
     def _resolve_nested_path(self, data: Dict[str, Any], path: str) -> Any:
         """
         Resolve nested path with array indexing support.

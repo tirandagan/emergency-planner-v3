@@ -31,38 +31,37 @@ export function StreamingGenerationStep({
   // Use ref to prevent double submission in React StrictMode
   const hasSubmittedRef = useRef(false);
 
+  // Memoize sanitized formData to prevent unnecessary re-runs
+  const sanitizedFormData = React.useMemo((): WizardFormData => ({
+    ...formData,
+    location: {
+      city: formData.location.city,
+      state: formData.location.state,
+      country: formData.location.country,
+      coordinates: {
+        lat: formData.location.coordinates.lat,
+        lng: formData.location.coordinates.lng,
+      },
+      climateZone: formData.location.climateZone,
+      fullAddress: formData.location.fullAddress,
+      placeId: formData.location.placeId,
+      // Exclude rawPlaceData - it contains Google Maps objects that can't be serialized
+    },
+  }), [formData]);
+
   useEffect(() => {
-    // Guard against double submission in StrictMode
+    // Guard against double submission
     if (hasSubmittedRef.current) {
-      console.log('[StreamingGenerationStep] Job already submitted, skipping duplicate');
       return;
     }
 
     let isMounted = true;
 
     const submitJob = async (): Promise<void> => {
+      // Mark as submitted IMMEDIATELY at the start of the async function
+      hasSubmittedRef.current = true;
+
       try {
-        // Mark as submitted before async operation
-        hasSubmittedRef.current = true;
-
-        // Sanitize formData to remove Google Maps objects before passing to server action
-        const sanitizedFormData: WizardFormData = {
-          ...formData,
-          location: {
-            city: formData.location.city,
-            state: formData.location.state,
-            country: formData.location.country,
-            coordinates: {
-              lat: formData.location.coordinates.lat,
-              lng: formData.location.coordinates.lng,
-            },
-            climateZone: formData.location.climateZone,
-            fullAddress: formData.location.fullAddress,
-            placeId: formData.location.placeId,
-            // Exclude rawPlaceData - it contains Google Maps objects that can't be serialized
-          },
-        };
-
         console.log('[StreamingGenerationStep] Submitting job to LLM service');
 
         // Submit job to LLM service
@@ -97,7 +96,7 @@ export function StreamingGenerationStep({
     return () => {
       isMounted = false;
     };
-  }, [formData, onComplete, router]);
+  }, [sanitizedFormData, onComplete, router]);
 
   // Render loading or error state
   if (status === 'error') {
@@ -136,7 +135,7 @@ export function StreamingGenerationStep({
         Submitting Your Mission Plan
       </h3>
       <p className="text-base text-slate-600 dark:text-slate-400 text-center max-w-md">
-        Creating your personalized disaster preparedness plan. You'll be redirected to the
+        Creating your personalized disaster preparedness plan. You&apos;ll be redirected to the
         progress page in just a moment...
       </p>
 

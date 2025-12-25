@@ -265,14 +265,9 @@ class LLMStepExecutor:
         resolved = {}
 
         for var_name, var_ref in variable_map.items():
-            # Check if it's a variable reference (${...})
-            if isinstance(var_ref, str) and var_ref.startswith("${") and var_ref.endswith("}"):
-                # Extract path: "${input.location}" -> "input.location"
-                path = var_ref[2:-1]
-
-                # Resolve from context
-                value = context.get_value(path)
-                resolved[var_name] = value
+            if isinstance(var_ref, str):
+                # Use context.resolve_string to handle single or multiple placeholders
+                resolved[var_name] = context.resolve_string(var_ref)
             else:
                 # Literal value (no substitution)
                 resolved[var_name] = var_ref
