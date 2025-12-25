@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser, createClient } from '@/utils/supabase/server';
+import { getCurrentUser } from '@/utils/supabase/server';
 import { getLatestMissionReport } from '@/lib/mission-reports';
 import { logApiError } from '@/lib/system-logger';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * API Route: GET /api/mission-plan/check
@@ -22,15 +25,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's subscription tier
-    const supabase = await createClient();
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier')
-      .eq('id', user.id)
-      .single();
+    // Get user's subscription tier using Drizzle ORM
+    const [profile] = await db
+      .select({ subscriptionTier: profiles.subscriptionTier })
+      .from(profiles)
+      .where(eq(profiles.id, user.id))
+      .limit(1);
 
-    const userTier = profile?.subscription_tier || 'FREE';
+    const userTier = profile?.subscriptionTier || 'FREE';
 
     // Only check for existing plans if user is on FREE tier
     if (userTier !== 'FREE') {

@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, integer, jsonb, decimal, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, integer, jsonb, decimal, varchar, index } from 'drizzle-orm/pg-core';
 import { profiles } from './profiles';
 
 /**
@@ -44,6 +44,8 @@ export const missionReports = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    jobId: uuid('job_id'), // LLM service workflow job ID for tracking generation
+    status: varchar('status', { length: 50 }), // Job status: 'generating' | 'completed' | 'failed' | 'cancelled'
     title: text('title').notNull(),
     location: text('location'),
     scenarios: text('scenarios').array().notNull(),
@@ -67,6 +69,8 @@ export const missionReports = pgTable(
   },
   (table) => ({
     userIdIdx: index('idx_mission_reports_user_id').on(table.userId),
+    jobIdIdx: index('idx_mission_reports_job_id').on(table.jobId),
+    statusIdx: index('idx_mission_reports_status').on(table.status),
     scenariosIdx: index('idx_mission_reports_scenarios').using('gin', table.scenarios),
     deletedAtIdx: index('idx_mission_reports_deleted_at').on(table.deletedAt),
     userEnrichmentsIdx: index('idx_mission_reports_user_enrichments').using('gin', table.userEnrichments),

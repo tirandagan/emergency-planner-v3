@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { createLLMCallback } from '@/lib/llm-callbacks';
 import { getAdminEmail } from '@/db/queries/system-settings';
-import { handleEmergencyContactsComplete } from '@/lib/ai/webhook-handlers';
+import { handleEmergencyContactsComplete, handleMissionGenerationComplete } from '@/lib/ai/webhook-handlers';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -253,6 +253,17 @@ export async function POST(request: Request): Promise<NextResponse> {
         // Trigger processing but don't await to keep webhook response <200ms
         handleEmergencyContactsComplete(userId, payload.result).catch(err => {
           console.error('[LLM Webhook] Async processing failed:', err);
+        });
+      }
+
+      // NEW: Handle mission_generation workflow
+      if (payload.workflow_name === 'mission_generation') {
+        handleMissionGenerationComplete(
+          userId,
+          payload.job_id,
+          payload.result
+        ).catch(err => {
+          console.error('[LLM Webhook] Mission generation processing failed:', err);
         });
       }
     }

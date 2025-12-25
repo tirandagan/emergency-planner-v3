@@ -32,7 +32,7 @@ curl -X POST "https://llm-service-api-6vrk.onrender.com/api/v1/workflow" \
       "static_contacts": "911, poison control, FEMA, Washington State Emergency Management",
       "scenarios": ["earthquake", "wildfire"]
     },
-    "webhook_url": "http://beprepared.ai/api/webhooks/llm-callback",
+    "webhook_url": "https://beprepared.ai/api/webhooks/llm-callback",
     "priority": 0,
     "debug_mode": false
   }'

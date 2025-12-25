@@ -136,6 +136,34 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     updateUserActivity(user.id);
   }
 
+  // Fetch user profile data and set headers for server components
+  if (user) {
+    try {
+      const [profile] = await db
+        .select({
+          subscriptionTier: profiles.subscriptionTier,
+          firstName: profiles.firstName,
+        })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1);
+
+      if (profile) {
+        response.headers.set('x-user-tier', profile.subscriptionTier || 'FREE');
+        if (profile.firstName) {
+          response.headers.set('x-user-name', profile.firstName);
+        }
+      } else {
+        // User authenticated but no profile - set defaults
+        response.headers.set('x-user-tier', 'FREE');
+      }
+    } catch (error) {
+      console.error('[Middleware] Failed to fetch user profile:', error);
+      // Fallback to FREE tier on error
+      response.headers.set('x-user-tier', 'FREE');
+    }
+  }
+
   // Redirect authenticated users away from auth pages
   if (user && request.nextUrl.pathname.startsWith('/auth/')) {
     // Check if there's a 'next' parameter to redirect to
