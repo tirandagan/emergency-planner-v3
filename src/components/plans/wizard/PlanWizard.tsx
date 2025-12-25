@@ -158,7 +158,7 @@ export function PlanWizard({
       ? zodResolver(personnelConfigurationSchema)
       : currentStep === 2
       ? zodResolver(locationContextSchema)
-      : zodResolver(scenarioSelectionSchema)) as Resolver<WizardFormData>,
+      : zodResolver(scenarioSelectionSchema)) as unknown as Resolver<WizardFormData>,
     defaultValues: INITIAL_FORM_DATA as WizardFormData,
     mode: 'onChange',
   });
