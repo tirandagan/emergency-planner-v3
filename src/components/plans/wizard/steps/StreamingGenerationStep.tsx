@@ -11,8 +11,6 @@ import type { WizardFormData } from '@/types/wizard';
 interface StreamingGenerationStepProps {
   formData: WizardFormData;
   onComplete?: (reportId: string) => void;
-  mode?: 'create' | 'edit';
-  existingPlanId?: string;
 }
 
 type GenerationStatus = 'submitting' | 'error';
@@ -20,8 +18,6 @@ type GenerationStatus = 'submitting' | 'error';
 export function StreamingGenerationStep({
   formData,
   onComplete,
-  mode,
-  existingPlanId,
 }: StreamingGenerationStepProps) {
   const router = useRouter();
   const [status, setStatus] = useState<GenerationStatus>('submitting');

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -159,7 +159,7 @@ export function PlanWizard({
       ? zodResolver(personnelConfigurationSchema)
       : currentStep === 2
       ? zodResolver(locationContextSchema)
-      : zodResolver(scenarioSelectionSchema)),
+      : zodResolver(scenarioSelectionSchema)) as Resolver<WizardFormData>,
     defaultValues: INITIAL_FORM_DATA as WizardFormData,
     mode: 'onChange',
   });
@@ -427,8 +427,6 @@ export function PlanWizard({
           <StreamingGenerationStep
             formData={formData as WizardFormData}
             onComplete={handleGenerationComplete}
-            mode={mode}
-            existingPlanId={existingPlanId}
           />
         );
       default:
