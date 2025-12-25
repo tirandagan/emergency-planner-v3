@@ -77,23 +77,21 @@
     {
       "id": "generate_mission_plan",
       "type": "llm",
-      "description": "Generate comprehensive mission plan with Claude Sonnet 3.5",
-      "display_name": "Generating Mission Plan",
-      "provider": "openrouter",
-      "model": "anthropic/claude-3.5-sonnet",
-      "prompt_template": "mission-generation/mega-prompt.md",
-      "user_message": "${steps.build_user_message.user_message}",
-      "variables": {
-        "location": "${input.formData.location.city}, ${input.formData.location.state}",
-        "climate_zone": "${input.formData.location.climateZone}",
-        "family_size": "${input.formData.familySize}",
-        "duration_days": "${input.formData.durationDays}",
-        "bundle_context": "${steps.join_bundles.bundle_context}"
-      },
-      "temperature": 0.7,
-      "max_tokens": 8000,
       "error_mode": "fail",
-      "outputs": ["mission_plan", "llm_usage"]
+      "config": {
+        "model": "anthropic/claude-3.5-sonnet",
+        "prompt_template": "mission-generation/mega-prompt.md",
+        "temperature": 0.7,
+        "max_tokens": 8000,
+        "variables": {
+          "location": "${input.formData.location.city}, ${input.formData.location.state}",
+          "climate_zone": "${input.formData.location.climateZone}",
+          "family_size": "${input.formData.familySize}",
+          "duration_days": "${input.formData.durationDays}",
+          "bundle_context": "${steps.join_bundles.bundle_context}",
+          "user_message": "${steps.build_user_message.user_message}"
+        }
+      }
     },
     {
       "id": "parse_sections",
