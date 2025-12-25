@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,11 +28,23 @@ export function StreamingGenerationStep({
   const [error, setError] = useState<string | null>(null);
 
   // Auto-submit job when component mounts
+  // Use ref to prevent double submission in React StrictMode
+  const hasSubmittedRef = useRef(false);
+
   useEffect(() => {
+    // Guard against double submission in StrictMode
+    if (hasSubmittedRef.current) {
+      console.log('[StreamingGenerationStep] Job already submitted, skipping duplicate');
+      return;
+    }
+
     let isMounted = true;
 
     const submitJob = async (): Promise<void> => {
       try {
+        // Mark as submitted before async operation
+        hasSubmittedRef.current = true;
+
         // Sanitize formData to remove Google Maps objects before passing to server action
         const sanitizedFormData: WizardFormData = {
           ...formData,
@@ -51,25 +63,30 @@ export function StreamingGenerationStep({
           },
         };
 
+        console.log('[StreamingGenerationStep] Submitting job to LLM service');
+
         // Submit job to LLM service
         const result = await submitMissionGenerationJob(sanitizedFormData);
 
         if (!isMounted) return;
 
         if (result.jobId && result.reportId) {
+          console.log('[StreamingGenerationStep] Job submitted successfully:', { jobId: result.jobId, reportId: result.reportId });
+
           // Call onComplete if provided
           onComplete?.(result.reportId);
 
           // Redirect to progress page where JobStatusPoller will track the job
           router.push(`/plans/${result.reportId}/progress?jobId=${result.jobId}`);
         } else {
+          console.error('[StreamingGenerationStep] Job submission failed - missing jobId or reportId');
           setStatus('error');
           setError('Failed to submit mission generation job');
         }
       } catch (err) {
         if (!isMounted) return;
 
-        console.error('Failed to submit job:', err);
+        console.error('[StreamingGenerationStep] Job submission error:', err);
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Failed to submit mission generation job');
       }
