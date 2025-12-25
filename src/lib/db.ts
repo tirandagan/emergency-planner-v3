@@ -1,36 +1,13 @@
 import { supabase } from './supabaseClient';
-import { Product, User } from '@/types';
+import { Product } from '@/types';
 
+/**
+ * Legacy database utilities using Supabase REST API
+ *
+ * NOTE: For user profile queries, use @/db/queries/users instead (Drizzle ORM)
+ * TODO: Migrate product queries to Drizzle ORM for consistency
+ */
 export const db = {
-  // --- Auth & User ---
-  async getUserProfile(userId: string): Promise<User | null> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      // Profiles table might not exist yet during initial setup
-      // Only log if it's not a "relation does not exist" error
-      if (error.code !== 'PGRST116' && !error.message.includes('relation') && !error.message.includes('does not exist')) {
-        console.error('Error fetching profile:', error);
-      }
-      return null;
-    }
-
-    return {
-      id: data.id,
-      email: data.email, // Note: Profile might not store email if using auth table, but we can merge it in AuthContext
-      name: data.full_name,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      birthYear: data.birth_year,
-      gender: data.gender as 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined,
-      role: data.role as 'ADMIN' | 'USER'
-    };
-  },
-
   // --- Products ---
   async getProducts(): Promise<Product[]> {
     const { data, error } = await supabase

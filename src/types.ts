@@ -15,6 +15,8 @@ export interface User {
   birthYear?: number;
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   role: 'ADMIN' | 'USER';
+  householdMembers?: import('@/types/wizard').FamilyMember[];
+  saveHouseholdPreference?: boolean;
 }
 
 export enum ScenarioType {

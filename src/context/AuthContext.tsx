@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
-import { db } from '@/lib/db';
 import {
   getCachedProfile,
   setCachedProfile,
@@ -52,8 +51,32 @@ const fetchProfileWithTimeout = async (
         setTimeout(() => reject(new Error('Profile fetch timeout')), timeoutMs)
       );
 
-      const result = await Promise.race([db.getUserProfile(userId), timeoutPromise]);
-      return result;
+      // Fetch profile via API route (which uses Drizzle ORM server-side)
+      const fetchPromise = fetch(`/api/profile/${userId}`).then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Profile API returned ${res.status}`);
+        }
+        return res.json();
+      });
+
+      const result = await Promise.race([fetchPromise, timeoutPromise]);
+
+      // Transform API response to User type
+      if (result) {
+        return {
+          id: result.id,
+          email: result.email,
+          name: result.fullName || '',
+          firstName: result.firstName || undefined,
+          lastName: result.lastName || undefined,
+          birthYear: result.birthYear || undefined,
+          gender: result.gender as 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined,
+          role: result.role as 'ADMIN' | 'USER',
+          householdMembers: result.householdMembers,
+          saveHouseholdPreference: result.saveHouseholdPreference,
+        };
+      }
+      return null;
     } catch (error) {
       // On last attempt, log and return null
       if (attempt === retries) {
@@ -89,6 +112,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const profile = await getOrCreatePendingFetch(authUser.id, async () => {
       return await fetchProfileWithTimeout(authUser.id);
     });
+
+    if (!profile) {
+      console.warn('[AuthContext] No profile found in database for user:', authUser.id);
+    }
 
     if (profile) {
       console.debug('[AuthContext] Profile fetched successfully, caching...');

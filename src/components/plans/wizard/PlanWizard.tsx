@@ -16,10 +16,11 @@ import {
   locationContextSchema,
   validateStep,
 } from '@/lib/validation/wizard';
-import type { WizardFormData, LocationData } from '@/types/wizard';
+import type { WizardFormData, LocationData, FamilyMember } from '@/types/wizard';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { invalidateCachedProfile } from '@/lib/cache';
+import { updateHouseholdMembers } from '@/app/actions/profile';
 
 const STEP_LABELS = ['Scenarios', 'Personnel', 'Location & Context', 'Generate Plan'];
 const STORAGE_KEY = 'plan-wizard-state';
@@ -78,10 +79,18 @@ interface PlanWizardProps {
   mode?: 'create' | 'edit';
   existingPlanId?: string;
   initialData?: Partial<WizardFormData>;
+  savedHouseholdMembers?: FamilyMember[];
+  saveHouseholdPreference?: boolean;
 }
 
-export function PlanWizard({ mode = 'create', existingPlanId, initialData }: PlanWizardProps = {}) {
-  const { user } = useAuth();
+export function PlanWizard({
+  mode = 'create',
+  existingPlanId,
+  initialData,
+  savedHouseholdMembers,
+  saveHouseholdPreference: initialSavePreference,
+}: PlanWizardProps = {}) {
+  const { user, refreshProfile } = useAuth();
   const isEditMode = mode === 'edit';
   const storageKey = isEditMode ? EDIT_STORAGE_KEY : STORAGE_KEY;
   
@@ -130,6 +139,9 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
   const [isValidating, setIsValidating] = useState(false);
   const [hasLoadedState, setHasLoadedState] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
+  const [saveHouseholdPreference, setSaveHouseholdPreference] = useState(
+    initialSavePreference ?? user?.saveHouseholdPreference ?? true
+  );
 
   // React Hook Form setup
   const {
@@ -156,6 +168,13 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
   });
 
   const formData = watch();
+
+  // Sync save preference state with user profile
+  useEffect(() => {
+    if (user?.saveHouseholdPreference !== undefined) {
+      setSaveHouseholdPreference(user.saveHouseholdPreference);
+    }
+  }, [user?.saveHouseholdPreference]);
 
   // Load saved state on mount, or preload user profile data if starting fresh
   useEffect(() => {
@@ -298,13 +317,32 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
   /**
    * Handle next button click
    */
-  const handleNext = async () => {
+  const handleNext = async (): Promise<void> => {
     const isValid = await validateCurrentStep();
 
-    if (isValid && currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-      // Scroll to top of wizard
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (isValid) {
+      // Save household members to profile when leaving Step 2 (Personnel)
+      if (currentStep === 1 && saveHouseholdPreference) {
+        try {
+          await updateHouseholdMembers(
+            formData.familyMembers,
+            saveHouseholdPreference
+          );
+
+          // Refresh profile in context to get updated data
+          if (user?.id) {
+            invalidateCachedProfile(user.id);
+            await refreshProfile();
+          }
+        } catch (error) {
+          console.error('Failed to save household members:', error);
+        }
+      }
+
+      if (currentStep < 3) {
+        setCurrentStep(currentStep + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
@@ -337,11 +375,16 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
   /**
    * Handle generation complete
    */
-  const handleGenerationComplete = (reportId: string) => {
+  const handleGenerationComplete = (reportId: string): void => {
     console.log(isEditMode ? 'Update complete:' : 'Generation complete:', reportId);
-    // Clear saved wizard state since we're done
     clearSavedState(storageKey);
-    // TODO: Phase 8 - Navigate to generated plan
+  };
+
+  /**
+   * Handle quick add button click
+   */
+  const handleQuickAdd = (): void => {
+    console.log('Loaded saved household members from profile');
   };
 
   /**
@@ -363,6 +406,10 @@ export function PlanWizard({ mode = 'create', existingPlanId, initialData }: Pla
           <PersonnelStep
             control={control}
             errors={errors}
+            savedHouseholdMembers={savedHouseholdMembers}
+            savePreference={saveHouseholdPreference}
+            onSavePreferenceChange={setSaveHouseholdPreference}
+            onQuickAdd={handleQuickAdd}
           />
         );
       case 2:

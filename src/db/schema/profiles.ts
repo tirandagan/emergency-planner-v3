@@ -1,4 +1,5 @@
-import { pgTable, text, uuid, timestamp, integer, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, integer, boolean, jsonb, index } from 'drizzle-orm/pg-core';
+import type { FamilyMember } from '@/types/wizard';
 
 export const profiles = pgTable(
   'profiles',
@@ -32,6 +33,8 @@ export const profiles = pgTable(
     loginCount: integer('login_count').notNull().default(0),
     lastOtpAt: timestamp('last_otp_at', { withTimezone: true }),
     passwordLoginsSinceOtp: integer('password_logins_since_otp').notNull().default(0),
+    householdMembers: jsonb('household_members').$type<FamilyMember[]>(),
+    saveHouseholdPreference: boolean('save_household_preference').default(true),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
@@ -42,6 +45,7 @@ export const profiles = pgTable(
     lastLoginIdx: index('idx_profiles_last_login').on(table.lastLoginAt),
     isHighValueIdx: index('idx_profiles_is_high_value').on(table.isHighValue),
     lastActiveAtIdx: index('idx_profiles_last_active_at').on(table.lastActiveAt),
+    householdMembersIdx: index('idx_profiles_household_members').using('gin', table.householdMembers),
   })
 );
 

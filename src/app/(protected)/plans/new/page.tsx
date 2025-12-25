@@ -1,92 +1,56 @@
-"use client";
-
-import { use, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import { WizardGuard } from '@/components/plans/wizard/WizardGuard';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/utils/supabase/server';
+import { getUserProfile } from '@/db/queries/users';
+import { db } from '@/db';
+import { missionReports } from '@/db/schema/mission-reports';
+import { eq } from 'drizzle-orm';
+import { PlanWizardClient } from './PlanWizardClient';
 import { transformReportToWizardData } from '@/lib/wizard/transform-plan-data';
-import type { WizardFormData } from '@/types/wizard';
-import type { MissionReport } from '@/lib/mission-reports';
+import type { WizardFormData, FamilyMember } from '@/types/wizard';
 
-// Disable SSR for the wizard to prevent hydration issues
-const PlanWizard = dynamic(
-  () => import('@/components/plans/wizard/PlanWizard').then(mod => mod.PlanWizard),
-  { ssr: false }
-);
+interface PageProps {
+  searchParams: Promise<{ edit?: string }>;
+}
 
-export default function NewPlanPage() {
-  const searchParams = useSearchParams();
-  const editReportId = searchParams.get('edit');
-  const [initialData, setInitialData] = useState<Partial<WizardFormData> | undefined>();
-  const [isLoading, setIsLoading] = useState(!!editReportId);
-  const [error, setError] = useState<string | null>(null);
+export default async function NewPlanPage({ searchParams }: PageProps): Promise<React.ReactElement> {
+  // Get current user
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch existing plan data if editing
-  useEffect(() => {
-    const fetchPlanData = async () => {
-      if (!editReportId) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/plans/${editReportId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch plan data');
-        }
-
-        const report: MissionReport = await response.json();
-        const wizardData = transformReportToWizardData(report);
-        setInitialData(wizardData);
-      } catch (err) {
-        console.error('Error fetching plan data:', err);
-        setError('Failed to load plan for editing');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPlanData();
-  }, [editReportId]);
-
-  if (isLoading) {
-    return (
-      <WizardGuard>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading plan data...</p>
-          </div>
-        </div>
-      </WizardGuard>
-    );
+  if (!user) {
+    return redirect('/auth/login');
   }
 
-  if (error) {
-    return (
-      <WizardGuard>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center max-w-md">
-            <p className="text-destructive mb-4">{error}</p>
-            <button
-              onClick={() => window.location.href = '/dashboard'}
-              className="text-primary hover:underline"
-            >
-              Return to Dashboard
-            </button>
-          </div>
-        </div>
-      </WizardGuard>
-    );
+  // Fetch user profile with household members using Drizzle ORM
+  const userProfile = await getUserProfile(user.id);
+
+  // Extract household members and save preference
+  const savedHouseholdMembers: FamilyMember[] | undefined = userProfile?.householdMembers ?? undefined;
+  const saveHouseholdPreference: boolean = userProfile?.saveHouseholdPreference ?? true;
+
+  // Handle edit mode
+  const { edit: editReportId } = await searchParams;
+  let initialData: Partial<WizardFormData> | undefined;
+
+  if (editReportId) {
+    const [report] = await db
+      .select()
+      .from(missionReports)
+      .where(eq(missionReports.id, editReportId))
+      .limit(1);
+
+    if (report && report.userId === user.id) {
+      initialData = transformReportToWizardData(report as any);
+    }
   }
 
   return (
-    <WizardGuard>
-      <PlanWizard
-        mode={editReportId ? 'edit' : 'create'}
-        existingPlanId={editReportId || undefined}
-        initialData={initialData}
-      />
-    </WizardGuard>
+    <PlanWizardClient
+      mode={editReportId ? 'edit' : 'create'}
+      existingPlanId={editReportId || undefined}
+      initialData={initialData}
+      savedHouseholdMembers={savedHouseholdMembers}
+      saveHouseholdPreference={saveHouseholdPreference}
+    />
   );
 }

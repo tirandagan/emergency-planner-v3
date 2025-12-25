@@ -58,6 +58,8 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       systemEmailsOptIn: data.system_emails_opt_in,
       dripCampaignsOptIn: data.drip_campaigns_opt_in,
       callRemindersOptIn: data.call_reminders_opt_in,
+      householdMembers: data.household_members,
+      saveHouseholdPreference: data.save_household_preference,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     } as UserProfile;
@@ -116,6 +118,8 @@ export async function getUserByStripeCustomerId(
     systemEmailsOptIn: data.system_emails_opt_in,
     dripCampaignsOptIn: data.drip_campaigns_opt_in,
     callRemindersOptIn: data.call_reminders_opt_in,
+    householdMembers: data.household_members,
+    saveHouseholdPreference: data.save_household_preference,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   } as UserProfile;
@@ -168,6 +172,8 @@ export async function getUserByStripeSubscriptionId(
     systemEmailsOptIn: data.system_emails_opt_in,
     dripCampaignsOptIn: data.drip_campaigns_opt_in,
     callRemindersOptIn: data.call_reminders_opt_in,
+    householdMembers: data.household_members,
+    saveHouseholdPreference: data.save_household_preference,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   } as UserProfile;

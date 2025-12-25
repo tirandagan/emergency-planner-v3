@@ -501,3 +501,62 @@ export async function exportUserData(
   }
 }
 
+export type UpdateHouseholdMembersResult =
+  | { success: true }
+  | { success: false; error: string };
+
+/**
+ * Update user's saved household members configuration
+ * Called when user completes Step 2 with "Save to profile" toggle enabled
+ */
+export async function updateHouseholdMembers(
+  householdMembers: import('@/types/wizard').FamilyMember[],
+  savePreference: boolean
+): Promise<UpdateHouseholdMembersResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { db } = await import('@/db');
+    const { profiles } = await import('@/db/schema/profiles');
+    const { eq } = await import('drizzle-orm');
+
+    await db
+      .update(profiles)
+      .set({
+        householdMembers: householdMembers,
+        saveHouseholdPreference: savePreference,
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, user.id));
+
+    revalidatePath('/plans/new', 'page');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating household members:', error);
+
+    await logSystemError(error, {
+      category: 'database_error',
+      component: 'ProfileActions',
+      route: '/app/actions/profile',
+      userAction: 'Updating saved household members configuration',
+      metadata: {
+        operation: 'updateHouseholdMembers',
+      },
+    });
+
+    return {
+      success: false,
+      error: 'Failed to save household members',
+    };
+  }
+}
+
