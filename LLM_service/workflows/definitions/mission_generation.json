@@ -55,6 +55,7 @@
       "description": "Build user message with form data summary",
       "display_name": "Building User Message",
       "error_mode": "fail",
+      "outputs": ["user_message"],
       "config": {
         "operation": "template",
         "config": {
