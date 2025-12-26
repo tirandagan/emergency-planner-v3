@@ -742,12 +742,15 @@ class TemplateTransformation(BaseTransformation):
         context_dict = {**context_data} if isinstance(context_data, dict) else {}
         context_dict.update(extra_variables)
 
-        # Use a temporary WorkflowContext to resolve variables (including nested ones)
-        from .context import WorkflowContext
-        ctx = WorkflowContext(context_dict)
-        
-        # Use the resolve_string method which handles multiple placeholders and nested paths
-        return ctx.resolve_string(template)
+        # Simple string replacement for template variables
+        # The variables are already resolved by the executor before being passed here
+        result = template
+        for key, value in context_dict.items():
+            placeholder = f"${{{key}}}"
+            if placeholder in result:
+                result = result.replace(placeholder, str(value))
+
+        return result
 
 
 class MergeTransformation(BaseTransformation):
