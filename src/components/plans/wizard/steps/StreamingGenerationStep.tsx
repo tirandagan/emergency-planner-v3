@@ -51,12 +51,12 @@ export function StreamingGenerationStep({
       return;
     }
 
+    // Mark as submitted IMMEDIATELY (synchronously)
+    hasSubmittedRef.current = true;
+
     let isMounted = true;
 
     const submitJob = async (): Promise<void> => {
-      // Mark as submitted IMMEDIATELY at the start of the async function
-      hasSubmittedRef.current = true;
-
       try {
         console.log('[StreamingGenerationStep] Submitting job to LLM service');
 
@@ -92,7 +92,8 @@ export function StreamingGenerationStep({
     return () => {
       isMounted = false;
     };
-  }, [sanitizedFormData, onComplete, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   // Render loading or error state
   if (status === 'error') {

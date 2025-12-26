@@ -72,9 +72,13 @@ class WorkflowContext:
         # Map result to specific output names if provided
         if output_names:
             for name in output_names:
-                # If output is a dict and name exists in it, it's already merged above.
-                # Otherwise, map the whole output to this name.
-                self.steps[step_id][name] = output
+                # Special handling for LLM responses with 'content' field
+                if isinstance(output, dict) and "content" in output:
+                    # Map the content string to the output name for easier access
+                    self.steps[step_id][name] = output["content"]
+                else:
+                    # Map the whole output to this name
+                    self.steps[step_id][name] = output
         
         logger.debug(f"Stored output for step: {step_id}")
 
