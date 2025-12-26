@@ -28,6 +28,12 @@
 
 ---
 
+## Available Bundles
+
+${bundle_context}
+
+---
+
 ## Scenario-Specific Context
 
 {{scenario_prompts}}
@@ -39,3 +45,9 @@
 {{include:../shared/safety-disclaimers.md}}
 
 {{include:../shared/tone-and-voice.md}}
+
+---
+
+## User Request
+
+${user_message}
