@@ -180,6 +180,13 @@ class WorkflowStatusResponse(BaseModel):
         examples=[8, 12]
     )
 
+    # Webhook configuration
+    webhook_url: Optional[str] = Field(
+        None,
+        description="Webhook URL that will be called when job completes",
+        examples=["https://example.com/api/webhooks/llm-callback"]
+    )
+
     model_config = {
         "json_schema_extra": {
             "examples": [

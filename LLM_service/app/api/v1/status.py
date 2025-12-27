@@ -144,6 +144,7 @@ def get_workflow_status(
         current_step=current_step,
         steps_completed=steps_completed,
         total_steps=total_steps,
+        webhook_url=job.webhook_url,
     )
 
     logger.info(f"Status returned: {job_id} ({job.status})")
